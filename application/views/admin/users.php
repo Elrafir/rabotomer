@@ -112,6 +112,29 @@
         </table>
     </div>
 
+    <!-- Разделитель -->
+    <hr class="my-16 border-t-2 border-gray-100">
+
+    <!-- Системные Настройки -->
+    <div class="mb-10">
+        <h2 class="text-4xl font-black text-gray-800 mb-2">Настройки Системы</h2>
+        <p class="text-lg text-gray-500 font-mono">Глобальные параметры работы трекера</p>
+    </div>
+
+    <div class="bg-white rounded-3xl shadow-sm border border-gray-100 p-10 mb-16">
+        <div class="max-w-xl">
+            <label class="block text-gray-700 text-xl font-bold mb-4">Лимит времени на паузе (минуты)</label>
+            <p class="text-gray-500 mb-6">Если таймер находится на паузе дольше указанного времени, сессия будет автоматически остановлена (завершена). Укажите 0, чтобы отключить авто-стоп.</p>
+            
+            <div class="flex gap-4">
+                <input type="number" id="settingPauseLimit" value="<?= htmlspecialchars($pause_limit_minutes ?? 10); ?>" class="w-32 bg-gray-50 border border-gray-300 rounded-xl px-5 py-4 text-2xl font-bold text-center focus:ring-2 focus:ring-blue-500 focus:outline-none" min="0">
+                <button onclick="saveSettings()" class="bg-green-600 hover:bg-green-700 text-white font-bold py-4 px-8 rounded-xl text-xl shadow-md transition-colors">
+                    Сохранить
+                </button>
+            </div>
+        </div>
+    </div>
+
 </div>
 
 <!-- Модальное окно добавления пользователя -->
@@ -278,15 +301,27 @@
     }
 
     function deleteBackup(filename) {
-        if (confirm("Точно удалить этот файл бэкапа?")) {
-            $.post(api.delete_backup, { filename: filename }, function(response) {
-                let res = JSON.parse(response);
-                if (res.status === 'success') {
-                    window.location.reload();
-                } else {
-                    alert(res.message);
-                }
-            });
-        }
+        if (!confirm('<?= lang("admin_js_confirm_delete_backup"); ?>')) return;
+
+        $.post('<?= base_url("admin/delete_backup_ajax"); ?>', { filename: filename }, function(response) {
+            let res = JSON.parse(response);
+            if (res.status === 'success') {
+                window.location.reload();
+            } else {
+                alert(res.message);
+            }
+        });
+    }
+
+    function saveSettings() {
+        const limit = $('#settingPauseLimit').val();
+        $.post('<?= base_url("admin/save_settings_ajax"); ?>', { pause_limit_minutes: limit }, function(response) {
+            let res = JSON.parse(response);
+            if (res.status === 'success') {
+                alert(res.message);
+            } else {
+                alert(res.message);
+            }
+        });
     }
 </script>

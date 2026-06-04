@@ -1,6 +1,6 @@
 <?php
 if (!function_exists('hex2rgba')) {
-    function hex2rgba($color, $opacity = 0.05) {
+    function hex2rgba($color, $opacity = 0.1) {
         if (empty($color)) return 'rgba(229, 231, 235, ' . $opacity . ')';
         $color = ltrim($color, '#');
         if (strlen($color) == 6) {
@@ -38,7 +38,7 @@ if (!function_exists('render_task_tree')) {
                 }
             }
             
-            $pale_bg = hex2rgba($task['color'], 0.05);
+            $pale_bg = hex2rgba($task['color'], 0.1);
             echo '<li class="' . $task_classes . '" style="background-color: ' . $pale_bg . ';">';
             echo '<div class="flex justify-between items-center">';
             
@@ -197,44 +197,7 @@ if (!function_exists('render_task_tree')) {
     <?php endif; ?>
 </div>
 
-<!-- Плавающая панель активного таймера -->
-<div id="activeTimerPanel" class="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-7xl bg-white border border-gray-200 rounded-t-2xl shadow-[0_-10px_40px_rgba(0,0,0,0.1)] transform transition-transform duration-300 z-50 translate-y-full">
-    <div class="px-4 sm:px-6 lg:px-8 py-3 flex items-center justify-between gap-4">
-        
-        <div class="flex flex-row items-center gap-6 flex-grow overflow-hidden">
-            <div class="flex items-center gap-2 min-w-0">
-                <span class="text-gray-500 text-sm font-bold uppercase whitespace-nowrap"><?= lang('dash_timer_in_progress'); ?></span>
-                <span id="activeTimerTitle" class="text-xl font-black text-emerald-600 truncate max-w-sm md:max-w-md lg:max-w-lg">
-                    <!-- Title updated via JS -->
-                </span>
-            </div>
-            
-            <div class="flex items-center gap-4 ml-auto">
-                <div class="flex flex-col items-end">
-                    <div class="text-gray-500 text-xs font-bold uppercase"><?= lang('dash_timer_total'); ?></div>
-                    <div id="totalTimerDisplay" class="text-green-600 text-2xl font-mono leading-none">00:00:00</div>
-                </div>
-                <div class="h-8 border-l border-gray-300 hidden sm:block"></div>
-                <div class="flex flex-col items-end hidden sm:flex">
-                    <div class="text-gray-500 text-xs font-bold uppercase"><?= lang('dash_timer_current_session'); ?></div>
-                    <div id="timerDisplay" class="text-red-600 text-xl font-mono leading-none">00:00:00</div>
-                </div>
-            </div>
-            
-            <input type="hidden" id="activeTimerTotal" value="<?php echo $active_session ? (int)($active_session['total_accumulated'] ?? 0) : '0'; ?>">
-            <input type="hidden" id="activeTimerElapsed" value="<?php echo $active_session ? (int)($active_session['current_elapsed'] ?? 0) : '0'; ?>">
-        </div>
-        
-        <div class="flex items-center gap-3 ml-auto flex-shrink-0">
-            <button id="btnPauseDashboard" onclick="pauseTimer()" class="bg-yellow-500 hover:bg-yellow-400 text-white font-black py-3 px-6 rounded-full text-xl shadow-sm transition-all transform hover:scale-105 active:scale-95 whitespace-nowrap">
-                <?= lang('btn_pause'); ?>
-            </button>
-            <button onclick="stopTimer()" class="bg-red-600 hover:bg-red-500 text-white font-black py-3 px-8 rounded-full text-xl shadow-sm transition-all transform hover:scale-105 active:scale-95 whitespace-nowrap">
-                <?= lang('btn_stop'); ?>
-            </button>
-        </div>
-    </div>
-</div>
+
 
 <!-- Модальное окно для ручной корректировки времени -->
 <div id="editTimeModal" class="hidden fixed inset-0 z-[100] bg-black bg-opacity-50 flex items-center justify-center p-4">
@@ -384,7 +347,7 @@ if (!function_exists('render_task_tree')) {
 
 <script>
     // URL-ы для AJAX (оставлены для совместимости локальных функций дашборда)
-    const api = window.globalApi;
+    var api = window.globalApi;
 
     // Скрипт для подстановки ставки
     function updateRate(selectElem) {
@@ -415,8 +378,8 @@ if (!function_exists('render_task_tree')) {
     }
 
     $(document).on('click', '.toggle-children', function() {
-        const icon = $(this).find('.icon-expand');
-        const childrenList = $(this).closest('li').find('> ul.task-children');
+        var icon = $(this).find('.icon-expand');
+        var childrenList = $(this).closest('li').find('> ul.task-children');
         
         childrenList.slideToggle(200);
         
@@ -431,17 +394,25 @@ if (!function_exists('render_task_tree')) {
     // Обработчики pauseTimer, stopTimer, startTimer определены глобально
 
 
-    /**
-     * AJAX-обработчик кнопки "Готово"
-     */
     function completeTask(taskId) {
         // Окно подтверждения (на всякий случай, чтобы случайно стилусом не закрыть проект)
         if (!confirm("<?= lang('js_confirm_complete'); ?>")) {
             return;
         }
+        
+        // Если задача была на паузе, очищаем её локальное состояние
+        let pausedInfo = localStorage.getItem('pausedTimerInfo');
+        if (pausedInfo) {
+            try {
+                let parsed = JSON.parse(pausedInfo);
+                if (parsed.task_id == taskId) {
+                    localStorage.removeItem('pausedTimerInfo');
+                }
+            } catch(e) {}
+        }
 
         $.post(api.complete, { task_id: taskId }, function(response) {
-            let res = JSON.parse(response);
+            var res = JSON.parse(response);
             if (res.status === 'success') {
                 window.location.reload();
             } else {
@@ -459,7 +430,7 @@ if (!function_exists('render_task_tree')) {
         }
 
         $.post(api.restore, { task_id: taskId }, function(response) {
-            let res = JSON.parse(response);
+            var res = JSON.parse(response);
             if (res.status === 'success') {
                 window.location.reload();
             } else {
@@ -482,9 +453,9 @@ if (!function_exists('render_task_tree')) {
 
         // Загружаем сессии этой задачи через AJAX
         $.post(api.get_sessions, { task_id: taskId }, function(response) {
-            let res = JSON.parse(response);
+            var res = JSON.parse(response);
             if (res.status === 'success') {
-                let html = '';
+                var html = '';
                 if (res.data.length === 0) {
                     html = '<tr><td colspan="5" class="px-4 py-8 text-center text-gray-400"><?= lang('modal_no_records'); ?></td></tr>';
                 } else {
@@ -519,10 +490,10 @@ if (!function_exists('render_task_tree')) {
      * Сохранение новой ручной сессии
      */
     function saveManualSession() {
-        const taskId = $('#modalTaskId').val();
-        const start = $('#modalStartTime').val();
-        const end = $('#modalEndTime').val();
-        const note = $('#modalNote').val();
+        var taskId = $('#modalTaskId').val();
+        var start = $('#modalStartTime').val();
+        var end = $('#modalEndTime').val();
+        var note = $('#modalNote').val();
 
         if (!start || !end) {
             alert('<?= lang('js_alert_fill_fields'); ?>');
@@ -530,7 +501,7 @@ if (!function_exists('render_task_tree')) {
         }
 
         $.post(api.add_manual, { task_id: taskId, start_time: start, end_time: end, note: note }, function(response) {
-            let res = JSON.parse(response);
+            var res = JSON.parse(response);
             if (res.status === 'success') {
                 // Если успешно, перезагружаем данные в окне
                 openEditModal(taskId, $('#modalTaskTitle').text());
@@ -546,7 +517,7 @@ if (!function_exists('render_task_tree')) {
      * Логика для Каскадного Аккордеона
      */
     function toggleCascadeAccordion(taskId) {
-        const container = $('#inline-history-' + taskId);
+        var container = $('#inline-history-' + taskId);
         
         // Если контейнер уже открыт, просто скрываем его
         if (!container.hasClass('hidden') && container.html().trim() !== '') {
@@ -559,19 +530,19 @@ if (!function_exists('render_task_tree')) {
         container.html('<div class="py-2 px-4 text-gray-400 italic"><?= lang('modal_loading'); ?></div>').removeClass('hidden').hide().slideDown(200);
 
         $.post(api.get_cascading, { task_id: taskId }, function(response) {
-            let res = JSON.parse(response);
+            var res = JSON.parse(response);
             if (res.status === 'success') {
                 if (res.data.length === 0) {
                     container.html('<div class="py-2 px-4 text-gray-500 font-medium"><?= lang('cascade_no_sessions'); ?></div>');
                     return;
                 }
                 
-                let html = '<table class="w-full text-left border-collapse text-xs md:text-sm text-gray-600"><thead class="bg-gray-100 text-gray-500 border-b border-gray-200 font-semibold tracking-wide"><tr><th class="px-3 py-1"><?= lang('modal_col_start'); ?> - <?= lang('modal_col_end'); ?></th><th class="px-3 py-1"><?= lang('cascade_col_task'); ?></th><th class="px-3 py-1"><?= lang('cascade_col_duration'); ?></th><th class="px-3 py-1 w-1/3"><?= lang('cascade_col_note'); ?></th></tr></thead><tbody class="divide-y divide-gray-100">';
-                const showLimit = 10;
-                const displayData = res.data.slice(0, showLimit);
+                var html = '<table class="w-full text-left border-collapse text-xs md:text-sm text-gray-600"><thead class="bg-gray-100 text-gray-500 border-b border-gray-200 font-semibold tracking-wide"><tr><th class="px-3 py-1"><?= lang('modal_col_start'); ?> - <?= lang('modal_col_end'); ?></th><th class="px-3 py-1"><?= lang('cascade_col_task'); ?></th><th class="px-3 py-1"><?= lang('cascade_col_duration'); ?></th><th class="px-3 py-1 w-1/3"><?= lang('cascade_col_note'); ?></th></tr></thead><tbody class="divide-y divide-gray-100">';
+                var showLimit = 10;
+                var displayData = res.data.slice(0, showLimit);
                 
                 displayData.forEach(s => {
-                    const colorStyle = s.color ? `background-color: ${s.color};` : 'background-color: #e5e7eb;';
+                    var colorStyle = s.color ? `background-color: ${s.color};` : 'background-color: #e5e7eb;';
                     html += `
                         <tr class="hover:bg-gray-100 transition-colors">
                             <td class="px-3 py-1.5 whitespace-nowrap"><span class="font-medium text-gray-700">${s.start_formatted}</span> <span class="text-gray-400">&rarr; ${s.end_formatted}</span></td>
@@ -584,8 +555,8 @@ if (!function_exists('render_task_tree')) {
                 html += '</tbody></table>';
                 
                 if (res.data.length > showLimit) {
-                    const moreCount = res.data.length - showLimit;
-                    const moreText = '<?= lang('cascade_show_more'); ?>'.replace('%d', moreCount);
+                    var moreCount = res.data.length - showLimit;
+                    var moreText = '<?= lang('cascade_show_more'); ?>'.replace('%d', moreCount);
                     html += `<div class="text-center py-2 text-purple-600 text-xs md:text-sm cursor-pointer hover:underline" onclick="openCascadeModal(${taskId}, '')">${moreText}</div>`;
                 }
                 
@@ -605,14 +576,14 @@ if (!function_exists('render_task_tree')) {
         $('#cascadeHistoryModal').removeClass('hidden');
 
         $.post(api.get_cascading, { task_id: taskId }, function(response) {
-            let res = JSON.parse(response);
+            var res = JSON.parse(response);
             if (res.status === 'success') {
-                let html = '';
+                var html = '';
                 if (res.data.length === 0) {
                     html = '<tr><td colspan="4" class="px-4 py-8 text-center text-gray-400 font-medium"><?= lang('cascade_no_sessions'); ?></td></tr>';
                 } else {
                     res.data.forEach(s => {
-                        const colorStyle = s.color ? `background-color: ${s.color};` : 'background-color: #e5e7eb;';
+                        var colorStyle = s.color ? `background-color: ${s.color};` : 'background-color: #e5e7eb;';
                         html += `
                         <tr class="hover:bg-gray-50 transition-colors">
                             <td class="px-4 py-2 border-b border-gray-100 whitespace-nowrap"><span class="font-medium text-gray-700">${s.start_formatted}</span> <span class="text-gray-400 text-xs">&rarr; ${s.end_formatted}</span></td>
@@ -635,12 +606,12 @@ if (!function_exists('render_task_tree')) {
      * Удаление сессии (делегирование событий, так как кнопки создаются динамически)
      */
     $(document).on('click', '.delete-session-btn', function() {
-        const sessionId = $(this).data('id');
+        var sessionId = $(this).data('id');
         
         // Быстрое подтверждение от пользователя
         if (confirm("<?= lang('js_confirm_delete'); ?>")) {
             $.post(api.delete_session, { session_id: sessionId }, function(response) {
-                let res = JSON.parse(response);
+                var res = JSON.parse(response);
                 if (res.status === 'success') {
                     // Перезагружаем страницу, чтобы пересчиталось время на главной
                     window.location.reload();
@@ -655,11 +626,11 @@ if (!function_exists('render_task_tree')) {
      * Редактирование названия задачи (простое нативное окно prompt)
      */
     function editTaskTitle(taskId, currentTitle) {
-        const newTitle = prompt("<?= lang('btn_edit'); ?>:", currentTitle);
+        var newTitle = prompt("<?= lang('btn_edit'); ?>:", currentTitle);
         
         if (newTitle !== null && newTitle.trim() !== "" && newTitle.trim() !== currentTitle) {
             $.post(api.edit_title, { task_id: taskId, title: newTitle.trim() }, function(response) {
-                let res = JSON.parse(response);
+                var res = JSON.parse(response);
                 if (res.status === 'success') {
                     window.location.reload();
                 } else {
@@ -675,7 +646,7 @@ if (!function_exists('render_task_tree')) {
     function deleteTaskCascade(taskId) {
         if (confirm("<?= lang('js_confirm_delete_task'); ?>")) {
             $.post(api.delete_task, { task_id: taskId }, function(response) {
-                let res = JSON.parse(response);
+                var res = JSON.parse(response);
                 if (res.status === 'success') {
                     window.location.reload();
                 } else {
@@ -689,7 +660,7 @@ if (!function_exists('render_task_tree')) {
      * Живой поиск по дереву задач
      */
     $(document).on('keyup', '#searchTaskInput', function() {
-        let value = $(this).val().toLowerCase().trim();
+        var value = $(this).val().toLowerCase().trim();
         
         if (value === "") {
             // Если поле пустое, показываем все корневые задачи и скрываем подзадачи, как было по умолчанию
@@ -701,7 +672,7 @@ if (!function_exists('render_task_tree')) {
             $('.task-tree-root li').each(function() {
                 // Ищем span, который содержит название задачи
                 // Он находится внутри первого .flex div, имеет текст
-                let taskName = $(this).find('> div:first-child > div:first-child > span.text-2xl').text().toLowerCase();
+                var taskName = $(this).find('> div:first-child > div:first-child > span.text-2xl').text().toLowerCase();
                 
                 if (taskName.indexOf(value) > -1) {
                     $(this).show();
@@ -716,14 +687,14 @@ if (!function_exists('render_task_tree')) {
     });
 
     // --- Color Picker Logic ---
-    let activeColorTaskId = null;
+    var activeColorTaskId = null;
 
     function openColorPicker(e, taskId) {
         e.stopPropagation();
         activeColorTaskId = taskId;
         
-        const dot = $(e.target);
-        const offset = dot.offset();
+        var dot = $(e.target);
+        var offset = dot.offset();
         
         $('#colorPickerPopover').css({
             top: offset.top + 20 + 'px',
@@ -735,7 +706,7 @@ if (!function_exists('render_task_tree')) {
         if (!activeColorTaskId) return;
 
         $.post(api.set_color, { task_id: activeColorTaskId, color: hexColor }, function(response) {
-            let res = JSON.parse(response);
+            var res = JSON.parse(response);
             if (res.status === 'success') {
                 window.location.reload();
             } else {

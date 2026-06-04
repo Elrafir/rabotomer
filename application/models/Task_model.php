@@ -54,7 +54,7 @@ class Task_model extends CI_Model {
      * Получить текущую активную сессию (где end_time IS NULL).
      * Возвращает данные сессии + название задачи.
      */
-    public function get_active_session($user_id) {
+    public function get_active_session($user_id, $skip_limit_check = false) {
         // Выбираем все поля сессии и только название/цвет из задач
         $this->db->select('time_sessions.*, tasks.title as task_title, tasks.color');
         $this->db->from('time_sessions');
@@ -68,11 +68,28 @@ class Task_model extends CI_Model {
         $session = $query->row_array();
         
         if ($session) {
+            // Проверка на превышение лимита паузы
+            if (!$skip_limit_check && $session['is_paused']) {
+                $this->load->model('Settings_model');
+                $limit_minutes = (int)$this->Settings_model->get_setting('pause_limit_minutes', 10);
+                $pause_seconds = time() - strtotime($session['last_paused_at']);
+                
+                if ($limit_minutes > 0 && $pause_seconds > ($limit_minutes * 60)) {
+                    // Лимит превышен! Автоматически останавливаем сессию
+                    $this->stop_timer($user_id, 'Авто-стоп по лимиту паузы');
+                    return null; // Сессия больше не активна
+                }
+            }
+
             // Рассчитываем время текущей сессии
-            $session['current_elapsed'] = time() - strtotime($session['start_time']);
+            if ($session['is_paused']) {
+                $session['current_elapsed'] = strtotime($session['last_paused_at']) - strtotime($session['start_time']) - $session['pause_duration'];
+            } else {
+                $session['current_elapsed'] = time() - strtotime($session['start_time']) - $session['pause_duration'];
+            }
             
             // Рассчитываем накопленное время по предыдущим (завершенным) сессиям для этой задачи
-            $this->db->select('SUM(UNIX_TIMESTAMP(end_time) - UNIX_TIMESTAMP(start_time)) as total_sec', false);
+            $this->db->select('SUM(UNIX_TIMESTAMP(end_time) - UNIX_TIMESTAMP(start_time) - pause_duration) as total_sec', false);
             $this->db->where('task_id', $session['task_id']);
             $this->db->where('end_time IS NOT NULL', null, false);
             $sum_query = $this->db->get('time_sessions');
@@ -89,14 +106,19 @@ class Task_model extends CI_Model {
      * Возвращает true (успешно), 'spam' (сессия меньше минуты и была удалена), или false (ошибка).
      */
     public function stop_timer($user_id, $note = '') {
-        // Сначала получаем активную сессию, чтобы проверить её длительность
-        $active_session = $this->get_active_session($user_id);
+        // Сначала получаем активную сессию, чтобы проверить её длительность (без проверки лимита)
+        $active_session = $this->get_active_session($user_id, true);
         if (!$active_session) {
             return false;
         }
 
-        $end_time = date('Y-m-d H:i:s');
-        $duration = strtotime($end_time) - strtotime($active_session['start_time']);
+        if ($active_session['is_paused']) {
+            $end_time = $active_session['last_paused_at'];
+            $duration = strtotime($end_time) - strtotime($active_session['start_time']) - $active_session['pause_duration'];
+        } else {
+            $end_time = date('Y-m-d H:i:s');
+            $duration = strtotime($end_time) - strtotime($active_session['start_time']) - $active_session['pause_duration'];
+        }
 
         // Анти-спам: если меньше 60 секунд, удаляем сессию физически
         if ($duration < 60) {
@@ -107,6 +129,8 @@ class Task_model extends CI_Model {
 
         // Иначе обычное сохранение
         $this->db->set('end_time', $end_time);
+        $this->db->set('is_paused', 0);
+        $this->db->set('last_paused_at', NULL);
         if (!empty($note)) {
             $this->db->set('note', $note);
         }
@@ -129,19 +153,59 @@ class Task_model extends CI_Model {
             return false; // Задачи нет или она чужая
         }
 
-        // Шаг 2: Останавливаем любой другой активный таймер (чтобы не плодить параллельные)
-        $this->stop_timer($user_id);
+        // Шаг 2: Проверяем наличие активной сессии
+        $active = $this->get_active_session($user_id);
+        if ($active) {
+            if ($active['task_id'] == $task_id && $active['is_paused']) {
+                // Возвращаемся с паузы
+                $this->resume_timer($user_id, $active['id']);
+                return $active['id'];
+            }
+            $this->stop_timer($user_id);
+        }
 
         // Шаг 3: Создаем новую запись о сессии (старт - сейчас, стоп - NULL)
         $data = [
             'user_id' => $user_id,
             'task_id' => $task_id,
             'start_time' => date('Y-m-d H:i:s'),
-            'end_time' => NULL
+            'end_time' => NULL,
+            'is_paused' => 0,
+            'pause_duration' => 0
         ];
         
         $this->db->insert('time_sessions', $data);
         return $this->db->insert_id();
+    }
+    
+    public function pause_timer($user_id) {
+        $active = $this->get_active_session($user_id);
+        if ($active && !$active['is_paused']) {
+            $this->db->set('is_paused', 1);
+            $this->db->set('last_paused_at', date('Y-m-d H:i:s'));
+            $this->db->where('id', $active['id']);
+            $this->db->update('time_sessions');
+            return true;
+        }
+        return false;
+    }
+    
+    public function resume_timer($user_id, $session_id) {
+        $this->db->where('id', $session_id);
+        $this->db->where('user_id', $user_id);
+        $session = $this->db->get('time_sessions')->row_array();
+        
+        if ($session && $session['is_paused']) {
+            $pause_seconds = time() - strtotime($session['last_paused_at']);
+            
+            $this->db->set('is_paused', 0);
+            $this->db->set('last_paused_at', NULL);
+            $this->db->set('pause_duration', 'pause_duration + ' . $pause_seconds, FALSE);
+            $this->db->where('id', $session_id);
+            $this->db->update('time_sessions');
+            return true;
+        }
+        return false;
     }
 
     /**
@@ -154,7 +218,7 @@ class Task_model extends CI_Model {
 
         // 1. Считаем время для самой этой задачи (только завершенные сессии)
         // Используем встроенную функцию MySQL TIMESTAMPDIFF для подсчета разницы в секундах
-        $this->db->select('SUM(TIMESTAMPDIFF(SECOND, start_time, end_time)) as time_sum');
+        $this->db->select('SUM(TIMESTAMPDIFF(SECOND, start_time, end_time) - pause_duration) as time_sum');
         $this->db->from('time_sessions');
         $this->db->where('task_id', $task_id);
         $this->db->where('user_id', $user_id);

@@ -52,6 +52,7 @@ $is_dashboard = (current_url() == site_url('tasks') || current_url() == site_url
         <!-- Динамическая загрузка внутреннего представления с передачей всех данных -->
         <?php if (isset($inner_view)): ?>
             <?php $data['active_session'] = $active_session; ?>
+            <?php $this->load->view('templates/flash_messages'); ?>
             <?php $this->load->view($inner_view, $data ?? []); ?>
         <?php else: ?>
             <p class="text-red-500">Ошибка: Внутреннее представление не задано.</p>
@@ -65,6 +66,7 @@ $is_dashboard = (current_url() == site_url('tasks') || current_url() == site_url
             window.globalApi = {
                 start: '<?php echo site_url("tasks/start_timer_ajax"); ?>',
                 stop: '<?php echo site_url("tasks/stop_timer_ajax"); ?>',
+                pause: '<?php echo site_url("tasks/pause_timer_ajax"); ?>',
                 complete: '<?php echo site_url("tasks/complete_ajax"); ?>',
                 get_sessions: '<?php echo site_url("tasks/get_sessions_ajax"); ?>',
                 get_cascading: '<?php echo site_url("tasks/get_cascading_history_ajax"); ?>',
@@ -87,18 +89,66 @@ $is_dashboard = (current_url() == site_url('tasks') || current_url() == site_url
             window.isDashboardPage = <?= $is_dashboard ? 'true' : 'false' ?>;
         </script>
 
-        <!-- Плавающий глобальный виджет для других страниц -->
-        <div id="globalFloatingWidget" class="hidden fixed z-[9999] bg-white rounded-full shadow-2xl border border-gray-200 p-2 pr-4 flex items-center gap-3 cursor-move hover:shadow-lg transition-shadow select-none" style="top: 80px; right: 20px;">
-            <div class="drag-handle w-10 h-10 bg-emerald-100 rounded-full flex items-center justify-center cursor-grab active:cursor-grabbing text-xl">
-                🟢
-            </div>
-            <div class="flex flex-col">
-                <span id="globalWidgetTitle" class="text-xs font-bold text-gray-500 truncate max-w-[150px]">Task</span>
-                <span id="globalWidgetTimer" class="text-lg font-mono font-bold text-emerald-600">00:00:00</span>
-            </div>
-            <button onclick="globalTogglePause()" id="globalWidgetPauseBtn" class="ml-2 bg-yellow-500 hover:bg-yellow-400 text-white w-10 h-10 rounded-full shadow-sm flex items-center justify-center font-bold text-xl transition-colors">
-                ⏸
+        <div id="globalFloatingWidgetContainer" class="hidden opacity-0 scale-50 pointer-events-none transition-all duration-500 ease-out fixed z-[9999] flex items-center select-none" style="top: 80px; right: 35px; touch-action: none; transform-origin: center right;">
+            
+            <!-- Кнопка полной остановки (появляется только на паузе) -->
+            <button onclick="actionStopTimer();" onpointerdown="event.stopPropagation();" id="globalWidgetStopBtn" title="Завершить задачу" class="absolute top-1/2 -translate-y-1/2 w-12 h-12 rounded-full bg-red-600 hover:bg-red-700 shadow-[0_5px_15px_rgba(220,38,38,0.5)] border border-red-400 text-white text-xl flex items-center justify-center opacity-0 transform scale-50 pointer-events-none transition-all duration-500 ease-out z-[-1]" style="left: -56px;">
+                <svg class="w-6 h-6" viewBox="0 0 24 24" fill="none"><rect x="4" y="9" width="16" height="6" fill="white" rx="1"/></svg>
             </button>
+            
+            <div id="globalFloatingWidget" class="relative rounded-full widget-base-bg widget-glass-shadow px-7 py-3 flex items-center gap-4 cursor-pointer text-white transition-colors">
+                <div id="globalWidgetIcon" class="w-8 h-8 flex-shrink-0 flex items-center justify-center widget-icon-bg rounded-full text-xl font-bold relative z-10">
+                    <!-- Icon injected via JS -->
+                </div>
+                <div class="flex flex-col text-left min-w-[120px] relative z-10">
+                    <span id="globalWidgetTitle" class="text-[11px] uppercase font-bold opacity-90 truncate max-w-[160px] drop-shadow-sm">Task</span>
+                    <span id="globalWidgetTimer" class="text-xl font-mono font-black leading-tight tracking-wider drop-shadow-md">00:00:00</span>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Плавающая панель активного таймера (спрятана по умолчанию) -->
+        <div id="activeTimerPanel" class="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-7xl bg-white border border-gray-200 rounded-t-2xl shadow-[0_-10px_40px_rgba(0,0,0,0.1)] transform transition-transform duration-300 z-50 translate-y-full">
+            <!-- Кнопка "Свернуть" -->
+            <button id="btnCollapseTimerPanel" onclick="hideTimerPanel()" class="hidden absolute -top-10 right-4 bg-white px-4 py-1 rounded-t-lg shadow-sm border border-b-0 border-gray-200 text-gray-500 hover:text-gray-700 hover:bg-gray-50 text-sm font-bold flex items-center gap-1 transition-colors">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                свернуть
+            </button>
+            <div class="px-4 sm:px-6 lg:px-8 py-3 flex items-center justify-between gap-4">
+                
+                <div class="flex flex-row items-center gap-6 flex-grow overflow-hidden">
+                    <div class="flex items-center gap-2 min-w-0">
+                        <span class="text-gray-500 text-sm font-bold uppercase whitespace-nowrap"><?= lang('dash_timer_in_progress'); ?></span>
+                        <span id="activeTimerTitle" class="text-xl font-black text-emerald-600 truncate max-w-sm md:max-w-md lg:max-w-lg">
+                            <!-- Title updated via JS -->
+                        </span>
+                    </div>
+                    
+                    <div class="flex items-center gap-4 ml-auto">
+                        <div class="flex flex-col items-end">
+                            <div class="text-gray-500 text-xs font-bold uppercase"><?= lang('dash_timer_total'); ?></div>
+                            <div id="totalTimerDisplay" class="text-green-600 text-2xl font-mono leading-none">00:00:00</div>
+                        </div>
+                        <div class="h-8 border-l border-gray-300 hidden sm:block"></div>
+                        <div class="flex flex-col items-end hidden sm:flex">
+                            <div class="text-gray-500 text-xs font-bold uppercase"><?= lang('dash_timer_current_session'); ?></div>
+                            <div id="timerDisplay" class="text-red-600 text-xl font-mono leading-none">00:00:00</div>
+                        </div>
+                    </div>
+                    
+                    <input type="hidden" id="activeTimerTotal" value="<?php echo $active_session ? (int)($active_session['total_accumulated'] ?? 0) : '0'; ?>">
+                    <input type="hidden" id="activeTimerElapsed" value="<?php echo $active_session ? (int)($active_session['current_elapsed'] ?? 0) : '0'; ?>">
+                </div>
+                
+                <div class="flex items-center gap-3 ml-auto flex-shrink-0">
+                    <button id="btnPauseDashboard" onclick="globalTogglePause()" class="bg-yellow-500 hover:bg-yellow-400 text-white font-black py-3 px-6 rounded-full text-xl shadow-sm transition-all transform hover:scale-105 active:scale-95 whitespace-nowrap">
+                        <?= lang('btn_pause'); ?>
+                    </button>
+                    <button onclick="actionStopTimer()" class="bg-red-600 hover:bg-red-500 text-white font-black py-3 px-8 rounded-full text-xl shadow-sm transition-all transform hover:scale-105 active:scale-95 whitespace-nowrap">
+                        <?= lang('btn_stop'); ?>
+                    </button>
+                </div>
+            </div>
         </div>
 
         <!-- Глобальное модальное окно добавления проекта -->

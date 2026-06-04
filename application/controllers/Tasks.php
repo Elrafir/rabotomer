@@ -79,8 +79,17 @@ class Tasks extends MY_Controller {
         $task_id = $this->input->post('task_id');
 
         if (!empty($task_id)) {
+            $active = $this->Task_model->get_active_session($user_id);
+            $is_resume = ($active && $active['task_id'] == $task_id && $active['is_paused']);
+            
             $session_id = $this->Task_model->start_timer($user_id, $task_id);
             if ($session_id) {
+                if ($is_resume) {
+                    $this->session->set_flashdata('success', 'Таймер возобновлен');
+                } else {
+                    $this->session->set_flashdata('success', 'Таймер запущен');
+                }
+                
                 // Возвращаем новую активную сессию для обновления UI
                 $active_session = $this->Task_model->get_active_session($user_id);
                 echo json_encode(['status' => 'success', 'data' => $active_session]);
@@ -101,11 +110,28 @@ class Tasks extends MY_Controller {
         $result = $this->Task_model->stop_timer($user_id, $note);
         
         if ($result === 'spam') {
-            echo json_encode(['status' => 'spam', 'message' => lang('ajax_error_spam')]);
+            $this->session->set_flashdata('error', lang('ajax_error_spam'));
+            echo json_encode(['status' => 'spam']);
         } elseif ($result) {
+            $this->session->set_flashdata('success', 'Задача сохранена');
             echo json_encode(['status' => 'success']);
         } else {
             echo json_encode(['status' => 'error', 'message' => lang('ajax_error_stop')]);
+        }
+    }
+
+    /**
+     * AJAX-обработчик паузы таймера
+     */
+    public function pause_timer_ajax() {
+        $user_id = $this->session->userdata('user_id');
+        
+        if ($this->Task_model->pause_timer($user_id)) {
+            $this->session->set_flashdata('warning', 'Таймер поставлен на паузу');
+            $active_session = $this->Task_model->get_active_session($user_id);
+            echo json_encode(['status' => 'success', 'data' => $active_session]);
+        } else {
+            echo json_encode(['status' => 'error', 'message' => 'Ошибка при паузе таймера']);
         }
     }
 
@@ -118,6 +144,7 @@ class Tasks extends MY_Controller {
 
         if (!empty($task_id)) {
             if ($this->Task_model->complete_task_recursive($task_id, $user_id)) {
+                $this->session->set_flashdata('success', 'Задача успешно завершена');
                 echo json_encode(['status' => 'success']);
                 return;
             }
@@ -135,6 +162,7 @@ class Tasks extends MY_Controller {
 
         if (!empty($task_id)) {
             if ($this->Task_model->restore_task_recursive($task_id, $user_id)) {
+                $this->session->set_flashdata('success', 'Задача успешно восстановлена');
                 echo json_encode(['status' => 'success']);
                 return;
             }

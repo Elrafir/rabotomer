@@ -63,8 +63,29 @@ class Admin extends MY_Controller {
         }
 
         $data['backups'] = $backups;
+        
+        // Системные настройки
+        $this->load->model('Settings_model');
+        $data['pause_limit_minutes'] = $this->Settings_model->get_setting('pause_limit_minutes', 10);
 
         $this->render_page('admin/users', $data);
+    }
+    
+    /**
+     * AJAX-обработчик сохранения системных настроек
+     */
+    public function save_settings_ajax() {
+        $this->form_validation->set_rules('pause_limit_minutes', 'Лимит паузы', 'required|numeric|greater_than_equal_to[0]');
+        
+        if ($this->form_validation->run() !== FALSE) {
+            $this->load->model('Settings_model');
+            $this->Settings_model->set_setting('pause_limit_minutes', $this->input->post('pause_limit_minutes'));
+            
+            echo json_encode(['status' => 'success', 'message' => 'Настройки успешно сохранены']);
+            return;
+        }
+        
+        echo json_encode(['status' => 'error', 'message' => validation_errors(' ', ' ')]);
     }
 
     /**

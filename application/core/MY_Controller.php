@@ -36,6 +36,7 @@ class MY_Controller extends CI_Controller {
             $data['active_session'] = $user_id ? $this->Task_model->get_active_session($user_id) : null;
             
             // Отдаем только контент (без хидера и футера)
+            $this->load->view('templates/flash_messages');
             $this->load->view($inner_view, $data);
         } else {
             // Обычный запрос (отдаем всё)
