@@ -65,7 +65,23 @@ class Task_model extends CI_Model {
         $this->db->where('time_sessions.end_time IS NULL', null, false);
         
         $query = $this->db->get();
-        return $query->row_array();
+        $session = $query->row_array();
+        
+        if ($session) {
+            // Рассчитываем время текущей сессии
+            $session['current_elapsed'] = time() - strtotime($session['start_time']);
+            
+            // Рассчитываем накопленное время по предыдущим (завершенным) сессиям для этой задачи
+            $this->db->select('SUM(UNIX_TIMESTAMP(end_time) - UNIX_TIMESTAMP(start_time)) as total_sec', false);
+            $this->db->where('task_id', $session['task_id']);
+            $this->db->where('end_time IS NOT NULL', null, false);
+            $sum_query = $this->db->get('time_sessions');
+            $sum_result = $sum_query->row_array();
+            
+            $session['total_accumulated'] = (int)($sum_result['total_sec'] ?? 0);
+        }
+        
+        return $session;
     }
 
     /**

@@ -8,10 +8,10 @@
     
     <!-- Локальное подключение Tailwind CSS -->
     <link href="<?php echo base_url('assets/css/tailwind.min.css'); ?>" rel="stylesheet">
-    <link href="<?php echo base_url('assets/css/main.css'); ?>" rel="stylesheet">
+    <link href="<?php echo base_url('assets/css/main.css?v='.time()); ?>" rel="stylesheet">
     <!-- Локальное подключение jQuery -->
     <script src="<?php echo base_url('assets/js/jquery.min.js'); ?>"></script>
-    <script src="<?php echo base_url('assets/js/main.js'); ?>"></script>
+    <script src="<?php echo base_url('assets/js/main.js?v='.time()); ?>"></script>
     
     <!-- Динамический вывод дополнительных CSS файлов (если они переданы из контроллера) -->
     <?php if (isset($custom_css) && is_array($custom_css)): ?>

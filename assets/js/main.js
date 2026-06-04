@@ -129,9 +129,19 @@ function showTimerUI() {
         $('#activeTimerTitle').text(currentTaskTitle);
         $('#activeTimerPanel').removeClass('translate-y-full').addClass('translate-y-0');
         $('#globalFloatingWidget').addClass('hidden'); // Hide widget on dashboard
+        
+        if (isPaused) {
+            $('#timerDisplay').text(formatTime(initialSessionSeconds));
+            $('#totalTimerDisplay').text(formatTime(totalAccumulatedSeconds + initialSessionSeconds));
+            $('#btnPauseDashboard').html(`▶ ${window.globalLang.btn_continue}`).removeClass('bg-yellow-500 hover:bg-yellow-400').addClass('bg-green-500 hover:bg-green-400');
+        }
     } else {
         // Show widget on other pages
         $('#globalFloatingWidget').removeClass('hidden');
+        if (isPaused) {
+            $('#globalWidgetTimer').text(formatTime(initialSessionSeconds));
+            $('#globalWidgetPauseBtn').html('▶').removeClass('bg-yellow-500 hover:bg-yellow-400').addClass('bg-green-500 hover:bg-green-400');
+        }
     }
 }
 
@@ -241,31 +251,27 @@ $(document).ready(function() {
     let isDragging = false;
     let startX, startY, initialLeft, initialTop;
     
-    handle.on('mousedown touchstart', function(e) {
+    // Используем Pointer Events для идеальной поддержки стилуса и тачскрина
+    handle.css('touch-action', 'none'); // Блокируем скролл при перетаскивании
+    
+    handle.on('pointerdown', function(e) {
         isDragging = true;
         const pos = widget.position();
         initialLeft = pos.left;
         initialTop = pos.top;
         
-        if (e.type === 'touchstart') {
-            startX = e.originalEvent.touches[0].clientX;
-            startY = e.originalEvent.touches[0].clientY;
-        } else {
-            startX = e.clientX;
-            startY = e.clientY;
-            e.preventDefault();
-        }
+        startX = e.clientX;
+        startY = e.clientY;
+        
+        handle[0].setPointerCapture(e.pointerId);
         $('body').addClass('select-none');
     });
     
-    $(document).on('mousemove touchmove', function(e) {
+    handle.on('pointermove', function(e) {
         if (!isDragging) return;
         
-        let clientX = e.type === 'touchmove' ? e.originalEvent.touches[0].clientX : e.clientX;
-        let clientY = e.type === 'touchmove' ? e.originalEvent.touches[0].clientY : e.clientY;
-        
-        let dx = clientX - startX;
-        let dy = clientY - startY;
+        let dx = e.clientX - startX;
+        let dy = e.clientY - startY;
         
         widget.css({
             left: initialLeft + dx + 'px',
@@ -275,9 +281,10 @@ $(document).ready(function() {
         });
     });
     
-    $(document).on('mouseup touchend', function() {
+    handle.on('pointerup pointercancel', function(e) {
         if (isDragging) {
             isDragging = false;
+            handle[0].releasePointerCapture(e.pointerId);
             $('body').removeClass('select-none');
             // Save pos
             const pos = widget.position();
@@ -285,3 +292,118 @@ $(document).ready(function() {
         }
     });
 });
+
+// --- GLOBAL ADD MODAL ---
+function openGlobalAddModal() {
+    $('#globalAddModal').removeClass('hidden');
+    // Focus the input
+    setTimeout(() => $('#globalAddModal input[name="title"]').focus(), 100);
+}
+
+function closeGlobalAddModal() {
+    $('#globalAddModal').addClass('hidden');
+}
+
+function updateRateGlobal(selectElem) {
+    const rate = $(selectElem).find(':selected').data('rate');
+    const row = $(selectElem).closest('form');
+    if (rate) {
+        row.find('.rate-input').val(rate);
+    } else {
+        row.find('.rate-input').val('');
+    }
+}
+
+// --- GLOBAL SPA AJAX NAVIGATION ---
+$(document).ready(function() {
+    $(document).on('click', 'a', function(e) {
+        const href = $(this).attr('href');
+        
+        // Пропускаем невалидные ссылки, якоря и javascript:
+        if (!href || href === '#' || href.startsWith('javascript:')) return;
+        
+        // Пропускаем ссылки, открывающиеся в новом окне
+        if ($(this).attr('target') === '_blank') return;
+        
+        // Пропускаем ссылки на админку и авторизацию
+        if (href.indexOf('/admin') !== -1 || href.indexOf('/auth') !== -1) return;
+        
+        // Проверяем, что ссылка ведет на наш домен
+        if (href.startsWith('http') && !href.startsWith(window.location.origin)) return;
+
+        e.preventDefault();
+        loadAjaxPage(href);
+    });
+
+    $(window).on('popstate', function(e) {
+        loadAjaxPage(window.location.href, false);
+    });
+});
+
+function loadAjaxPage(url, push = true) {
+    // Показываем какой-нибудь индикатор загрузки (например, затемняем контент)
+    $('#main-content').css('opacity', '0.5');
+    
+    $.ajax({
+        url: url,
+        type: 'GET',
+        headers: { 'X-Requested-With': 'XMLHttpRequest' }, // Явно указываем AJAX
+        success: function(html) {
+            // Обновляем контент
+            $('#main-content').html(html);
+            $('#main-content').css('opacity', '1');
+            
+            // Обновляем URL
+            if (push) {
+                window.history.pushState(null, '', url);
+            }
+            
+            // Обновляем визуальное состояние меню
+            updateActiveMenu(url);
+            
+            // Прокручиваем наверх страницы
+            window.scrollTo(0, 0);
+        },
+        error: function() {
+            // Фолбэк: если что-то пошло не так, просто переходим по ссылке как обычно
+            window.location.href = url;
+        }
+    });
+}
+
+function updateActiveMenu(url) {
+    // Снимаем выделение со всех ссылок в навбаре
+    $('nav a').removeClass('text-blue-200 underline');
+    
+    // Ищем подходящую ссылку и подсвечиваем её
+    $('nav a').each(function() {
+        const linkHref = $(this).attr('href');
+        if (!linkHref) return;
+        
+        // Если ссылка - это корень (dashboard)
+        if (url === window.location.origin + '/' || url === window.location.origin) {
+            if (linkHref === window.location.origin + '/' || linkHref === window.location.origin + '/tasks') {
+                $(this).addClass('text-blue-200 underline');
+                window.isDashboardPage = true; // Обновляем глобальный флаг
+            }
+        } 
+        // Если другая страница
+        else if (url.indexOf(linkHref) !== -1 && linkHref !== window.location.origin + '/') {
+            $(this).addClass('text-blue-200 underline');
+            if (linkHref.indexOf('/tasks') !== -1) {
+                window.isDashboardPage = true;
+            } else {
+                window.isDashboardPage = false;
+            }
+        }
+    });
+    
+    // После загрузки страницы обновляем видимость UI таймера в зависимости от страницы
+    if (typeof showTimerUI === 'function' && typeof hideTimerUI === 'function') {
+        if (globalTimerInterval || isPaused) {
+            showTimerUI();
+        } else {
+            hideTimerUI();
+        }
+    }
+}

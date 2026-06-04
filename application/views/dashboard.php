@@ -165,39 +165,7 @@ if (!function_exists('render_task_tree')) {
 ?>
 
 <div class="relative min-h-[80vh] pb-32">
-    <!-- Блок добавления корневого проекта (уровень 1) -->
-    <div class="bg-white p-8 rounded-2xl shadow-sm border border-gray-100 mb-10">
-        <h2 class="text-3xl font-bold mb-6 text-gray-800"><?= lang('dash_new_project_title'); ?></h2>
-        <?php echo form_open('tasks/add', ['class' => 'flex flex-col gap-4']); ?>
-            <div class="flex flex-col md:flex-row gap-4">
-            <input type="text" name="title" placeholder="<?= lang('dash_new_project_placeholder'); ?>" class="flex-grow px-5 py-4 bg-gray-50 border border-gray-200 rounded-xl text-xl focus:ring-2 focus:ring-blue-500 focus:outline-none" required>
-            
-            <?php 
-                $ci =& get_instance();
-                $customers = $ci->load->get_var('customers');
-            ?>
-            <select name="customer_id" class="customer-select px-4 py-4 bg-gray-50 border border-gray-200 rounded-xl text-lg focus:ring-2 focus:ring-blue-500 focus:outline-none" onchange="updateRate(this)">
-                <option value=""><?= lang('finance_no_customer'); ?></option>
-                <?php if (!empty($customers)): ?>
-                    <?php foreach ($customers as $c): ?>
-                        <option value="<?= $c['id']; ?>" data-rate="<?= $c['hourly_rate']; ?>"><?= htmlspecialchars($c['name'] ?? ''); ?></option>
-                    <?php endforeach; ?>
-                <?php endif; ?>
-            </select>
-            
-            <select name="is_fixed_price" class="px-4 py-4 bg-gray-50 border border-gray-200 rounded-xl text-lg focus:ring-2 focus:ring-blue-500 focus:outline-none">
-                <option value="0"><?= lang('finance_hourly'); ?></option>
-                <option value="1"><?= lang('finance_fixed'); ?></option>
-            </select>
-            
-            <input type="number" step="0.01" name="price" placeholder="<?= lang('finance_price'); ?>" class="rate-input w-24 px-4 py-4 bg-gray-50 border border-gray-200 rounded-xl text-lg focus:ring-2 focus:ring-blue-500 focus:outline-none">
-            
-            <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 px-8 rounded-xl text-xl shadow-lg transition-transform hover:-translate-y-1">
-                <?= lang('btn_add'); ?>
-            </button>
-            </div>
-        <?php echo form_close(); ?>
-    </div>
+    <!-- Блок добавления корневого проекта удален и перенесен в глобальное модальное окно (body.php) -->
 
     <!-- Список задач -->
     <div class="flex justify-between items-end mb-6">
@@ -253,13 +221,13 @@ if (!function_exists('render_task_tree')) {
                 </div>
             </div>
             
-            <input type="hidden" id="activeTimerTotal" value="<?php echo $active_session ? (int)$active_session['total_accumulated'] : '0'; ?>">
-            <input type="hidden" id="activeTimerElapsed" value="<?php echo $active_session ? (int)$active_session['current_elapsed'] : '0'; ?>">
+            <input type="hidden" id="activeTimerTotal" value="<?php echo $active_session ? (int)($active_session['total_accumulated'] ?? 0) : '0'; ?>">
+            <input type="hidden" id="activeTimerElapsed" value="<?php echo $active_session ? (int)($active_session['current_elapsed'] ?? 0) : '0'; ?>">
         </div>
         
         <div class="flex items-center gap-3 ml-auto flex-shrink-0">
             <button id="btnPauseDashboard" onclick="pauseTimer()" class="bg-yellow-500 hover:bg-yellow-400 text-white font-black py-3 px-6 rounded-full text-xl shadow-sm transition-all transform hover:scale-105 active:scale-95 whitespace-nowrap">
-                ⏸ <?= lang('btn_pause'); ?>
+                <?= lang('btn_pause'); ?>
             </button>
             <button onclick="stopTimer()" class="bg-red-600 hover:bg-red-500 text-white font-black py-3 px-8 rounded-full text-xl shadow-sm transition-all transform hover:scale-105 active:scale-95 whitespace-nowrap">
                 <?= lang('btn_stop'); ?>
@@ -720,7 +688,7 @@ if (!function_exists('render_task_tree')) {
     /**
      * Живой поиск по дереву задач
      */
-    $('#searchTaskInput').on('keyup', function() {
+    $(document).on('keyup', '#searchTaskInput', function() {
         let value = $(this).val().toLowerCase().trim();
         
         if (value === "") {

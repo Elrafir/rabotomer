@@ -29,11 +29,20 @@ class MY_Controller extends CI_Controller {
      * @param array $data Массив данных для передачи в представления
      */
     protected function render_page($inner_view, $data = []) {
-        // Передаем имя внутреннего представления в данные
-        $data['inner_view'] = $inner_view;
-        // Загружаем шаблоны по очереди
-        $this->load->view('templates/header', $data);
-        $this->load->view('templates/body', $data);
-        $this->load->view('templates/footer', $data);
+        if ($this->input->is_ajax_request()) {
+            // Для AJAX (SPA) нам нужно передать active_session, так как он обычно загружается в body.php
+            $this->load->model('Task_model');
+            $user_id = $this->session->userdata('user_id');
+            $data['active_session'] = $user_id ? $this->Task_model->get_active_session($user_id) : null;
+            
+            // Отдаем только контент (без хидера и футера)
+            $this->load->view($inner_view, $data);
+        } else {
+            // Обычный запрос (отдаем всё)
+            $data['inner_view'] = $inner_view;
+            $this->load->view('templates/header', $data);
+            $this->load->view('templates/body', $data);
+            $this->load->view('templates/footer', $data);
+        }
     }
 }

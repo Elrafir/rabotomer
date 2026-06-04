@@ -20,6 +20,7 @@ $lang['btn_done'] = '✔ ГОТОВО';
 $lang['btn_save'] = 'Сохранить';
 $lang['btn_cancel'] = 'Отмена';
 $lang['btn_create'] = 'Создать';
+$lang['btn_add'] = 'Добавить';
 $lang['btn_add_subtask'] = '+ Подзадача';
 $lang['btn_edit'] = 'Редактировать';
 $lang['btn_delete'] = 'Удалить';
