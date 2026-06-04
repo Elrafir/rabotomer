@@ -1,0 +1,15 @@
+# Скрываем дампы базы
+backups/*
+!backups/.htaccess
+
+# Скрываем логи и кэш CodeIgniter
+application/logs/*
+!application/logs/index.html
+application/cache/*
+!application/cache/index.html
+application/config/database.php
+
+# Системные файлы ОС и редакторов
+.DS_Store
+.vscode/
+.idea/

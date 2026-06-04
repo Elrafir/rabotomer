@@ -1,0 +1,29 @@
+/* assets/css/main.css */
+
+/* Предотвращение переноса строк в блоке с кнопками */
+.btn-group-fixed {
+    white-space: nowrap;
+    flex-shrink: 0;
+}
+
+/* Стили для связующих линий дерева задач */
+.task-children > li {
+    position: relative;
+}
+
+/* Горизонтальная линия от границы родительского списка к задаче */
+.task-children > li::before {
+    content: "";
+    position: absolute;
+    left: -1rem; /* должно совпадать с padding-left (pl-4) списка */
+    top: 1.75rem; /* примерно половина высоты компактного блока задачи */
+    width: 1rem;
+    height: 2px;
+    background-color: #e5e7eb; /* цвет border-gray-200 в Tailwind */
+}
+
+/* Точка цвета (индикатор) поверх линий */
+.tree-dot {
+    position: relative;
+    z-index: 10;
+}
