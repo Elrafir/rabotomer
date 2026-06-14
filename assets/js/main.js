@@ -1145,3 +1145,182 @@ $(document).on('change', '.customer-select', function() {
     });
 });
 
+// =========================================
+// ОБРАБОТЧИКИ МОДУЛЯ СТАТИСТИКИ (AJAX SPA)
+// =========================================
+
+/**
+ * Вспомогательная функция для форматирования JS объекта даты в строку формата YYYY-MM-DD.
+ * @param {Date} date Объект даты
+ * @returns {string} Строка в формате YYYY-MM-DD
+ */
+function formatJsDateForStats(date) {
+    // Получаем год из объекта даты
+    const year = date.getFullYear();
+    // Получаем месяц и увеличиваем на 1 (так как месяцы в JS 0-индексированы), дополняем нулем слева
+    const month = (date.getMonth() + 1).toString().padStart(2, '0');
+    // Получаем число месяца и дополняем нулем слева
+    const day = date.getDate().toString().padStart(2, '0');
+    // Возвращаем склеенную через дефис строку
+    return `${year}-${month}-${day}`;
+}
+
+/**
+ * Функция сбора параметров фильтров и мгновенного обновления контента страницы статистики по AJAX.
+ * Строит URL с GET параметрами и загружает его через существующий SPA метод loadAjaxPage.
+ */
+function refreshStatistics() {
+    // Получаем состояние чекбокса: 1 если выбран (показывать архив), 0 если снят (скрыть архив)
+    const showArchived = $('#filter-show-archived').is(':checked') ? 1 : 0;
+    
+    // Инициализируем массив для сборки GET параметров запроса
+    const params = [];
+    
+    // Всегда добавляем флаг архивных в параметры запроса
+    params.push('show_archived=' + showArchived);
+    
+    // Если на странице есть поле ввода даты начала, считываем его
+    if ($('#stat-date-start').length) {
+        // Добавляем параметр start в массив
+        params.push('start=' + $('#stat-date-start').val());
+    }
+    
+    // Если на странице есть поле ввода даты окончания, считываем его
+    if ($('#stat-date-end').length) {
+        // Добавляем параметр end в массив
+        params.push('end=' + $('#stat-date-end').val());
+    }
+    
+    // Склеиваем параметры через амперсанд и прикрепляем к текущему пути URL (pathname)
+    const targetUrl = window.location.pathname + '?' + params.join('&');
+    
+    // Вызываем стандартный SPA-метод загрузки страницы без перезагрузки
+    loadAjaxPage(targetUrl, true);
+}
+
+// Обработчик переключения чекбокса "Показывать архивные"
+$(document).on('change', '#filter-show-archived', function() {
+    // Вызываем AJAX-обновление статистики при изменении состояния чекбокса
+    refreshStatistics();
+});
+
+// Обработчик изменения ручных полей ввода календарей (даты начала или конца)
+$(document).on('change', '#stat-date-start, #stat-date-end', function() {
+    // Перезагружаем статистику с новыми датами
+    refreshStatistics();
+});
+
+// Обработчик клика по крестику на цветной плашке (чипсе) скрытия архивных
+$(document).on('click', '#chip-hide-archived', function() {
+    // Принудительно устанавливаем чекбокс в дефолтное состояние (checked = true)
+    $('#filter-show-archived').prop('checked', true);
+    // Мгновенно перезагружаем статистику для сброса фильтра
+    refreshStatistics();
+});
+
+// Обработчик клика по быстрым кнопкам дат (Сегодня, Вчера, Неделя, Месяц)
+$(document).on('click', '.btn-fast-date', function(e) {
+    // Предотвращаем стандартное поведение кнопки
+    e.preventDefault();
+    
+    // Считываем тип выбранного периода из дата-атрибута кнопки
+    const range = $(this).data('range');
+    // Объявляем объекты даты для начала и конца периода
+    let start = new Date();
+    let end = new Date();
+
+    // Обрабатываем выбор быстрого периода
+    if (range === 'today') {
+        // Сегодня: даты начала и конца совпадают с текущим моментом
+    } else if (range === 'yesterday') {
+        // Вчера: сдвигаем дату начала на 1 день назад
+        start.setDate(start.getDate() - 1);
+        // Сдвигаем дату конца на 1 день назад
+        end.setDate(end.getDate() - 1);
+    } else if (range === 'week') {
+        // Неделя: получаем текущий день недели (1 - понедельник, 7 - воскресенье)
+        const day = start.getDay() || 7;
+        // Если сегодня не понедельник, сдвигаем дату старта на начало недели (понедельник)
+        if (day !== 1) {
+            // Вычитаем разницу дней
+            start.setHours(-24 * (day - 1));
+        }
+    } else if (range === 'month') {
+        // Месяц: переводим дату начала на 1 число текущего месяца
+        start.setDate(1);
+    }
+
+    // Подставляем вычисленные и отформатированные даты в соответствующие поля на форме
+    $('#stat-date-start').val(formatJsDateForStats(start));
+    $('#stat-date-end').val(formatJsDateForStats(end));
+    
+    // Запускаем AJAX-обновление статистики с новым выбранным периодом
+    refreshStatistics();
+});
+
+// Обработчик клика по кнопке открытия модального окна фильтров
+$(document).on('click', '#btn-open-filters', function(e) {
+    // Предотвращаем стандартный переход по клику
+    e.preventDefault();
+    
+    // Отображаем модальное окно фильтров, удаляя скрывающий класс hidden
+    $('#modal-filters').removeClass('hidden');
+    
+    // Анимируем появление бэкдропа и карточки через плавное изменение прозрачности и масштаба
+    setTimeout(function() {
+        // Устанавливаем полную непрозрачность
+        $('#modal-filters').removeClass('opacity-0').addClass('opacity-100');
+        // Возвращаем карточку к исходному масштабу 100%
+        $('#modal-filters').find('.transform').removeClass('scale-95').addClass('scale-100');
+    }, 50);
+});
+
+/**
+ * Вспомогательная функция для плавного закрытия модального окна фильтров с обратной анимацией.
+ */
+function closeFiltersStatsModal() {
+    // Анимируем уменьшение карточки модалки
+    $('#modal-filters').find('.transform').removeClass('scale-100').addClass('scale-95');
+    // Скрываем прозрачность бэкдропа
+    $('#modal-filters').removeClass('opacity-100').addClass('opacity-0');
+    
+    // Полностью скрываем блок из DOM через 300мс после завершения анимации
+    setTimeout(function() {
+        // Добавляем класс hidden
+        $('#modal-filters').addClass('hidden');
+    }, 300);
+}
+
+// Обработчик закрытия по крестику на модалке или кнопке "Применить"
+$(document).on('click', '#btn-close-filters-modal, #btn-apply-filters', function(e) {
+    // Вызываем функцию скрытия модалки
+    closeFiltersStatsModal();
+});
+
+// Обработчик закрытия модалки при клике на внешнюю область (темный фон)
+$(document).on('click', '#modal-filters', function(e) {
+    // Если клик произошел по самому оверлею, а не по внутреннему контейнеру карточки
+    if ($(e.target).closest('.transform').length === 0) {
+        // Закрываем модальное окно
+        closeFiltersStatsModal();
+    }
+});
+
+// Обработчик плавного раскрытия подразделов дерева задач (аккордеон) в проектном срезе
+$(document).on('click', '.toggle-stats-children', function(e) {
+    // Находим ближайший родительский элемент LI дерева задач
+    const li = $(this).closest('li');
+    
+    // Извлекаем вложенный список детей (stats-children), относящийся именно к этому LI
+    const childrenUl = li.children('.stats-children');
+    
+    // Находим иконку раскрытия (стрелочку), расположенную внутри текущего заголовка
+    const arrowIcon = $(this).find('.icon-stats-expand');
+    
+    // Плавно разворачиваем или сворачиваем вложенный список за 200мс
+    childrenUl.slideToggle(200);
+    
+    // Поворачиваем стрелочку иконки на 180 градусов
+    arrowIcon.toggleClass('rotate-180');
+});
+
