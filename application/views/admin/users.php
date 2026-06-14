@@ -176,14 +176,27 @@
     </div>
 
     <div class="bg-white rounded-3xl shadow-sm border border-gray-100 p-10 mb-16">
-        <div class="max-w-xl">
-            <label class="block text-gray-700 text-xl font-bold mb-4">Лимит времени на паузе (минуты)</label>
-            <p class="text-gray-500 mb-6">Если таймер находится на паузе дольше указанного времени, сессия будет автоматически остановлена (завершена). Укажите 0, чтобы отключить авто-стоп.</p>
-            
-            <div class="flex gap-4">
+        <div class="max-w-xl space-y-10">
+            <div>
+                <label class="block text-gray-700 text-xl font-bold mb-4">Лимит времени на паузе (минуты)</label>
+                <p class="text-gray-500 mb-6">Если таймер находится на паузе дольше указанного времени, сессия будет автоматически остановлена (завершена). Укажите 0, чтобы отключить авто-стоп.</p>
                 <input type="number" id="settingPauseLimit" value="<?= htmlspecialchars($pause_limit_minutes ?? 10); ?>" class="w-32 bg-gray-50 border border-gray-300 rounded-xl px-5 py-4 text-2xl font-bold text-center focus:ring-2 focus:ring-blue-500 focus:outline-none" min="0">
+            </div>
+
+            <div>
+                <label class="block text-gray-700 text-xl font-bold mb-4">Количество строк на странице (пагинация)</label>
+                <p class="text-gray-500 mb-6">Количество записей, отображаемых по умолчанию на страницах журнала, списка задач и заказчиков.</p>
+                <select id="settingPerPage" class="w-48 bg-gray-50 border border-gray-300 rounded-xl px-5 py-4 text-xl font-bold focus:ring-2 focus:ring-blue-500 focus:outline-none">
+                    <option value="10" <?= (isset($per_page) && $per_page == 10) ? 'selected' : ''; ?>>10</option>
+                    <option value="25" <?= (!isset($per_page) || $per_page == 25) ? 'selected' : ''; ?>>25</option>
+                    <option value="50" <?= (isset($per_page) && $per_page == 50) ? 'selected' : ''; ?>>50</option>
+                    <option value="100" <?= (isset($per_page) && $per_page == 100) ? 'selected' : ''; ?>>100</option>
+                </select>
+            </div>
+
+            <div>
                 <button onclick="saveSettings()" class="bg-green-600 hover:bg-green-700 text-white font-bold py-4 px-8 rounded-xl text-xl shadow-md transition-colors">
-                    Сохранить
+                    Сохранить настройки
                 </button>
             </div>
         </div>
@@ -516,7 +529,8 @@
 
     function saveSettings() {
         const limit = $('#settingPauseLimit').val();
-        $.post('<?= base_url("admin/save_settings_ajax"); ?>', { pause_limit_minutes: limit }, function(response) {
+        const perPage = $('#settingPerPage').val();
+        $.post('<?= base_url("admin/save_settings_ajax"); ?>', { pause_limit_minutes: limit, per_page: perPage }, function(response) {
             let res = JSON.parse(response);
             if (res.status === 'success') {
                 alert(res.message);
