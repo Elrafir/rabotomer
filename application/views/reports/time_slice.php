@@ -31,6 +31,8 @@
         'calculation_filters' => $calculation_filters,
         'spec_filters' => $spec_filters,
         'sort_by' => $sort_by,
+        // Передаем направление сортировки
+        'sort_dir' => $sort_dir,
         // Передаем справочники
         'customers' => $customers,
         'calculations' => $calculations,
@@ -46,8 +48,8 @@
     ]); 
     ?>
 
-    <!-- Крупный информационный блок: Общее затраченное время за период -->
-    <div class="bg-gradient-to-br from-blue-600 to-indigo-700 p-8 rounded-3xl text-white shadow-md flex justify-between items-center mb-8">
+    <!-- Крупный информационный блок: Общее затраченное время за период (динамический фон темы) -->
+    <div class="p-8 rounded-3xl text-white shadow-md flex justify-between items-center mb-8" style="background: linear-gradient(to right, var(--theme-color-solid), var(--theme-color-hover-solid)) !important;">
         <!-- Группа подписи и цифры -->
         <div>
             <!-- Небольшая подпись над цифрой -->

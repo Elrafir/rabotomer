@@ -159,6 +159,8 @@ if (!function_exists('render_stats_project_tree')) {
         'calculation_filters' => $calculation_filters,
         'spec_filters' => $spec_filters,
         'sort_by' => $sort_by,
+        // Передаем направление сортировки
+        'sort_dir' => $sort_dir,
         // Передаем справочники
         'customers' => $customers,
         'calculations' => $calculations,

@@ -1,9 +1,9 @@
 <!-- Верхняя панель управления (Toolbar) -->
 <div class="bg-white p-4 rounded-xl shadow-sm border border-gray-100 mb-6">
-    <!-- Первый ряд: выбор дат и сортировка (выровнены по правому краю) -->
+    <!-- Первый ряд: выбор дат (выровнены по правому краю) -->
     <div class="flex flex-wrap items-center justify-end gap-4 w-full">
         
-        <!-- Блок быстрых периодов, календарей и Сортировки -->
+        <!-- Блок быстрых периодов и календарей -->
         <div class="flex flex-wrap items-center gap-4">
             <?php 
             // Проверяем, нужно ли показывать выбор дат для данного отчета
@@ -67,95 +67,113 @@
             // Завершаем проверку показа дат
             endif; 
             ?>
-
-            <!-- Блок выбора сортировки данных -->
-            <div class="flex items-center gap-2">
-                <!-- Надпись Сортировка -->
-                <span class="text-gray-500 text-xs font-bold uppercase tracking-wider">Сортировка</span>
-                <!-- Селектор типа сортировки (По времени, по алфавиту, по заказчику) -->
-                <select id="filter-sort" class="px-3.5 py-2 bg-gray-50 border border-gray-200 rounded-lg text-xs font-bold text-gray-700 focus:ring-2 focus:ring-blue-500 focus:outline-none">
-                    <!-- Опция сортировки по времени -->
-                    <option value="time" <?= (isset($sort_by) && $sort_by === 'time') ? 'selected' : ''; ?>>По времени</option>
-                    <!-- Опция сортировки по алфавиту -->
-                    <option value="title" <?= (isset($sort_by) && $sort_by === 'title') ? 'selected' : ''; ?>>По алфавиту</option>
-                    <!-- Опция сортировки по имени заказчика -->
-                    <option value="customer" <?= (isset($sort_by) && $sort_by === 'customer') ? 'selected' : ''; ?>>По заказчику</option>
-                </select>
-            </div>
         </div>
     </div>
-    <!-- Контейнер для отображения активных фильтров (чипсов) -->
-    <div id="chips-container" class="flex flex-wrap gap-2 mt-4 pt-3 border-t border-gray-100 <?= (
-        ((isset($show_archived) && (int)$show_archived === 0)) ||
-        (!empty($customer_filters)) ||
-        (!empty($calculation_filters)) ||
-        (!empty($spec_filters))
-    ) ? '' : 'hidden' ?>">
+
+    <!-- Второй ряд: чипсы активных фильтров (слева) и блок сортировки (справа) -->
+    <div class="flex flex-wrap items-center justify-between gap-4 mt-4 pt-3 border-t border-gray-100 w-full">
         
-        <!-- Чипс "Скрыты архивные" -->
-        <?php if (isset($show_archived) && (int)$show_archived === 0): ?>
-            <span id="chip-hide-archived" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold bg-amber-50 text-amber-700 border border-amber-200 cursor-pointer transition-colors hover:bg-amber-100 select-none">
-                <span>Скрыты архивные</span>
-                <span class="text-amber-500 font-black hover:text-amber-900 ml-1">✕</span>
-            </span>
-        <?php endif; ?>
+        <!-- Контейнер для отображения активных фильтров (чипсов) -->
+        <div id="chips-container" class="flex flex-wrap gap-2 <?= (
+            ((isset($show_archived) && (int)$show_archived === 0)) ||
+            (!empty($customer_filters)) ||
+            (!empty($calculation_filters)) ||
+            (!empty($spec_filters))
+        ) ? '' : 'hidden' ?>">
+            
+            <!-- Чипс "Скрыты архивные" -->
+            <?php if (isset($show_archived) && (int)$show_archived === 0): ?>
+                <span id="chip-hide-archived" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold bg-amber-50 text-amber-700 border border-amber-200 cursor-pointer transition-colors hover:bg-amber-100 select-none">
+                    <span>Скрыты архивные</span>
+                    <span class="text-amber-500 font-black hover:text-amber-900 ml-1">✕</span>
+                </span>
+            <?php endif; ?>
 
-        <!-- Чипсы Заказчиков -->
-        <?php if (!empty($customer_filters)): foreach($customer_filters as $cf): ?>
-            <?php
-            $label = 'Без заказчика';
-            if ($cf !== 'none' && !empty($customers)) {
-                foreach ($customers as $c) {
-                    if ((string)$c['id'] === (string)$cf) {
-                        $label = $c['name'];
-                        break;
+            <!-- Чипсы Заказчиков -->
+            <?php if (!empty($customer_filters)): foreach($customer_filters as $cf): ?>
+                <?php
+                // Определяем название заказчика по умолчанию, если привязка отсутствует
+                $label = 'Без заказчика';
+                if ($cf !== 'none' && !empty($customers)) {
+                    foreach ($customers as $c) {
+                        if ((string)$c['id'] === (string)$cf) {
+                            $label = $c['name'];
+                            break;
+                        }
                     }
                 }
-            }
-            ?>
-            <span class="chip-customer-item inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold bg-indigo-50 text-indigo-700 border border-indigo-200 cursor-pointer transition-colors hover:bg-indigo-100 select-none" data-value="<?= htmlspecialchars($cf); ?>">
-                <span>Заказчик: <?= htmlspecialchars($label); ?></span>
-                <span class="text-indigo-500 font-black hover:text-indigo-900 ml-1">✕</span>
-            </span>
-        <?php endforeach; endif; ?>
+                ?>
+                <!-- Чипс конкретного выбранного заказчика -->
+                <span class="chip-customer-item inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold bg-indigo-50 text-indigo-700 border border-indigo-200 cursor-pointer transition-colors hover:bg-indigo-100 select-none" data-value="<?= htmlspecialchars($cf); ?>">
+                    <span>Заказчик: <?= htmlspecialchars($label); ?></span>
+                    <span class="text-indigo-500 font-black hover:text-indigo-900 ml-1">✕</span>
+                </span>
+            <?php endforeach; endif; ?>
 
-        <!-- Чипсы Калькуляций -->
-        <?php if (!empty($calculation_filters)): foreach($calculation_filters as $calf): ?>
-            <?php
-            $label = 'Вне калькуляций';
-            if ($calf !== 'none' && !empty($calculations)) {
-                foreach ($calculations as $calc) {
-                    if ((string)$calc['id'] === (string)$calf) {
-                        $label = $calc['title'];
-                        break;
+            <!-- Чипсы Калькуляций -->
+            <?php if (!empty($calculation_filters)): foreach($calculation_filters as $calf): ?>
+                <?php
+                // Определяем название калькуляции по умолчанию
+                $label = 'Вне калькуляций';
+                if ($calf !== 'none' && !empty($calculations)) {
+                    foreach ($calculations as $calc) {
+                        if ((string)$calc['id'] === (string)$calf) {
+                            $label = $calc['title'];
+                            break;
+                        }
                     }
                 }
-            }
-            ?>
-            <span class="chip-calculation-item inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold bg-emerald-50 text-emerald-700 border border-emerald-200 cursor-pointer transition-colors hover:bg-emerald-100 select-none" data-value="<?= htmlspecialchars($calf); ?>">
-                <span>Калькуляция: <?= htmlspecialchars($label); ?></span>
-                <span class="text-emerald-500 font-black hover:text-emerald-900 ml-1">✕</span>
-            </span>
-        <?php endforeach; endif; ?>
+                ?>
+                <!-- Чипс конкретной выбранной калькуляции -->
+                <span class="chip-calculation-item inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold bg-emerald-50 text-emerald-700 border border-emerald-200 cursor-pointer transition-colors hover:bg-emerald-100 select-none" data-value="<?= htmlspecialchars($calf); ?>">
+                    <span>Калькуляция: <?= htmlspecialchars($label); ?></span>
+                    <span class="text-emerald-500 font-black hover:text-emerald-900 ml-1">✕</span>
+                </span>
+            <?php endforeach; endif; ?>
 
-        <!-- Чипсы ТЗ -->
-        <?php if (!empty($spec_filters)): foreach($spec_filters as $sf): ?>
-            <?php
-            $label = 'Вне ТЗ';
-            if ($sf !== 'none' && !empty($specs)) {
-                foreach ($specs as $spec) {
-                    if ((string)$spec['id'] === (string)$sf) {
-                        $label = $spec['title'];
-                        break;
+            <!-- Чипсы ТЗ -->
+            <?php if (!empty($spec_filters)): foreach($spec_filters as $sf): ?>
+                <?php
+                // Определяем название ТЗ по умолчанию
+                $label = 'Вне ТЗ';
+                if ($sf !== 'none' && !empty($specs)) {
+                    foreach ($specs as $spec) {
+                        if ((string)$spec['id'] === (string)$sf) {
+                            $label = $spec['title'];
+                            break;
+                        }
                     }
                 }
-            }
-            ?>
-            <span class="chip-spec-item inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold bg-purple-50 text-purple-700 border border-purple-200 cursor-pointer transition-colors hover:bg-purple-100 select-none" data-value="<?= htmlspecialchars($sf); ?>">
-                <span>ТЗ: <?= htmlspecialchars($label); ?></span>
-                <span class="text-purple-500 font-black hover:text-purple-900 ml-1">✕</span>
-            </span>
-        <?php endforeach; endif; ?>
+                ?>
+                <!-- Чипс конкретного выбранного ТЗ -->
+                <span class="chip-spec-item inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold bg-purple-50 text-purple-700 border border-purple-200 cursor-pointer transition-colors hover:bg-purple-100 select-none" data-value="<?= htmlspecialchars($sf); ?>">
+                    <span>ТЗ: <?= htmlspecialchars($label); ?></span>
+                    <span class="text-purple-500 font-black hover:text-purple-900 ml-1">✕</span>
+                </span>
+            <?php endforeach; endif; ?>
+        </div>
+
+        <!-- Блок выбора сортировки данных (прижат к правому краю, иконка вместо текста) -->
+        <div class="flex items-center gap-2 ml-auto">
+            <!-- Кнопка переключения направления сортировки -->
+            <button type="button" id="btn-toggle-sort-dir" class="text-gray-400 hover:text-gray-600 transition-all duration-200 focus:outline-none <?= (isset($sort_dir) && $sort_dir === 'asc') ? 'transform rotate-180' : ''; ?>" title="Изменить направление сортировки">
+                <!-- Иконка сортировки (двунаправленные стрелки SVG) -->
+                <svg class="w-4 h-4 flex-shrink-0 transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4"></path>
+                </svg>
+            </button>
+            <!-- Скрытый инпут для передачи направления сортировки -->
+            <input type="hidden" id="filter-sort-dir" value="<?= htmlspecialchars($sort_dir ?? 'desc'); ?>">
+            <!-- Селектор типа сортировки -->
+            <select id="filter-sort" class="px-3 py-1.5 bg-gray-50 border border-gray-200 rounded-lg text-xs font-bold text-gray-700 focus:ring-2 focus:ring-blue-500 focus:outline-none">
+                <!-- Опция сортировки по времени -->
+                <option value="time" <?= (isset($sort_by) && $sort_by === 'time') ? 'selected' : ''; ?>>По времени</option>
+                <!-- Опция сортировки по алфавиту -->
+                <option value="title" <?= (isset($sort_by) && $sort_by === 'title') ? 'selected' : ''; ?>>По алфавиту</option>
+                <!-- Опция сортировки по имени заказчика -->
+                <option value="customer" <?= (isset($sort_by) && $sort_by === 'customer') ? 'selected' : ''; ?>>По заказчику</option>
+            </select>
+        </div>
 
     </div>
 </div>

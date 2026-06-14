@@ -1211,6 +1211,12 @@ function refreshStatistics() {
         // Добавляем тип сортировки в параметры GET-запроса
         params.push('sort_by=' + $('#filter-sort').val());
     }
+
+    // Если на странице есть скрытое поле направления сортировки
+    if ($('#filter-sort-dir').length) {
+        // Добавляем направление в параметры запроса
+        params.push('sort_dir=' + $('#filter-sort-dir').val());
+    }
     
     // Склеиваем параметры через амперсанд и прикрепляем к текущему пути URL (pathname)
     const targetUrl = window.location.pathname + '?' + params.join('&');
@@ -1275,6 +1281,29 @@ $(document).on('click', '.chip-spec-item', function() {
     // Снимаем отметку с чекбокса соответствующего ТЗ
     $('input[name="spec_filters[]"][value="' + val + '"]').prop('checked', false);
     // Перезагружаем статистику
+    refreshStatistics();
+});
+
+// Обработчик клика по кнопке изменения направления сортировки
+$(document).on('click', '#btn-toggle-sort-dir', function(e) {
+    // Отменяем дефолтное действие
+    e.preventDefault();
+    // Получаем текущее направление
+    const currentDir = $('#filter-sort-dir').val() || 'desc';
+    // Меняем его на противоположное
+    const newDir = (currentDir === 'asc') ? 'desc' : 'asc';
+    
+    // Записываем в инпут
+    $('#filter-sort-dir').val(newDir);
+    
+    // Визуально разворачиваем иконку на 180 градусов для 'asc'
+    if (newDir === 'asc') {
+        $(this).addClass('transform rotate-180');
+    } else {
+        $(this).removeClass('transform rotate-180');
+    }
+    
+    // Запускаем AJAX обновление статистики
     refreshStatistics();
 });
 

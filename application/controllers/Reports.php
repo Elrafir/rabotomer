@@ -102,9 +102,13 @@ class Reports extends MY_Controller {
         
         // Получаем выбранный тип сортировки (по умолчанию 'time' - по времени)
         $sort_by = $this->input->post('sort_by') ?: ($this->input->get('sort_by') ?: 'time');
+        // Вычисляем направление сортировки по умолчанию в зависимости от типа сортировки
+        $default_dir = ($sort_by === 'time') ? 'desc' : 'asc';
+        // Получаем выбранное направление сортировки (возрастающее или убывающее)
+        $sort_dir = $this->input->post('sort_dir') ?: ($this->input->get('sort_dir') ?: $default_dir);
 
         // ВРЕМЕННЫЙ ДЕБАГ: записываем параметры в лог-файл
-        file_put_contents(FCPATH . 'reports_debug.txt', date('Y-m-d H:i:s') . " | time_slice | GET: " . json_encode($_GET) . " | customer_filters: " . json_encode($customer_filters) . " | sort_by: " . $sort_by . "\n", FILE_APPEND);
+        file_put_contents(FCPATH . 'reports_debug.txt', date('Y-m-d H:i:s') . " | time_slice | GET: " . json_encode($_GET) . " | customer_filters: " . json_encode($customer_filters) . " | sort_by: " . $sort_by . " | sort_dir: " . $sort_dir . "\n", FILE_APPEND);
 
         // Извлекаем идентификатор текущего пользователя из сессии
         $user_id = $this->session->userdata('user_id');
@@ -123,8 +127,8 @@ class Reports extends MY_Controller {
         $this->db->order_by('customer_specs.title', 'ASC');
         $specs = $this->db->get()->result_array();
         
-        // Запрашиваем расчетные данные временного среза у нашей модели статистики с фильтрацией и сортировкой
-        $report_data = $this->Stats_model->get_time_slice($user_id, $start_date, $end_date, $show_archived, $customer_filters, $calculation_filters, $spec_filters, $sort_by);
+        // Запрашиваем расчетные данные временного среза у нашей модели статистики с фильтрацией, сортировкой и направлением
+        $report_data = $this->Stats_model->get_time_slice($user_id, $start_date, $end_date, $show_archived, $customer_filters, $calculation_filters, $spec_filters, $sort_by, $sort_dir);
         
         // Подготавливаем массив данных для рендеринга шаблона
         $data = [
@@ -152,6 +156,8 @@ class Reports extends MY_Controller {
             'spec_filters' => $spec_filters,
             // Передаем активный тип сортировки
             'sort_by' => $sort_by,
+            // Передаем активное направление сортировки
+            'sort_dir' => $sort_dir,
             // Передаем список заказчиков для выпадающего меню фильтрации
             'customers' => $customers,
             // Передаем списки калькуляций и ТЗ
@@ -202,9 +208,13 @@ class Reports extends MY_Controller {
         
         // Получаем выбранный тип сортировки (по умолчанию 'time' - по времени)
         $sort_by = $this->input->post('sort_by') ?: ($this->input->get('sort_by') ?: 'time');
+        // Вычисляем направление сортировки по умолчанию в зависимости от типа
+        $default_dir = ($sort_by === 'time') ? 'desc' : 'asc';
+        // Получаем выбранное направление сортировки (возрастающее или убывающее)
+        $sort_dir = $this->input->post('sort_dir') ?: ($this->input->get('sort_dir') ?: $default_dir);
 
         // ВРЕМЕННЫЙ ДЕБАГ: записываем параметры в лог-файл
-        file_put_contents(FCPATH . 'reports_debug.txt', date('Y-m-d H:i:s') . " | project_slice | GET: " . json_encode($_GET) . " | customer_filters: " . json_encode($customer_filters) . " | sort_by: " . $sort_by . "\n", FILE_APPEND);
+        file_put_contents(FCPATH . 'reports_debug.txt', date('Y-m-d H:i:s') . " | project_slice | GET: " . json_encode($_GET) . " | customer_filters: " . json_encode($customer_filters) . " | sort_by: " . $sort_by . " | sort_dir: " . $sort_dir . "\n", FILE_APPEND);
 
         // Получаем идентификатор текущего пользователя
         $user_id = $this->session->userdata('user_id');
@@ -223,8 +233,8 @@ class Reports extends MY_Controller {
         $this->db->order_by('customer_specs.title', 'ASC');
         $specs = $this->db->get()->result_array();
         
-        // Запрашиваем дерево проектов с каскадными суммами времени у модели с учетом фильтров
-        $projects_tree = $this->Stats_model->get_project_slice($user_id, $show_archived, $customer_filters, $calculation_filters, $spec_filters, $sort_by);
+        // Запрашиваем дерево проектов с каскадными суммами времени у модели с учетом фильтров, сортировки и направления
+        $projects_tree = $this->Stats_model->get_project_slice($user_id, $show_archived, $customer_filters, $calculation_filters, $spec_filters, $sort_by, $sort_dir);
         
         // Наполняем массив данных для передачи во вьюху
         $data = [
@@ -236,6 +246,8 @@ class Reports extends MY_Controller {
             'spec_filters' => $spec_filters,
             // Передаем активный тип сортировки
             'sort_by' => $sort_by,
+            // Передаем активное направление сортировки
+            'sort_dir' => $sort_dir,
             // Передаем список заказчиков для выпадающего меню
             'customers' => $customers,
             // Передаем списки калькуляций и ТЗ

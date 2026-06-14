@@ -27,7 +27,8 @@ class Stats_model extends CI_Model {
      * @param bool $show_archived Флаг отображения архивных (завершенных) задач
      * @return array Массив со статистикой: общее время и список проектов с долей времени
      */
-    public function get_time_slice($user_id, $start_date, $end_date, $show_archived, $customer_filters = [], $calculation_filters = [], $spec_filters = [], $sort_by = 'time') {
+    // Метод возвращает временной срез статистики с поддержкой сортировки и направления
+    public function get_time_slice($user_id, $start_date, $end_date, $show_archived, $customer_filters = [], $calculation_filters = [], $spec_filters = [], $sort_by = 'time', $sort_dir = 'desc') {
         // Формируем дату и время начала первого рабочего дня (с 05:00:00)
         $start_date_full = $start_date . ' 05:00:00';
         
@@ -292,20 +293,26 @@ class Stats_model extends CI_Model {
             ];
         }
 
-        // Сортируем полученный список проектов в соответствии с выбранным критерием
-        usort($projects_result, function($a, $b) use ($sort_by) {
+        // Сортируем полученный список проектов в соответствии с выбранным критерием и направлением
+        usort($projects_result, function($a, $b) use ($sort_by, $sort_dir) {
+            // Если выбран тип сортировки по алфавиту названия
             if ($sort_by === 'title') {
-                // Сортировка по алфавиту названия проекта (без учета регистра)
-                return strcasecmp($a['title'], $b['title']);
+                // Сравниваем названия проектов без учета регистра букв
+                $cmp = strcasecmp($a['title'], $b['title']);
+            // Если выбран тип сортировки по имени заказчика
             } elseif ($sort_by === 'customer') {
-                // Сортировка по алфавиту имени заказчика (без учета регистра)
+                // Извлекаем имена заказчиков проектов
                 $cust_a = $a['customer_name'] ?? '';
                 $cust_b = $b['customer_name'] ?? '';
-                return strcasecmp($cust_a, $cust_b);
+                // Сравниваем имена заказчиков проектов без учета регистра
+                $cmp = strcasecmp($cust_a, $cust_b);
+            // По умолчанию сортируем по общему количеству времени
             } else {
-                // Сортировка по умолчанию: по убыванию затраченного времени
-                return $b['total_seconds'] <=> $a['total_seconds'];
+                // Сравниваем общее время проектов по возрастанию
+                $cmp = $a['total_seconds'] <=> $b['total_seconds'];
             }
+            // Если направление сортировки по возрастанию (asc), возвращаем результат сравнения, иначе инвертируем его
+            return ($sort_dir === 'asc') ? $cmp : -$cmp;
         });
 
         // Считаем общие часы для всего периода
@@ -333,7 +340,8 @@ class Stats_model extends CI_Model {
      * @param bool $show_archived Флаг отображения архивных (завершенных) задач
      * @return array Иерархическое дерево проектов и подзадач со временем
      */
-    public function get_project_slice($user_id, $show_archived, $customer_filters = [], $calculation_filters = [], $spec_filters = [], $sort_by = 'time') {
+    // Метод возвращает дерево проектов (проектный срез) со временем, фильтрами и направлением сортировки
+    public function get_project_slice($user_id, $show_archived, $customer_filters = [], $calculation_filters = [], $spec_filters = [], $sort_by = 'time', $sort_dir = 'desc') {
         // Выбираем поля задачи, включая ID, связь с ТЗ и имя заказчика через LEFT JOIN
         $this->db->select('tasks.id, tasks.parent_id, tasks.title, tasks.status, tasks.color, tasks.customer_id, tasks.spec_id, customers.name as customer_name');
         
@@ -532,24 +540,30 @@ class Stats_model extends CI_Model {
 
         // Проходим по всем определенным корневым элементам
         foreach ($root_ids as $rid) {
-            // Рекурсивно собираем дерево с каскадным суммированием времени с нижних уровней, передавая параметр сортировки
-            $tree[] = $this->_build_tree_node($rid, $valid_tasks, $tasks_by_parent, $direct_times, $sort_by);
+            // Рекурсивно собираем дерево с каскадным суммированием времени с нижних уровней, передавая сортировку и направление
+            $tree[] = $this->_build_tree_node($rid, $valid_tasks, $tasks_by_parent, $direct_times, $sort_by, $sort_dir);
         }
 
-        // Сортируем корневые проекты на Уровне 1 в соответствии с выбранным критерием
-        usort($tree, function($a, $b) use ($sort_by) {
+        // Сортируем корневые проекты на Уровне 1 в соответствии с выбранным критерием и направлением
+        usort($tree, function($a, $b) use ($sort_by, $sort_dir) {
+            // Если выбран тип сортировки по алфавиту названия
             if ($sort_by === 'title') {
-                // Сортировка по алфавиту названия проекта (без учета регистра)
-                return strcasecmp($a['title'], $b['title']);
+                // Сравниваем названия проектов без учета регистра букв
+                $cmp = strcasecmp($a['title'], $b['title']);
+            // Если выбран тип сортировки по имени заказчика
             } elseif ($sort_by === 'customer') {
-                // Сортировка по алфавиту имени заказчика (без учета регистра)
+                // Извлекаем имена заказчиков проектов
                 $cust_a = $a['customer_name'] ?? '';
                 $cust_b = $b['customer_name'] ?? '';
-                return strcasecmp($cust_a, $cust_b);
+                // Сравниваем имена заказчиков проектов без учета регистра
+                $cmp = strcasecmp($cust_a, $cust_b);
+            // По умолчанию сортируем по общему количеству времени
             } else {
-                // Сортировка по умолчанию: по убыванию затраченного времени
-                return $b['total_seconds'] <=> $a['total_seconds'];
+                // Сравниваем общее время проектов по возрастанию
+                $cmp = $a['total_seconds'] <=> $b['total_seconds'];
             }
+            // Если направление сортировки по возрастанию (asc), возвращаем результат сравнения, иначе инвертируем его
+            return ($sort_dir === 'asc') ? $cmp : -$cmp;
         });
 
         // Возвращаем собранное и отсортированное дерево проектов
@@ -566,7 +580,7 @@ class Stats_model extends CI_Model {
      * @param string $sort_by Тип сортировки
      * @return array Собранный узел со вложенными детьми и просуммированным временем
      */
-    private function _build_tree_node($id, $valid_tasks, $tasks_by_parent, $direct_times, $sort_by) {
+    private function _build_tree_node($id, $valid_tasks, $tasks_by_parent, $direct_times, $sort_by, $sort_dir = 'desc') {
         // Берём исходные данные текущей задачи
         $node = $valid_tasks[$id];
 
@@ -580,8 +594,8 @@ class Stats_model extends CI_Model {
         if (isset($tasks_by_parent[$id])) {
             // Проходим по каждому ребенку в цикле
             foreach ($tasks_by_parent[$id] as $child_task) {
-                // Рекурсивно строим дочерний узел, передавая параметр сортировки дальше по дереву
-                $child_node = $this->_build_tree_node($child_task['id'], $valid_tasks, $tasks_by_parent, $direct_times, $sort_by);
+                // Рекурсивно строим дочерний узел, передавая параметр сортировки и направления дальше по дереву
+                $child_node = $this->_build_tree_node($child_task['id'], $valid_tasks, $tasks_by_parent, $direct_times, $sort_by, $sort_dir);
                 
                 // Добавляем построенного ребенка в массив детей текущей задачи
                 $children_nodes[] = $child_node;
@@ -591,20 +605,25 @@ class Stats_model extends CI_Model {
             }
         }
 
-        // Сортируем детей в соответствии с выбранным типом сортировки
-        usort($children_nodes, function($a, $b) use ($sort_by) {
+        // Сортируем детей в соответствии с выбранным типом сортировки и направлением
+        usort($children_nodes, function($a, $b) use ($sort_by, $sort_dir) {
+            // Если сортировка по алфавиту названия задачи
             if ($sort_by === 'title') {
-                // Сортировка по алфавиту названия задачи (без учета регистра)
-                return strcasecmp($a['title'], $b['title']);
+                // Сравниваем названия проектов без учета регистра букв
+                $cmp = strcasecmp($a['title'], $b['title']);
+            // Если сортировка по имени заказчика
             } elseif ($sort_by === 'customer') {
-                // Сортировка по алфавиту имени заказчика (без учета регистра)
+                // Сравниваем имена заказчиков проектов без учета регистра
                 $cust_a = $a['customer_name'] ?? '';
                 $cust_b = $b['customer_name'] ?? '';
-                return strcasecmp($cust_a, $cust_b);
+                $cmp = strcasecmp($cust_a, $cust_b);
+            // По умолчанию по общему времени
             } else {
-                // Сортировка по умолчанию: по убыванию затраченного времени
-                return $b['total_seconds'] <=> $a['total_seconds'];
+                // Сравниваем по общему времени по возрастанию
+                $cmp = $a['total_seconds'] <=> $b['total_seconds'];
             }
+            // Если направление сортировки по возрастанию (asc), возвращаем результат сравнения, иначе инвертируем его
+            return ($sort_dir === 'asc') ? $cmp : -$cmp;
         });
 
         // Прямое время, записанное на саму эту задачу (без детей)
