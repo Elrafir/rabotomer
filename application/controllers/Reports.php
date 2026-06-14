@@ -100,10 +100,10 @@ class Reports extends MY_Controller {
             $spec_filters = explode(',', $spec_filters);
         }
         
-        // Получаем выбранный тип сортировки (по умолчанию 'time' - по времени)
-        $sort_by = $this->input->post('sort_by') ?: ($this->input->get('sort_by') ?: 'time');
+        // Получаем выбранный тип сортировки (по умолчанию 'activity' - по последней активности)
+        $sort_by = $this->input->post('sort_by') ?: ($this->input->get('sort_by') ?: 'activity');
         // Вычисляем направление сортировки по умолчанию в зависимости от типа сортировки
-        $default_dir = ($sort_by === 'time') ? 'desc' : 'asc';
+        $default_dir = in_array($sort_by, ['time', 'created', 'activity']) ? 'desc' : 'asc';
         // Получаем выбранное направление сортировки (возрастающее или убывающее)
         $sort_dir = $this->input->post('sort_dir') ?: ($this->input->get('sort_dir') ?: $default_dir);
 
@@ -206,10 +206,10 @@ class Reports extends MY_Controller {
             $spec_filters = explode(',', $spec_filters);
         }
         
-        // Получаем выбранный тип сортировки (по умолчанию 'time' - по времени)
-        $sort_by = $this->input->post('sort_by') ?: ($this->input->get('sort_by') ?: 'time');
+        // Получаем выбранный тип сортировки (по умолчанию 'activity' - по последней активности)
+        $sort_by = $this->input->post('sort_by') ?: ($this->input->get('sort_by') ?: 'activity');
         // Вычисляем направление сортировки по умолчанию в зависимости от типа
-        $default_dir = ($sort_by === 'time') ? 'desc' : 'asc';
+        $default_dir = in_array($sort_by, ['time', 'created', 'activity']) ? 'desc' : 'asc';
         // Получаем выбранное направление сортировки (возрастающее или убывающее)
         $sort_dir = $this->input->post('sort_dir') ?: ($this->input->get('sort_dir') ?: $default_dir);
 

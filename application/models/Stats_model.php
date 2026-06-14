@@ -44,8 +44,8 @@ class Stats_model extends CI_Model {
         // Инициализируем массив для хранения детальных данных о задачах
         $task_map = [];
 
-        // Выбираем поля задачи, включая ID, связь с ТЗ и имя заказчика через LEFT JOIN
-        $this->db->select('tasks.id, tasks.parent_id, tasks.title, tasks.status, tasks.color, tasks.customer_id, tasks.spec_id, customers.name as customer_name');
+        // Выбираем поля задачи, включая ID, связь с ТЗ, имя заказчика и дату создания
+        $this->db->select('tasks.id, tasks.parent_id, tasks.title, tasks.status, tasks.color, tasks.customer_id, tasks.spec_id, tasks.created_at, customers.name as customer_name');
         
         // Указываем источник данных - таблицу tasks
         $this->db->from('tasks');
@@ -92,8 +92,8 @@ class Stats_model extends CI_Model {
             $task_packages_map[$mapping['task_id']][] = (int)$mapping['package_id'];
         }
 
-        // Запрашиваем из базы данных агрегированное время сессий за указанный период
-        $this->db->select('task_id, SUM(TIMESTAMPDIFF(SECOND, start_time, end_time) - pause_duration) as duration_sec', false);
+        // Запрашиваем из базы данных время сессий и максимальное время окончания сессии за указанный период
+        $this->db->select('task_id, SUM(TIMESTAMPDIFF(SECOND, start_time, end_time) - pause_duration) as duration_sec, MAX(end_time) as max_end_time', false);
         
         // Указываем источник - таблицу сессий времени time_sessions
         $this->db->from('time_sessions');
@@ -121,6 +121,8 @@ class Stats_model extends CI_Model {
 
         // Инициализируем массив для накопления секунд по корневым проектам
         $root_seconds = [];
+        // Накопление максимального времени сессии для корневых проектов
+        $root_max_end_time = [];
         
         // Инициализируем переменную для расчета суммарного времени за весь период
         $grand_total_seconds = 0;
@@ -249,6 +251,14 @@ class Stats_model extends CI_Model {
             
             // Добавляем секунды текущей сессии к балансу корневого проекта
             $root_seconds[$curr_id] += $duration;
+
+            // Накапливаем максимальную дату активности для корневого проекта
+            $max_end = $session['max_end_time'] ?? null;
+            if ($max_end !== null) {
+                if (!isset($root_max_end_time[$curr_id]) || strcmp($max_end, $root_max_end_time[$curr_id]) > 0) {
+                    $root_max_end_time[$curr_id] = $max_end;
+                }
+            }
             
             // Увеличиваем общую сумму затраченного времени за период на СУБД-уровне
             $grand_total_seconds += $duration;
@@ -280,6 +290,10 @@ class Stats_model extends CI_Model {
                 'id' => $root_id,
                 // Название корневого проекта
                 'title' => $task_map[$root_id]['title'],
+                // Дата создания проекта
+                'created_at' => $task_map[$root_id]['created_at'],
+                // Последняя активность
+                'last_activity' => $root_max_end_time[$root_id] ?? null,
                 // Установленный цвет проекта для графики и плашек
                 'color' => $task_map[$root_id]['color'] ? $task_map[$root_id]['color'] : '#e5e7eb',
                 // Время в секундах для сортировки
@@ -295,8 +309,16 @@ class Stats_model extends CI_Model {
 
         // Сортируем полученный список проектов в соответствии с выбранным критерием и направлением
         usort($projects_result, function($a, $b) use ($sort_by, $sort_dir) {
+            // Сортировка по дате добавления проекта
+            if ($sort_by === 'created') {
+                $cmp = strtotime($a['created_at']) <=> strtotime($b['created_at']);
+            // Сортировка по последней активности
+            } elseif ($sort_by === 'activity') {
+                $act_a = $a['last_activity'] ?? '';
+                $act_b = $b['last_activity'] ?? '';
+                $cmp = strcmp($act_a, $act_b);
             // Если выбран тип сортировки по алфавиту названия
-            if ($sort_by === 'title') {
+            } elseif ($sort_by === 'title') {
                 // Сравниваем названия проектов без учета регистра букв
                 $cmp = strcasecmp($a['title'], $b['title']);
             // Если выбран тип сортировки по имени заказчика
@@ -306,7 +328,7 @@ class Stats_model extends CI_Model {
                 $cust_b = $b['customer_name'] ?? '';
                 // Сравниваем имена заказчиков проектов без учета регистра
                 $cmp = strcasecmp($cust_a, $cust_b);
-            // По умолчанию сортируем по общему количеству времени
+            // По умолчанию сортируем по общему количеству времени (обратная совместимость с 'time')
             } else {
                 // Сравниваем общее время проектов по возрастанию
                 $cmp = $a['total_seconds'] <=> $b['total_seconds'];
@@ -342,8 +364,8 @@ class Stats_model extends CI_Model {
      */
     // Метод возвращает дерево проектов (проектный срез) со временем, фильтрами и направлением сортировки
     public function get_project_slice($user_id, $show_archived, $customer_filters = [], $calculation_filters = [], $spec_filters = [], $sort_by = 'time', $sort_dir = 'desc') {
-        // Выбираем поля задачи, включая ID, связь с ТЗ и имя заказчика через LEFT JOIN
-        $this->db->select('tasks.id, tasks.parent_id, tasks.title, tasks.status, tasks.color, tasks.customer_id, tasks.spec_id, customers.name as customer_name');
+        // Выбираем поля задачи, включая ID, связь с ТЗ, имя заказчика и дату создания
+        $this->db->select('tasks.id, tasks.parent_id, tasks.title, tasks.status, tasks.color, tasks.customer_id, tasks.spec_id, tasks.created_at, customers.name as customer_name');
         
         // Указываем таблицу задач
         $this->db->from('tasks');
@@ -484,8 +506,8 @@ class Stats_model extends CI_Model {
             $valid_tasks[$id] = $task;
         }
 
-        // Получаем суммарное время по всем сессиям за всё время для каждой задачи
-        $this->db->select('task_id, SUM(TIMESTAMPDIFF(SECOND, start_time, end_time) - pause_duration) as duration_sec', false);
+        // Получаем суммарное время и максимальную дату активности по всем сессиям за всё время для каждой задачи
+        $this->db->select('task_id, SUM(TIMESTAMPDIFF(SECOND, start_time, end_time) - pause_duration) as duration_sec, MAX(end_time) as max_end_time', false);
         
         // Таблица сессий
         $this->db->from('time_sessions');
@@ -507,11 +529,14 @@ class Stats_model extends CI_Model {
 
         // Формируем карту direct_times: ID задачи -> секунды, записанные напрямую на неё
         $direct_times = [];
+        // Карта максимального времени активности для каждой задачи
+        $direct_max_end_times = [];
         
-        // Цикл заполнения карты прямых временных затрат
+        // Цикл заполнения карт
         foreach ($raw_sessions as $s) {
             // Привязываем сумму секунд к идентификатору задачи
             $direct_times[$s['task_id']] = (int)$s['duration_sec'];
+            $direct_max_end_times[$s['task_id']] = $s['max_end_time'];
         }
 
         // Группируем валидные задачи по родителям и находим корни дерева
@@ -541,13 +566,21 @@ class Stats_model extends CI_Model {
         // Проходим по всем определенным корневым элементам
         foreach ($root_ids as $rid) {
             // Рекурсивно собираем дерево с каскадным суммированием времени с нижних уровней, передавая сортировку и направление
-            $tree[] = $this->_build_tree_node($rid, $valid_tasks, $tasks_by_parent, $direct_times, $sort_by, $sort_dir);
+            $tree[] = $this->_build_tree_node($rid, $valid_tasks, $tasks_by_parent, $direct_times, $direct_max_end_times, $sort_by, $sort_dir);
         }
 
         // Сортируем корневые проекты на Уровне 1 в соответствии с выбранным критерием и направлением
         usort($tree, function($a, $b) use ($sort_by, $sort_dir) {
+            // Сортировка по дате добавления проекта
+            if ($sort_by === 'created') {
+                $cmp = strtotime($a['created_at']) <=> strtotime($b['created_at']);
+            // Сортировка по последней активности
+            } elseif ($sort_by === 'activity') {
+                $act_a = $a['last_activity'] ?? '';
+                $act_b = $b['last_activity'] ?? '';
+                $cmp = strcmp($act_a, $act_b);
             // Если выбран тип сортировки по алфавиту названия
-            if ($sort_by === 'title') {
+            } elseif ($sort_by === 'title') {
                 // Сравниваем названия проектов без учета регистра букв
                 $cmp = strcasecmp($a['title'], $b['title']);
             // Если выбран тип сортировки по имени заказчика
@@ -557,7 +590,7 @@ class Stats_model extends CI_Model {
                 $cust_b = $b['customer_name'] ?? '';
                 // Сравниваем имена заказчиков проектов без учета регистра
                 $cmp = strcasecmp($cust_a, $cust_b);
-            // По умолчанию сортируем по общему количеству времени
+            // По умолчанию сортируем по общему количеству времени (обратная совместимость с 'time')
             } else {
                 // Сравниваем общее время проектов по возрастанию
                 $cmp = $a['total_seconds'] <=> $b['total_seconds'];
@@ -577,10 +610,11 @@ class Stats_model extends CI_Model {
      * @param array $valid_tasks Карта валидных задач
      * @param array $tasks_by_parent Связи родитель-дети
      * @param array $direct_times Карта прямого времени задач
+     * @param array $direct_max_end_times Карта максимального времени активности
      * @param string $sort_by Тип сортировки
      * @return array Собранный узел со вложенными детьми и просуммированным временем
      */
-    private function _build_tree_node($id, $valid_tasks, $tasks_by_parent, $direct_times, $sort_by, $sort_dir = 'desc') {
+    private function _build_tree_node($id, $valid_tasks, $tasks_by_parent, $direct_times, $direct_max_end_times, $sort_by, $sort_dir = 'desc') {
         // Берём исходные данные текущей задачи
         $node = $valid_tasks[$id];
 
@@ -590,25 +624,43 @@ class Stats_model extends CI_Model {
         // Сумма секунд, переданная снизу от дочерних подзадач
         $child_seconds_sum = 0;
 
+        // Прямое максимальное время окончания сессии для этой задачи
+        $my_max_end = $direct_max_end_times[$id] ?? null;
+        $max_activity = $my_max_end;
+
         // Если у этой задачи есть зарегистрированные валидные дети
         if (isset($tasks_by_parent[$id])) {
             // Проходим по каждому ребенку в цикле
             foreach ($tasks_by_parent[$id] as $child_task) {
-                // Рекурсивно строим дочерний узел, передавая параметр сортировки и направления дальше по дереву
-                $child_node = $this->_build_tree_node($child_task['id'], $valid_tasks, $tasks_by_parent, $direct_times, $sort_by, $sort_dir);
+                // Рекурсивно строим дочерний узел, передавая параметры
+                $child_node = $this->_build_tree_node($child_task['id'], $valid_tasks, $tasks_by_parent, $direct_times, $direct_max_end_times, $sort_by, $sort_dir);
                 
                 // Добавляем построенного ребенка в массив детей текущей задачи
                 $children_nodes[] = $child_node;
                 
                 // Суммируем каскадное время ребенка к общему балансу текущей задачи
                 $child_seconds_sum += $child_node['total_seconds'];
+
+                // Вычисляем максимальную активность среди детей
+                $child_act = $child_node['last_activity'] ?? null;
+                if ($child_act !== null && ($max_activity === null || strcmp($child_act, $max_activity) > 0)) {
+                    $max_activity = $child_act;
+                }
             }
         }
 
         // Сортируем детей в соответствии с выбранным типом сортировки и направлением
         usort($children_nodes, function($a, $b) use ($sort_by, $sort_dir) {
+            // Сортировка по дате добавления
+            if ($sort_by === 'created') {
+                $cmp = strtotime($a['created_at']) <=> strtotime($b['created_at']);
+            // Сортировка по последней активности
+            } elseif ($sort_by === 'activity') {
+                $act_a = $a['last_activity'] ?? '';
+                $act_b = $b['last_activity'] ?? '';
+                $cmp = strcmp($act_a, $act_b);
             // Если сортировка по алфавиту названия задачи
-            if ($sort_by === 'title') {
+            } elseif ($sort_by === 'title') {
                 // Сравниваем названия проектов без учета регистра букв
                 $cmp = strcasecmp($a['title'], $b['title']);
             // Если сортировка по имени заказчика
@@ -617,7 +669,7 @@ class Stats_model extends CI_Model {
                 $cust_a = $a['customer_name'] ?? '';
                 $cust_b = $b['customer_name'] ?? '';
                 $cmp = strcasecmp($cust_a, $cust_b);
-            // По умолчанию по общему времени
+            // По умолчанию по общему времени (обратная совместимость с 'time')
             } else {
                 // Сравниваем по общему времени по возрастанию
                 $cmp = $a['total_seconds'] <=> $b['total_seconds'];
@@ -640,6 +692,9 @@ class Stats_model extends CI_Model {
 
         // Добавляем к узлу рассчитанное каскадное время в секундах
         $node['total_seconds'] = $total_seconds;
+        
+        // Добавляем дату последней активности
+        $node['last_activity'] = $max_activity;
         
         // Добавляем красивый локализованный формат времени
         $node['formatted_time'] = sprintf($this->lang->line('time_format_hours_mins') ?: '%02d ч. %02d мин.', $hours, $minutes);

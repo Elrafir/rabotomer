@@ -82,8 +82,10 @@
             <input type="hidden" id="filter-sort-dir" value="<?= htmlspecialchars($sort_dir ?? 'desc'); ?>">
             <!-- Селектор типа сортировки -->
             <select id="filter-sort" class="px-3 py-1.5 bg-gray-50 border border-gray-200 rounded-lg text-xs font-bold text-gray-700 focus:ring-2 focus:ring-blue-500 focus:outline-none">
-                <!-- Опция сортировки по времени -->
-                <option value="time" <?= (isset($sort_by) && $sort_by === 'time') ? 'selected' : ''; ?>>По времени</option>
+                <!-- Опция сортировки по дате добавления -->
+                <option value="created" <?= (isset($sort_by) && $sort_by === 'created') ? 'selected' : ''; ?>>По дате добавления</option>
+                <!-- Опция сортировки по последней активности -->
+                <option value="activity" <?= (isset($sort_by) && $sort_by === 'activity') ? 'selected' : ''; ?>>По последней активности</option>
                 <!-- Опция сортировки по алфавиту -->
                 <option value="title" <?= (isset($sort_by) && $sort_by === 'title') ? 'selected' : ''; ?>>По алфавиту</option>
                 <!-- Опция сортировки по имени заказчика -->
