@@ -22,8 +22,53 @@ class History extends MY_Controller {
         // Проверяем, является ли пользователь администратором (group_id = 1 или root)
         $is_admin = ($this->session->userdata('group_id') == 1 || $this->session->userdata('username') === 'root');
 
-        // Получаем все завершенные сессии текущего пользователя
-        $sessions = $this->Task_model->get_global_history($user_id);
+        // Загружаем библиотеку пагинации и настройки
+        $this->load->library('pagination');
+        $this->load->model('Settings_model');
+        $per_page = (int)$this->Settings_model->get_setting('per_page', 25);
+
+        // Получаем текущую страницу (offset)
+        $offset = $this->uri->segment(3) ? (int)$this->uri->segment(3) : 0;
+
+        $total_rows = $this->Task_model->get_global_history_count($user_id);
+
+        $config['base_url'] = site_url('history/index');
+        $config['total_rows'] = $total_rows;
+        $config['per_page'] = $per_page;
+        $config['uri_segment'] = 3;
+
+        // Красивое оформление пагинации в стиле Tailwind CSS
+        $config['full_tag_open'] = '<div class="flex items-center justify-center gap-2 mt-8">';
+        $config['full_tag_close'] = '</div>';
+        
+        $config['first_link'] = '«';
+        $config['first_tag_open'] = '<div class="px-3 py-1.5 border border-gray-200 rounded-lg text-sm hover:bg-gray-50">';
+        $config['first_tag_close'] = '</div>';
+        
+        $config['last_link'] = '»';
+        $config['last_tag_open'] = '<div class="px-3 py-1.5 border border-gray-200 rounded-lg text-sm hover:bg-gray-50">';
+        $config['last_tag_close'] = '</div>';
+        
+        $config['next_link'] = '›';
+        $config['next_tag_open'] = '<div class="px-3 py-1.5 border border-gray-200 rounded-lg text-sm hover:bg-gray-50">';
+        $config['next_tag_close'] = '</div>';
+        
+        $config['prev_link'] = '‹';
+        $config['prev_tag_open'] = '<div class="px-3 py-1.5 border border-gray-200 rounded-lg text-sm hover:bg-gray-50">';
+        $config['prev_tag_close'] = '</div>';
+        
+        $config['cur_tag_open'] = '<span class="px-3 py-1.5 bg-blue-600 text-white rounded-lg text-sm font-bold shadow-sm">';
+        $config['cur_tag_close'] = '</span>';
+        
+        $config['num_tag_open'] = '<div class="px-3 py-1.5 border border-gray-200 rounded-lg text-sm hover:bg-gray-50">';
+        $config['num_tag_close'] = '</div>';
+
+        $config['attributes'] = array('class' => 'text-gray-600');
+
+        $this->pagination->initialize($config);
+
+        // Получаем завершенные сессии текущего пользователя для текущей страницы
+        $sessions = $this->Task_model->get_global_history_paginated($user_id, $per_page, $offset);
         
         // Форматируем данные для вывода
         foreach ($sessions as &$s) {
@@ -38,12 +83,11 @@ class History extends MY_Controller {
         }
 
         // Подготавливаем результирующий массив данных для рендеринга страницы.
-        // Добавляем параметр left_sidebar_view с файлом 'sidebars/statistics',
-        // чтобы отобразить левое меню навигации по разделу статистики и калькуляции.
         $data = [
             'sessions' => $sessions,
             'left_sidebar_view' => 'sidebars/statistics', // Подключение левой панели со статистикой и ссылками
-            'is_admin' => $is_admin
+            'is_admin' => $is_admin,
+            'pagination_links' => $this->pagination->create_links()
         ];
 
         // Если администратор, подгружаем его задачи для выбора в формах CRUD

@@ -95,6 +95,11 @@
                 </table>
             </div>
         </div>
+        <?php if (!empty($pagination_links)): ?>
+            <div class="flex justify-center mt-6">
+                <?= $pagination_links; ?>
+            </div>
+        <?php endif; ?>
     <?php endif; ?>
 </div>
 
