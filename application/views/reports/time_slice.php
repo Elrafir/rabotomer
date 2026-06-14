@@ -49,7 +49,7 @@
     ?>
 
     <!-- Крупный информационный блок: Общее затраченное время за период (динамический фон темы) -->
-    <div class="p-8 rounded-3xl text-white shadow-md flex justify-between items-center mb-8" style="background: linear-gradient(to right, var(--theme-color-solid), var(--theme-color-hover-solid)) !important;">
+    <div class="p-8 rounded-3xl text-white shadow-md flex justify-between items-center mb-8" style="background: linear-gradient(to right, var(--theme-color-main), var(--theme-color-hover)) !important;">
         <!-- Группа подписи и цифры -->
         <div>
             <!-- Небольшая подпись над цифрой -->

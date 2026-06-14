@@ -33,10 +33,15 @@ class Task_model extends CI_Model {
         return $query->result_array();
     }
 
-    /**
-     * Создать новую задачу или подзадачу.
-     */
     public function add_task($user_id, $parent_id, $title, $customer_id = NULL, $is_fixed_price = 0, $price = 0, $spec_id = NULL) {
+        // Если при создании подзадачи заказчик не передан, наследуем его от родительской задачи
+        if (empty($customer_id) && !empty($parent_id)) {
+            $parent = $this->db->select('customer_id')->where('id', $parent_id)->get('tasks')->row_array();
+            if ($parent && !empty($parent['customer_id'])) {
+                $customer_id = $parent['customer_id'];
+            }
+        }
+
         // Подготавливаем данные для вставки
         $data = [
             'user_id' => $user_id,
@@ -463,16 +468,53 @@ class Task_model extends CI_Model {
      * Обновление деталей задачи (Название, Клиент, Финансы)
      */
     public function update_task_details($task_id, $user_id, $new_title, $customer_id, $is_fixed_price, $price, $spec_id = NULL) {
+        // Получаем текущего заказчика у задачи для проверки изменений
+        $current_task = $this->db->select('customer_id')->where('id', $task_id)->where('user_id', $user_id)->get('tasks')->row_array();
+        $old_customer_id = $current_task ? $current_task['customer_id'] : null;
+
+        $new_customer_db = empty($customer_id) ? null : $customer_id;
+        $old_customer_db = empty($old_customer_id) ? null : $old_customer_id;
+
+        $customer_changed = ($new_customer_db !== $old_customer_db);
+
         $this->db->set('title', $new_title);
-        $this->db->set('customer_id', empty($customer_id) ? NULL : $customer_id);
+        $this->db->set('customer_id', $new_customer_db);
         $this->db->set('is_fixed_price', $is_fixed_price ? 1 : 0);
         $this->db->set('price', (float)$price);
         $this->db->set('spec_id', empty($spec_id) ? NULL : $spec_id);
         
         $this->db->where('id', $task_id);
         $this->db->where('user_id', $user_id);
-        $this->db->update('tasks');
-        return $this->db->affected_rows() > 0;
+        $success = $this->db->update('tasks');
+
+        if ($success) {
+            // Если заказчик был изменен, каскадно обновляем его у всех дочерних задач
+            if ($customer_changed) {
+                $this->update_customer_cascade($task_id, $new_customer_db, $user_id);
+            }
+            return true;
+        }
+        return false;
+    }
+
+    /**
+     * Рекурсивно обновляет заказчика для всех подзадач указанной задачи.
+     */
+    public function update_customer_cascade($task_id, $customer_id, $user_id) {
+        $this->db->select('id');
+        $this->db->where('parent_id', $task_id);
+        $this->db->where('user_id', $user_id);
+        $children = $this->db->get('tasks')->result_array();
+        
+        foreach ($children as $child) {
+            $this->db->set('customer_id', empty($customer_id) ? NULL : $customer_id);
+            $this->db->where('id', $child['id']);
+            $this->db->where('user_id', $user_id);
+            $this->db->update('tasks');
+            
+            // Рекурсивный вызов для следующего уровня подзадач
+            $this->update_customer_cascade($child['id'], $customer_id, $user_id);
+        }
     }
 
     /**
