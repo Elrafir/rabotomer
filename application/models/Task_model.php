@@ -677,4 +677,101 @@ class Task_model extends CI_Model {
         
         return $this->db->affected_rows() > 0;
     }
+
+    /**
+     * Получить корневые задачи пользователя с пагинацией и все их подзадачи.
+     */
+    public function get_user_tasks_paginated($user_id, $limit, $offset) {
+        // Выбираем только корневые задачи (parent_id IS NULL)
+        $this->db->select('id');
+        $this->db->from('tasks');
+        $this->db->where('user_id', $user_id);
+        $this->db->where('parent_id IS NULL', null, false);
+        $this->db->where('deleted_at IS NULL', null, false);
+        $this->db->order_by('created_at', 'ASC');
+        $this->db->limit($limit, $offset);
+        $root_query = $this->db->get();
+        $root_ids = [];
+        foreach ($root_query->result_array() as $row) {
+            $root_ids[] = $row['id'];
+        }
+
+        if (empty($root_ids)) {
+            return [];
+        }
+
+        // Сначала получим детей 2 уровня:
+        $this->db->select('id');
+        $this->db->from('tasks');
+        $this->db->where_in('parent_id', $root_ids);
+        $this->db->where('user_id', $user_id);
+        $this->db->where('deleted_at IS NULL', null, false);
+        $level2_query = $this->db->get();
+        $level2_ids = [];
+        foreach ($level2_query->result_array() as $row) {
+            $level2_ids[] = $row['id'];
+        }
+
+        $all_needed_ids = array_merge($root_ids, $level2_ids);
+
+        // Получим детей 3 уровня:
+        if (!empty($level2_ids)) {
+            $this->db->select('id');
+            $this->db->from('tasks');
+            $this->db->where_in('parent_id', $level2_ids);
+            $this->db->where('user_id', $user_id);
+            $this->db->where('deleted_at IS NULL', null, false);
+            $level3_query = $this->db->get();
+            $level3_ids = [];
+            foreach ($level3_query->result_array() as $row) {
+                $level3_ids[] = $row['id'];
+            }
+            $all_needed_ids = array_merge($all_needed_ids, $level3_ids);
+        }
+
+        // Теперь выбираем все эти задачи
+        $this->db->select('tasks.*, customers.name as customer_name, customer_specs.title as spec_title');
+        $this->db->from('tasks');
+        $this->db->join('customers', 'customers.id = tasks.customer_id', 'left');
+        $this->db->join('customer_specs', 'customer_specs.id = tasks.spec_id', 'left');
+        $this->db->where_in('tasks.id', $all_needed_ids);
+        $this->db->where('tasks.user_id', $user_id);
+        $this->db->where('tasks.deleted_at IS NULL', null, false);
+        $this->db->order_by('tasks.created_at', 'ASC');
+        
+        return $this->db->get()->result_array();
+    }
+
+    /**
+     * Получить общее число завершенных сессий пользователя для пагинации журнала.
+     */
+    public function get_global_history_count($user_id) {
+        $this->db->from('time_sessions');
+        $this->db->join('tasks', 'tasks.id = time_sessions.task_id');
+        $this->db->where('time_sessions.user_id', $user_id);
+        $this->db->where('time_sessions.end_time IS NOT NULL', null, false);
+        return $this->db->count_all_results();
+    }
+
+    /**
+     * Получить сессии за текущую страницу журнала с пагинацией.
+     */
+    public function get_global_history_paginated($user_id, $limit, $offset) {
+        $this->db->select('
+            time_sessions.*, 
+            tasks.title as task_title, 
+            tasks.color,
+            TIMESTAMPDIFF(SECOND, time_sessions.start_time, time_sessions.end_time) as duration_seconds
+        ');
+        $this->db->from('time_sessions');
+        $this->db->join('tasks', 'tasks.id = time_sessions.task_id');
+        
+        $this->db->where('time_sessions.user_id', $user_id);
+        $this->db->where('time_sessions.end_time IS NOT NULL', null, false);
+        
+        $this->db->order_by('time_sessions.end_time', 'DESC');
+        $this->db->limit($limit, $offset);
+        
+        return $this->db->get()->result_array();
+    }
 }

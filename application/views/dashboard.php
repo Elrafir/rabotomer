@@ -664,4 +664,46 @@ $this->load->view('templates/task_list_loop');
             $('#colorPickerPopover').addClass('hidden');
         }
     });
+
+    // --- Бесконечный скролл задач ---
+    let taskOffset = <?= isset($per_page) ? $per_page : 25; ?>;
+    let taskLimit = <?= isset($per_page) ? $per_page : 25; ?>;
+    let taskHasMore = true;
+    let taskIsLoading = false;
+
+    $(window).on('scroll', function() {
+        if (!taskHasMore || taskIsLoading) return;
+
+        // Если пользователь прокрутил страницу почти до конца (200 пикселей до низа)
+        if ($(window).scrollTop() + $(window).height() >= $(document).height() - 200) {
+            taskIsLoading = true;
+            
+            $.post('<?= site_url("tasks/load_more_tasks_ajax"); ?>', { offset: taskOffset }, function(response) {
+                let res = JSON.parse(response);
+                if (res.status === 'success') {
+                    if (res.html && res.html.trim() !== '') {
+                        $('.task-tree-root').append(res.html);
+                        taskOffset += taskLimit;
+                        
+                        // Инициализируем свернутые/развернутые списки для новых подзадач из localStorage
+                        var expandedTasks = JSON.parse(localStorage.getItem('expandedTasks') || '{}');
+                        $('li[data-task-id]').each(function() {
+                            var taskId = $(this).data('task-id');
+                            if (expandedTasks[taskId] === true) {
+                                var childrenList = $(this).find('> ul.task-children');
+                                if (childrenList.length > 0) {
+                                    childrenList.show();
+                                    $(this).find('> div .toggle-children .icon-expand').addClass('rotate-180');
+                                }
+                            }
+                        });
+                    }
+                    taskHasMore = res.has_more;
+                }
+                taskIsLoading = false;
+            }).fail(function() {
+                taskIsLoading = false;
+            });
+        }
+    });
 </script>

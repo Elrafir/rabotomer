@@ -20,11 +20,18 @@ class Tasks extends MY_Controller {
     public function index() {
         $user_id = $this->session->userdata('user_id');
 
-        // Получаем плоский массив всех задач пользователя
-        $raw_tasks = $this->Task_model->get_user_tasks($user_id);
+        // Получаем лимит пагинации из настроек
+        $this->load->model('Settings_model');
+        $per_page = (int)$this->Settings_model->get_setting('per_page', 25);
+
+        // Получаем первую порцию задач пользователя с пагинацией
+        $raw_tasks = $this->Task_model->get_user_tasks_paginated($user_id, $per_page, 0);
         
         // Преобразуем плоский список в иерархическое дерево
         $tasks_tree = $this->_build_tree($raw_tasks);
+
+        // Полный список всех задач пользователя для выпадающих списков ручной корректировки
+        $all_flat_tasks = $this->Task_model->get_user_tasks($user_id);
 
         // Получаем активный таймер (сессию без end_time), если он есть
         $active_session = $this->Task_model->get_active_session($user_id);
@@ -45,7 +52,8 @@ class Tasks extends MY_Controller {
             'active_session' => $active_session,
             'customers' => $this->Customer_model->get_all($user_id),
             'is_admin' => $is_admin,
-            'flat_tasks' => $raw_tasks // Плоский список задач для формы редактирования сессий
+            'flat_tasks' => $all_flat_tasks, // Полный плоский список задач для формы редактирования сессий
+            'per_page' => $per_page
         ];
 
         // Рендерим страницу (header + body + контент + footer)
@@ -577,5 +585,46 @@ class Tasks extends MY_Controller {
         }
         // В случае ошибки возвращаем JSON
         echo json_encode(['status' => 'error', 'message' => 'Не удалось окончательно удалить задачу.']);
+    }
+
+    /**
+     * AJAX-обработчик бесконечного скролла на дашборде
+     */
+    public function load_more_tasks_ajax() {
+        $user_id = $this->session->userdata('user_id');
+        $offset = (int)$this->input->post('offset');
+        
+        $this->load->model('Settings_model');
+        $limit = (int)$this->Settings_model->get_setting('per_page', 25);
+        
+        $raw_tasks = $this->Task_model->get_user_tasks_paginated($user_id, $limit, $offset);
+        if (empty($raw_tasks)) {
+            echo json_encode(['status' => 'success', 'html' => '', 'has_more' => false]);
+            return;
+        }
+        
+        $tasks_tree = $this->_build_tree($raw_tasks);
+        
+        // Получаем активный таймер
+        $active_session = $this->Task_model->get_active_session($user_id);
+        
+        // Рендерим HTML через буфер вывода
+        ob_start();
+        $this->load->view('templates/task_list_loop');
+        render_task_tree($tasks_tree, 1, $active_session);
+        $html = ob_get_clean();
+        
+        // Убираем скрытие завершенных проектов на первом уровне, если они отрендерились
+        $html = str_replace('hidden task-children', 'block', $html);
+        
+        // Проверяем, есть ли еще записи
+        $next_raw = $this->Task_model->get_user_tasks_paginated($user_id, 1, $offset + $limit);
+        $has_more = !empty($next_raw);
+        
+        echo json_encode([
+            'status' => 'success',
+            'html' => $html,
+            'has_more' => $has_more
+        ]);
     }
 }
