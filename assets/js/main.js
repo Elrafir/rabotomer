@@ -1278,13 +1278,6 @@ $(document).on('click', '.chip-spec-item', function() {
     refreshStatistics();
 });
 
-// Обработчик клика по кнопке открытия встроенной выдвижной панели фильтров
-$(document).on('click', '#btn-open-filters', function(e) {
-    // Предотвращаем стандартный переход по клику
-    e.preventDefault();
-    // Переключаем видимость панели фильтров с анимацией slide
-    $('#filters-drawer').slideToggle(200);
-});
 
 // Обработчик клика по быстрым кнопкам дат (Сегодня, Вчера, Неделя, Месяц)
 $(document).on('click', '.btn-fast-date', function(e) {

@@ -68,3 +68,109 @@
         </a>
     </nav>
 </div>
+
+<?php
+// Проверяем, находимся ли мы на страницах временного или проектного среза статистики
+if (isset($active_sub_page) && in_array($active_sub_page, ['time_slice', 'project_slice'])): 
+?>
+    <!-- Блок боковых фильтров, отображаемый только в разделах отчетов -->
+    <div class="bg-white rounded-3xl shadow-sm border border-gray-100 p-6 mt-4">
+        <!-- Заголовок секции фильтрации -->
+        <h3 class="font-black text-gray-800 text-base mb-4">Фильтры</h3>
+        
+        <!-- Контейнер со списком всех фильтров, разделенных вертикальными отступами -->
+        <div class="flex flex-col gap-6">
+            
+            <!-- Секция опций отображения (архивные задачи) -->
+            <div class="flex flex-col gap-2">
+                <!-- Подзаголовок секции опций -->
+                <span class="text-xs font-bold text-gray-400 uppercase tracking-wider">Опции</span>
+                <!-- Метка с чекбоксом для скрытия/показа архивных задач -->
+                <label class="flex items-center gap-2 cursor-pointer mt-1 group">
+                    <!-- Чекбокс переключения показа архивных задач -->
+                    <input type="checkbox" id="filter-show-archived" class="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500 cursor-pointer" <?= (isset($show_archived) && (int)$show_archived === 1) ? 'checked' : ''; ?>>
+                    <!-- Текстовое описание опции -->
+                    <span class="text-sm text-gray-700 group-hover:text-gray-900 transition-colors">Показывать архивные</span>
+                </label>
+            </div>
+            
+            <!-- Секция фильтрации по заказчикам -->
+            <div class="flex flex-col gap-2">
+                <!-- Подзаголовок секции заказчиков -->
+                <span class="text-xs font-bold text-gray-400 uppercase tracking-wider">Заказчики</span>
+                <!-- Прокручиваемый контейнер со списком заказчиков -->
+                <div class="max-h-40 overflow-y-auto space-y-1.5 pr-2">
+                    <!-- Вариант фильтрации "Без заказчика" -->
+                    <label class="flex items-center gap-2 cursor-pointer group">
+                        <!-- Чекбокс выбора задач без привязанного заказчика -->
+                        <input type="checkbox" name="customer_filters[]" value="none" class="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500 cursor-pointer" <?= (isset($customer_filters) && in_array('none', $customer_filters)) ? 'checked' : ''; ?>>
+                        <!-- Подпись для пустого заказчика -->
+                        <span class="text-sm text-gray-700 group-hover:text-gray-900 transition-colors">Без заказчика</span>
+                    </label>
+                    <!-- Проход циклом по списку доступных заказчиков пользователя -->
+                    <?php if (!empty($customers)): foreach($customers as $c): ?>
+                        <!-- Метка для конкретного заказчика -->
+                        <label class="flex items-center gap-2 cursor-pointer group">
+                            <!-- Чекбокс конкретного заказчика -->
+                            <input type="checkbox" name="customer_filters[]" value="<?= $c['id']; ?>" class="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500 cursor-pointer" <?= (isset($customer_filters) && in_array((string)$c['id'], $customer_filters)) ? 'checked' : ''; ?>>
+                            <!-- Название заказчика -->
+                            <span class="text-sm text-gray-700 group-hover:text-gray-900 transition-colors"><?= htmlspecialchars($c['name']); ?></span>
+                        </label>
+                    <?php endforeach; endif; ?>
+                </div>
+            </div>
+
+            <!-- Секция фильтрации по калькуляциям -->
+            <div class="flex flex-col gap-2">
+                <!-- Подзаголовок секции калькуляций -->
+                <span class="text-xs font-bold text-gray-400 uppercase tracking-wider">Калькуляция</span>
+                <!-- Прокручиваемый список калькуляций -->
+                <div class="max-h-40 overflow-y-auto space-y-1.5 pr-2">
+                    <!-- Вариант фильтрации "Вне калькуляций" -->
+                    <label class="flex items-center gap-2 cursor-pointer group">
+                        <!-- Чекбокс выбора задач, не входящих ни в одну калькуляцию -->
+                        <input type="checkbox" name="calculation_filters[]" value="none" class="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500 cursor-pointer" <?= (isset($calculation_filters) && in_array('none', $calculation_filters)) ? 'checked' : ''; ?>>
+                        <!-- Текст для задач вне калькуляций -->
+                        <span class="text-sm text-gray-700 group-hover:text-gray-900 transition-colors">Вне калькуляций</span>
+                    </label>
+                    <!-- Проход циклом по списку доступных пакетов калькуляции -->
+                    <?php if (!empty($calculations)): foreach($calculations as $calc): ?>
+                        <!-- Метка для конкретного пакета калькуляции -->
+                        <label class="flex items-center gap-2 cursor-pointer group">
+                            <!-- Чекбокс конкретного пакета калькуляции -->
+                            <input type="checkbox" name="calculation_filters[]" value="<?= $calc['id']; ?>" class="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500 cursor-pointer" <?= (isset($calculation_filters) && in_array((string)$calc['id'], $calculation_filters)) ? 'checked' : ''; ?>>
+                            <!-- Название калькуляции -->
+                            <span class="text-sm text-gray-700 group-hover:text-gray-900 transition-colors"><?= htmlspecialchars($calc['title']); ?></span>
+                        </label>
+                    <?php endforeach; endif; ?>
+                </div>
+            </div>
+
+            <!-- Секция фильтрации по техническим заданиям (ТЗ) -->
+            <div class="flex flex-col gap-2">
+                <!-- Подзаголовок секции технических заданий -->
+                <span class="text-xs font-bold text-gray-400 uppercase tracking-wider">Техзадания (ТЗ)</span>
+                <!-- Прокручиваемый список ТЗ -->
+                <div class="max-h-40 overflow-y-auto space-y-1.5 pr-2">
+                    <!-- Вариант фильтрации "Вне ТЗ" -->
+                    <label class="flex items-center gap-2 cursor-pointer group">
+                        <!-- Чекбокс выбора задач, не привязанных к ТЗ -->
+                        <input type="checkbox" name="spec_filters[]" value="none" class="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500 cursor-pointer" <?= (isset($spec_filters) && in_array('none', $spec_filters)) ? 'checked' : ''; ?>>
+                        <!-- Текст для задач вне ТЗ -->
+                        <span class="text-sm text-gray-700 group-hover:text-gray-900 transition-colors">Вне ТЗ</span>
+                    </label>
+                    <!-- Проход циклом по списку доступных технических заданий -->
+                    <?php if (!empty($specs)): foreach($specs as $spec): ?>
+                        <!-- Метка для конкретного ТЗ -->
+                        <label class="flex items-center gap-2 cursor-pointer group">
+                            <!-- Чекбокс конкретного ТЗ -->
+                            <input type="checkbox" name="spec_filters[]" value="<?= $spec['id']; ?>" class="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500 cursor-pointer" <?= (isset($spec_filters) && in_array((string)$spec['id'], $spec_filters)) ? 'checked' : ''; ?>>
+                            <!-- Название ТЗ с указанием имени заказчика в скобках -->
+                            <span class="text-sm text-gray-700 group-hover:text-gray-900 transition-colors"><?= htmlspecialchars($spec['title']); ?> <span class="text-[10px] text-gray-400 font-medium">(<?= htmlspecialchars($spec['customer_name']); ?>)</span></span>
+                        </label>
+                    <?php endforeach; endif; ?>
+                </div>
+            </div>
+        </div>
+    </div>
+<?php endif; ?>
