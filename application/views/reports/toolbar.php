@@ -27,6 +27,45 @@
                 <?php 
                 } 
                 ?>
+
+                <?php
+                // Если выбран конкретный заказчик или "без заказчика", выводим чипс
+                if (isset($customer_filter) && $customer_filter !== 'all') {
+                    // Текст чипса по умолчанию
+                    $chip_customer_label = 'Без заказчика';
+                    // Если выбран конкретный ID, ищем имя в массиве заказчиков
+                    if ($customer_filter !== 'none' && !empty($customers)) {
+                        foreach ($customers as $c) {
+                            if ((string)$c['id'] === (string)$customer_filter) {
+                                $chip_customer_label = 'Заказчик: ' . $c['name'];
+                                break;
+                            }
+                        }
+                    }
+                ?>
+                    <!-- Интерактивный чипс заказчика для быстрого сброса -->
+                    <span id="chip-customer" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold bg-indigo-50 text-indigo-700 border border-indigo-200 cursor-pointer transition-colors hover:bg-indigo-100 select-none">
+                        <span><?= htmlspecialchars($chip_customer_label); ?></span>
+                        <span class="text-indigo-500 font-black hover:text-indigo-900 ml-1">✕</span>
+                    </span>
+                <?php
+                }
+                ?>
+
+                <?php
+                // Если выбран не дефолтный тип сортировки (не по времени), выводим чипс
+                if (isset($sort_by) && $sort_by !== 'time') {
+                    // Переводим технический ключ сортировки в понятную текстовую строку
+                    $sort_label = $sort_by === 'title' ? 'Сортировка: По алфавиту' : 'Сортировка: По заказчику';
+                ?>
+                    <!-- Интерактивный чипс сортировки для сброса на дефолт -->
+                    <span id="chip-sort" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold bg-purple-50 text-purple-700 border border-purple-200 cursor-pointer transition-colors hover:bg-purple-100 select-none">
+                        <span><?= htmlspecialchars($sort_label); ?></span>
+                        <span class="text-purple-500 font-black hover:text-purple-900 ml-1">✕</span>
+                    </span>
+                <?php
+                }
+                ?>
             </div>
         </div>
 
@@ -36,22 +75,43 @@
         ?>
             <!-- Блок с быстрыми кнопками выбора периодов и календарем -->
             <div class="flex flex-wrap items-center gap-4">
-                <!-- Кнопки быстрого переключения временных интервалов -->
+                <!-- Кнопки быстрого переключения временных интервалов с подсветкой активного -->
                 <div class="flex gap-2">
+                    <?php
+                    // Вычисляем класс для кнопки "Сегодня" (проверяем равенство дат текущему рабочему дню)
+                    $today_btn_class = (isset($today_start) && $start_date === $today_start && $end_date === $today_end)
+                        ? 'bg-blue-600 text-white font-black'
+                        : 'bg-gray-100 hover:bg-gray-200 text-gray-700';
+                    
+                    // Вычисляем класс для кнопки "Вчера"
+                    $yesterday_btn_class = (isset($yesterday_start) && $start_date === $yesterday_start && $end_date === $yesterday_end)
+                        ? 'bg-blue-600 text-white font-black'
+                        : 'bg-gray-100 hover:bg-gray-200 text-gray-700';
+
+                    // Вычисляем класс для кнопки "Неделя"
+                    $week_btn_class = (isset($week_start) && $start_date === $week_start && $end_date === $week_end)
+                        ? 'bg-blue-600 text-white font-black'
+                        : 'bg-gray-100 hover:bg-gray-200 text-gray-700';
+
+                    // Вычисляем класс для кнопки "Месяц"
+                    $month_btn_class = (isset($month_start) && $start_date === $month_start && $end_date === $month_end)
+                        ? 'bg-blue-600 text-white font-black'
+                        : 'bg-gray-100 hover:bg-gray-200 text-gray-700';
+                    ?>
                     <!-- Кнопка переключения на текущий день -->
-                    <button data-range="today" class="btn-fast-date bg-gray-100 hover:bg-gray-200 text-gray-700 text-xs font-bold py-2 px-3.5 rounded-lg transition-colors">
+                    <button data-range="today" class="btn-fast-date text-xs py-2 px-3.5 rounded-lg transition-colors <?= $today_btn_class; ?>">
                         Сегодня
                     </button>
                     <!-- Кнопка переключения на вчерашний день -->
-                    <button data-range="yesterday" class="btn-fast-date bg-gray-100 hover:bg-gray-200 text-gray-700 text-xs font-bold py-2 px-3.5 rounded-lg transition-colors">
+                    <button data-range="yesterday" class="btn-fast-date text-xs py-2 px-3.5 rounded-lg transition-colors <?= $yesterday_btn_class; ?>">
                         Вчера
                     </button>
                     <!-- Кнопка переключения на текущую неделю -->
-                    <button data-range="week" class="btn-fast-date bg-gray-100 hover:bg-gray-200 text-gray-700 text-xs font-bold py-2 px-3.5 rounded-lg transition-colors">
+                    <button data-range="week" class="btn-fast-date text-xs py-2 px-3.5 rounded-lg transition-colors <?= $week_btn_class; ?>">
                         Неделя
                     </button>
                     <!-- Кнопка переключения на текущий месяц -->
-                    <button data-range="month" class="btn-fast-date bg-gray-100 hover:bg-gray-200 text-gray-700 text-xs font-bold py-2 px-3.5 rounded-lg transition-colors">
+                    <button data-range="month" class="btn-fast-date text-xs py-2 px-3.5 rounded-lg transition-colors <?= $month_btn_class; ?>">
                         Месяц
                     </button>
                 </div>
@@ -106,6 +166,28 @@
                     Показывать архивные
                 </span>
             </label>
+
+            <!-- Выпадающий список выбора заказчика -->
+            <div class="flex flex-col gap-1.5">
+                <label for="filter-customer" class="text-xs font-bold text-gray-500 uppercase tracking-wider">Заказчик</label>
+                <select id="filter-customer" class="w-full px-3.5 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm font-bold text-gray-700 focus:ring-2 focus:ring-blue-500 focus:outline-none">
+                    <option value="all" <?= (isset($customer_filter) && $customer_filter === 'all') ? 'selected' : ''; ?>>Все заказчики</option>
+                    <option value="none" <?= (isset($customer_filter) && $customer_filter === 'none') ? 'selected' : ''; ?>>Без заказчика</option>
+                    <?php if (!empty($customers)): foreach($customers as $c): ?>
+                        <option value="<?= $c['id']; ?>" <?= (isset($customer_filter) && (string)$customer_filter === (string)$c['id']) ? 'selected' : ''; ?>><?= htmlspecialchars($c['name'] ?? ''); ?></option>
+                    <?php endforeach; endif; ?>
+                </select>
+            </div>
+
+            <!-- Выпадающий список выбора типа сортировки -->
+            <div class="flex flex-col gap-1.5">
+                <label for="filter-sort" class="text-xs font-bold text-gray-500 uppercase tracking-wider">Сортировка</label>
+                <select id="filter-sort" class="w-full px-3.5 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm font-bold text-gray-700 focus:ring-2 focus:ring-blue-500 focus:outline-none">
+                    <option value="time" <?= (isset($sort_by) && $sort_by === 'time') ? 'selected' : ''; ?>>По времени</option>
+                    <option value="title" <?= (isset($sort_by) && $sort_by === 'title') ? 'selected' : ''; ?>>По алфавиту (названию)</option>
+                    <option value="customer" <?= (isset($sort_by) && $sort_by === 'customer') ? 'selected' : ''; ?>>По заказчику</option>
+                </select>
+            </div>
         </div>
         
         <!-- Футер модального окна с кнопкой применения -->

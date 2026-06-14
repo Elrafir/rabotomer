@@ -27,12 +27,15 @@ class Stats_model extends CI_Model {
      * @param bool $show_archived Флаг отображения архивных (завершенных) задач
      * @return array Массив со статистикой: общее время и список проектов с долей времени
      */
-    public function get_time_slice($user_id, $start_date, $end_date, $show_archived) {
-        // Формируем полный формат даты и времени начала дня для SQL-фильтра
-        $start_date_full = $start_date . ' 00:00:00';
+    public function get_time_slice($user_id, $start_date, $end_date, $show_archived, $customer_filter = 'all', $sort_by = 'time') {
+        // Формируем дату и время начала первого рабочего дня (с 05:00:00)
+        $start_date_full = $start_date . ' 05:00:00';
         
-        // Формируем полный формат даты и времени конца дня для SQL-фильтра
-        $end_date_full = $end_date . ' 23:59:59';
+        // Вычисляем календарный день, следующий за конечной датой периода
+        $next_day = date('Y-m-d', strtotime('+1 day', strtotime($end_date)));
+        
+        // Формируем дату и время окончания последнего рабочего дня (до 04:59:59 следующего дня)
+        $end_date_full = $next_day . ' 04:59:59';
 
         // Инициализируем массив для хранения связей родительских задач
         $parent_map = [];
@@ -40,17 +43,20 @@ class Stats_model extends CI_Model {
         // Инициализируем массив для хранения детальных данных о задачах
         $task_map = [];
 
-        // Выбираем только необходимые поля из таблицы задач для построения карты
-        $this->db->select('id, parent_id, title, status, color');
+        // Выбираем поля задачи, включая ID и имя заказчика через LEFT JOIN
+        $this->db->select('tasks.id, tasks.parent_id, tasks.title, tasks.status, tasks.color, tasks.customer_id, customers.name as customer_name');
         
         // Указываем источник данных - таблицу tasks
         $this->db->from('tasks');
         
+        // Присоединяем таблицу заказчиков для получения имени заказчика
+        $this->db->join('customers', 'customers.id = tasks.customer_id', 'left');
+        
         // Фильтруем задачи по текущему пользователю в целях изоляции данных
-        $this->db->where('user_id', $user_id);
+        $this->db->where('tasks.user_id', $user_id);
         
         // Исключаем задачи, помещенные пользователем в корзину (deleted_at не NULL)
-        $this->db->where('deleted_at IS NULL', null, false);
+        $this->db->where('tasks.deleted_at IS NULL', null, false);
         
         // Выполняем SQL-запрос к базе данных
         $query_tasks = $this->db->get();
@@ -118,6 +124,24 @@ class Stats_model extends CI_Model {
             if (!$show_archived && $task_map[$tid]['status'] === 'completed') {
                 // Пропускаем эту запись времени
                 continue;
+            }
+
+            // Получаем эффективный ID заказчика (с подъемом по иерархии)
+            $effective_customer_id = $this->_get_effective_customer_id($tid, $parent_map, $task_map);
+
+            // Если применен фильтр по заказчикам
+            if ($customer_filter !== 'all') {
+                if ($customer_filter === 'none') {
+                    // Исключаем задачи с заданным заказчиком
+                    if ($effective_customer_id !== null) {
+                        continue;
+                    }
+                } else {
+                    // Исключаем задачи, чей эффективный заказчик не совпадает с выбранным
+                    if ((string)$effective_customer_id !== (string)$customer_filter) {
+                        continue;
+                    }
+                }
             }
 
             // Начинаем подъем по иерархии вверх от текущей задачи до её корня
@@ -188,14 +212,26 @@ class Stats_model extends CI_Model {
                 // Округленный процент времени до одного знака после запятой
                 'percentage' => round($pct, 1),
                 // Локализованная строка формата времени (например: "05 ч. 24 мин.")
-                'formatted_time' => sprintf($this->lang->line('time_format_hours_mins') ?: '%02d ч. %02d мин.', $h, $m)
+                'formatted_time' => sprintf($this->lang->line('time_format_hours_mins') ?: '%02d ч. %02d мин.', $h, $m),
+                // Имя заказчика (если задано)
+                'customer_name' => $task_map[$root_id]['customer_name'] ?? ''
             ];
         }
 
-        // Сортируем полученный список проектов по убыванию затраченного времени
-        usort($projects_result, function($a, $b) {
-            // Возвращаем результат сравнения секунд: проект с большим временем идет вверх
-            return $b['total_seconds'] <=> $a['total_seconds'];
+        // Сортируем полученный список проектов в соответствии с выбранным критерием
+        usort($projects_result, function($a, $b) use ($sort_by) {
+            if ($sort_by === 'title') {
+                // Сортировка по алфавиту названия проекта (без учета регистра)
+                return strcasecmp($a['title'], $b['title']);
+            } elseif ($sort_by === 'customer') {
+                // Сортировка по алфавиту имени заказчика (без учета регистра)
+                $cust_a = $a['customer_name'] ?? '';
+                $cust_b = $b['customer_name'] ?? '';
+                return strcasecmp($cust_a, $cust_b);
+            } else {
+                // Сортировка по умолчанию: по убыванию затраченного времени
+                return $b['total_seconds'] <=> $a['total_seconds'];
+            }
         });
 
         // Считаем общие часы для всего периода
@@ -223,18 +259,21 @@ class Stats_model extends CI_Model {
      * @param bool $show_archived Флаг отображения архивных (завершенных) задач
      * @return array Иерархическое дерево проектов и подзадач со временем
      */
-    public function get_project_slice($user_id, $show_archived) {
-        // Загружаем все задачи пользователя, не находящиеся в корзине
-        $this->db->select('id, parent_id, title, status, color');
+    public function get_project_slice($user_id, $show_archived, $customer_filter = 'all', $sort_by = 'time') {
+        // Выбираем поля задачи, включая ID и имя заказчика через LEFT JOIN
+        $this->db->select('tasks.id, tasks.parent_id, tasks.title, tasks.status, tasks.color, tasks.customer_id, customers.name as customer_name');
         
         // Указываем таблицу задач
         $this->db->from('tasks');
         
+        // Присоединяем таблицу заказчиков
+        $this->db->join('customers', 'customers.id = tasks.customer_id', 'left');
+        
         // Изолируем выборку по пользователю
-        $this->db->where('user_id', $user_id);
+        $this->db->where('tasks.user_id', $user_id);
         
         // Только те, которые не удалены
-        $this->db->where('deleted_at IS NULL', null, false);
+        $this->db->where('tasks.deleted_at IS NULL', null, false);
         
         // Запускаем SQL-запрос
         $query_tasks = $this->db->get();
@@ -251,17 +290,38 @@ class Stats_model extends CI_Model {
             $all_tasks_map[$t['id']] = $t;
         }
 
-        // Фильтруем задачи на основе активности и статуса архивации
+        // Фильтруем задачи на основе активности, статуса архивации и выбранного заказчика
         $valid_tasks = [];
         
+        // Инициализируем карту родителей для поиска эффективного заказчика
+        $parent_map = [];
+        foreach ($all_tasks as $t) {
+            $parent_map[$t['id']] = $t['parent_id'];
+        }
+
         // Цикл проверки каждой задачи на пригодность к показу
         foreach ($all_tasks_map as $id => $task) {
-            // Если архивные включены, то задача всегда валидна.
-            // Иначе рекурсивно проверяем цепочку: задача и все её предки должны быть активными.
-            if ($show_archived || $this->_is_active_chain($id, $all_tasks_map)) {
-                // Если проверка пройдена, добавляем задачу в список валидных
-                $valid_tasks[$id] = $task;
+            // 1. Проверяем цепочку активности (если архивные скрыты)
+            if (!$show_archived && !$this->_is_active_chain($id, $all_tasks_map)) {
+                continue;
             }
+
+            // 2. Проверяем фильтр заказчика
+            if ($customer_filter !== 'all') {
+                $effective_customer_id = $this->_get_effective_customer_id($id, $parent_map, $all_tasks_map);
+                if ($customer_filter === 'none') {
+                    if ($effective_customer_id !== null) {
+                        continue;
+                    }
+                } else {
+                    if ((string)$effective_customer_id !== (string)$customer_filter) {
+                        continue;
+                    }
+                }
+            }
+
+            // Если все проверки пройдены, добавляем задачу в список валидных
+            $valid_tasks[$id] = $task;
         }
 
         // Получаем суммарное время по всем сессиям за всё время для каждой задачи
@@ -320,14 +380,24 @@ class Stats_model extends CI_Model {
 
         // Проходим по всем определенным корневым элементам
         foreach ($root_ids as $rid) {
-            // Рекурсивно собираем дерево с каскадным суммированием времени с нижних уровней
-            $tree[] = $this->_build_tree_node($rid, $valid_tasks, $tasks_by_parent, $direct_times);
+            // Рекурсивно собираем дерево с каскадным суммированием времени с нижних уровней, передавая параметр сортировки
+            $tree[] = $this->_build_tree_node($rid, $valid_tasks, $tasks_by_parent, $direct_times, $sort_by);
         }
 
-        // Сортируем корневые проекты на Уровне 1 по убыванию каскадно рассчитанного времени (долгострои в топ)
-        usort($tree, function($a, $b) {
-            // Возвращаем результат сравнения времени: проекты с большим временем идут в начало
-            return $b['total_seconds'] <=> $a['total_seconds'];
+        // Сортируем корневые проекты на Уровне 1 в соответствии с выбранным критерием
+        usort($tree, function($a, $b) use ($sort_by) {
+            if ($sort_by === 'title') {
+                // Сортировка по алфавиту названия проекта (без учета регистра)
+                return strcasecmp($a['title'], $b['title']);
+            } elseif ($sort_by === 'customer') {
+                // Сортировка по алфавиту имени заказчика (без учета регистра)
+                $cust_a = $a['customer_name'] ?? '';
+                $cust_b = $b['customer_name'] ?? '';
+                return strcasecmp($cust_a, $cust_b);
+            } else {
+                // Сортировка по умолчанию: по убыванию затраченного времени
+                return $b['total_seconds'] <=> $a['total_seconds'];
+            }
         });
 
         // Возвращаем собранное и отсортированное дерево проектов
@@ -341,9 +411,10 @@ class Stats_model extends CI_Model {
      * @param array $valid_tasks Карта валидных задач
      * @param array $tasks_by_parent Связи родитель-дети
      * @param array $direct_times Карта прямого времени задач
+     * @param string $sort_by Тип сортировки
      * @return array Собранный узел со вложенными детьми и просуммированным временем
      */
-    private function _build_tree_node($id, $valid_tasks, $tasks_by_parent, $direct_times) {
+    private function _build_tree_node($id, $valid_tasks, $tasks_by_parent, $direct_times, $sort_by) {
         // Берём исходные данные текущей задачи
         $node = $valid_tasks[$id];
 
@@ -357,8 +428,8 @@ class Stats_model extends CI_Model {
         if (isset($tasks_by_parent[$id])) {
             // Проходим по каждому ребенку в цикле
             foreach ($tasks_by_parent[$id] as $child_task) {
-                // Рекурсивно строим дочерний узел
-                $child_node = $this->_build_tree_node($child_task['id'], $valid_tasks, $tasks_by_parent, $direct_times);
+                // Рекурсивно строим дочерний узел, передавая параметр сортировки дальше по дереву
+                $child_node = $this->_build_tree_node($child_task['id'], $valid_tasks, $tasks_by_parent, $direct_times, $sort_by);
                 
                 // Добавляем построенного ребенка в массив детей текущей задачи
                 $children_nodes[] = $child_node;
@@ -368,10 +439,20 @@ class Stats_model extends CI_Model {
             }
         }
 
-        // Сортируем детей внутри текущей ветки по убыванию затраченного времени
-        usort($children_nodes, function($a, $b) {
-            // Сравниваем каскадное время детей для сортировки
-            return $b['total_seconds'] <=> $a['total_seconds'];
+        // Сортируем детей в соответствии с выбранным типом сортировки
+        usort($children_nodes, function($a, $b) use ($sort_by) {
+            if ($sort_by === 'title') {
+                // Сортировка по алфавиту названия задачи (без учета регистра)
+                return strcasecmp($a['title'], $b['title']);
+            } elseif ($sort_by === 'customer') {
+                // Сортировка по алфавиту имени заказчика (без учета регистра)
+                $cust_a = $a['customer_name'] ?? '';
+                $cust_b = $b['customer_name'] ?? '';
+                return strcasecmp($cust_a, $cust_b);
+            } else {
+                // Сортировка по умолчанию: по убыванию затраченного времени
+                return $b['total_seconds'] <=> $a['total_seconds'];
+            }
         });
 
         // Прямое время, записанное на саму эту задачу (без детей)
@@ -437,5 +518,43 @@ class Stats_model extends CI_Model {
 
         // Если все проверки пройдены и completed статус не встретился, цепочка активна
         return true;
+    }
+
+    /**
+     * Вспомогательный метод для определения эффективного заказчика задачи.
+     * Ищет заказчика у самой задачи или поднимается по дереву к родительским задачам.
+     * 
+     * @param int $task_id ID задачи
+     * @param array $parent_map Карта связей родитель-ребенок
+     * @param array $task_map Карта всех задач
+     * @return int|null ID заказчика или null, если заказчик не найден
+     */
+    private function _get_effective_customer_id($task_id, $parent_map, $task_map) {
+        // Устанавливаем текущий ID для подъема по иерархии
+        $curr_id = $task_id;
+        
+        // Защитный счетчик от бесконечных циклов
+        $loop_guard = 0;
+        
+        // Поднимаемся по дереву задач вверх
+        while ($curr_id !== null && $loop_guard < 100) {
+            // Проверяем наличие задачи в карте
+            if (isset($task_map[$curr_id])) {
+                // Если у задачи заполнен ID заказчика, возвращаем его
+                if (!empty($task_map[$curr_id]['customer_id'])) {
+                    return (int)$task_map[$curr_id]['customer_id'];
+                }
+                // Переходим к родителю
+                $curr_id = $parent_map[$curr_id] ?? null;
+            } else {
+                // Прерываем поиск при выходе за пределы карты
+                break;
+            }
+            // Инкрементируем счетчик шагов
+            $loop_guard++;
+        }
+        
+        // Возвращаем null, если заказчик не задан во всей цепочке
+        return null;
     }
 }

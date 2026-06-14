@@ -408,8 +408,10 @@ if (!function_exists('render_task_tree')) {
                 <label class="block text-gray-700 text-sm font-bold mb-2"><?= lang('nav_customers'); ?></label>
                 <select id="editTaskCustomer" class="customer-select w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:outline-none" onchange="updateRate(this)">
                     <option value=""><?= lang('finance_no_customer'); ?></option>
+                    <?php // Проверяем, что список клиентов не пуст, и обходим его в цикле ?>
                     <?php if(!empty($customers)): foreach($customers as $c): ?>
-                        <option value="<?= $c['id']; ?>" data-rate="<?= $c['hourly_rate']; ?>"><?= htmlspecialchars($c['name'] ?? ''); ?></option>
+                        <?php // Выводим опцию выбора клиента с подстановкой ID, дефолтной цены (вместо hourly_rate) и имени ?>
+                        <option value="<?= $c['id']; ?>" data-rate="<?= htmlspecialchars($c['default_price'] ?? '0.00'); ?>"><?= htmlspecialchars($c['name'] ?? ''); ?></option>
                     <?php endforeach; endif; ?>
                 </select>
             </div>
@@ -439,6 +441,16 @@ if (!function_exists('render_task_tree')) {
 <script>
     // URL-ы для AJAX (оставлены для совместимости локальных функций дашборда)
     window.api = window.globalApi;
+
+    // Функция для обновления ставки при выборе клиента в модальном окне редактирования задачи
+    function updateRate(selectElem) {
+        // Находим выбранную опцию в селекте клиента
+        var selectedOption = $(selectElem).find('option:selected');
+        // Извлекаем значение ставки из data-rate или используем 0.00 по умолчанию
+        var rate = selectedOption.data('rate') || '0.00';
+        // Присваиваем ставку полю ввода цены/тарифа задачи
+        $('#editTaskPrice').val(rate);
+    }
 
     // Скрипт для подстановки ставки
     function updateRateSubtask(selectElem) {

@@ -7,8 +7,14 @@
         <div class="flex items-center gap-6">
             <!-- Декоративное изображение логотипа отчетов -->
             <img src="<?= base_url('assets/img/reports_logo.png') ?>" alt="Reports Logo" class="w-16 h-16 object-cover rounded-2xl shadow-sm">
-            <!-- Главный заголовок страницы -->
-            <h1 class="text-3xl font-black text-gray-800">Временной срез</h1>
+            <!-- Главный заголовок страницы с выводом периода -->
+            <div>
+                <h1 class="text-3xl font-black text-gray-800">Временной срез</h1>
+                <!-- Рабочий период с 5 утра до 5 утра следующего дня -->
+                <p class="text-[11px] text-gray-500 font-bold mt-1 uppercase tracking-wider">
+                    Период: с <span class="text-blue-600 font-black"><?= date('d.m.Y', strtotime($start_date)); ?> 05:00</span> по <span class="text-blue-600 font-black"><?= date('d.m.Y', strtotime('+1 day', strtotime($end_date))); ?> 05:00</span>
+                </p>
+            </div>
         </div>
     </div>
 
@@ -19,7 +25,19 @@
         'show_dates' => true, 
         'start_date' => $start_date, 
         'end_date' => $end_date, 
-        'show_archived' => $show_archived
+        'show_archived' => $show_archived,
+        // Передаем новые параметры фильтрации по заказчикам и сортировки во View тулбара
+        'customer_filter' => $customer_filter,
+        'sort_by' => $sort_by,
+        'customers' => $customers,
+        'today_start' => $today_start,
+        'today_end' => $today_end,
+        'yesterday_start' => $yesterday_start,
+        'yesterday_end' => $yesterday_end,
+        'week_start' => $week_start,
+        'week_end' => $week_end,
+        'month_start' => $month_start,
+        'month_end' => $month_end
     ]); 
     ?>
 
@@ -73,6 +91,12 @@
                         <div class="w-4 h-4 rounded-full border border-gray-200 shadow-sm flex-shrink-0" style="background-color: <?= htmlspecialchars($project['color']); ?>"></div>
                         <!-- Название проекта с обрезкой длинного текста -->
                         <span class="text-base font-bold text-gray-800 truncate"><?= htmlspecialchars($project['title']); ?></span>
+                        <?php // Если у проекта есть привязанный заказчик, выводим его имя рядом ?>
+                        <?php if (!empty($project['customer_name'])): ?>
+                            <span class="text-xs text-gray-400 font-medium px-2 py-0.5 rounded-full bg-gray-50 border border-gray-200">
+                                [<?= htmlspecialchars($project['customer_name']); ?>]
+                            </span>
+                        <?php endif; ?>
                     </div>
 
                     <!-- Средний блок: Наглядный прогресс-бар доли времени проекта -->

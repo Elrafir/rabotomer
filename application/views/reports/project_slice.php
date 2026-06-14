@@ -83,6 +83,11 @@ if (!function_exists('render_stats_project_tree')) {
             // Пишем название
             echo '<span class="' . $title_classes . '">' . htmlspecialchars($node['title'] ?? '') . '</span>';
             
+            // Если у задачи напрямую или каскадно определен заказчик, выводим его имя в квадратных скобках
+            if (!empty($node['customer_name'])) {
+                echo '<span class="text-[11px] text-gray-400 font-medium px-1.5 py-0.5 rounded bg-gray-50 border border-gray-100 flex-shrink-0">[' . htmlspecialchars($node['customer_name']) . ']</span>';
+            }
+            
             // Если у задачи есть вложенные подзадачи, выводим бейдж со счетчиком и стрелочку
             if ($has_children) {
                 // Количество прямых потомков
@@ -148,7 +153,11 @@ if (!function_exists('render_stats_project_tree')) {
     // Передаем параметры: отключаем фильтрацию дат (show_dates => false) и передаем флаг архивных задач
     $this->load->view('reports/toolbar', [
         'show_dates' => false, 
-        'show_archived' => $show_archived
+        'show_archived' => $show_archived,
+        // Передаем активный фильтр по заказчикам, сортировке и список всех клиентов
+        'customer_filter' => $customer_filter,
+        'sort_by' => $sort_by,
+        'customers' => $customers
     ]); 
     ?>
 
