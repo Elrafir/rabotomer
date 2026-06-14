@@ -15,11 +15,41 @@ class Customers extends MY_Controller {
 
     public function index($active_customer_id = null) {
         $user_id = $this->session->userdata('user_id');
-        $data['customers'] = $this->Customer_model->get_all($user_id);
+
+        $this->load->model('Settings_model');
+        $per_page = (int)$this->Settings_model->get_setting('per_page', 25);
+
+        // Получаем первую порцию заказчиков
+        $data['customers'] = $this->Customer_model->get_all($user_id, $per_page, 0);
+        $data['per_page'] = $per_page;
 
         // Если активный заказчик не передан, выбираем первого из списка для удобства
-        if ($active_customer_id === null && !empty($data['customers'])) {
-            $active_customer_id = $data['customers'][0]['id'];
+        if ($active_customer_id === null) {
+            $all_customers = $this->Customer_model->get_all($user_id, 1, 0);
+            if (!empty($all_customers)) {
+                $active_customer_id = $all_customers[0]['id'];
+            }
+        }
+
+        // Если активный заказчик не входит в первую страницу, добавим его, чтобы он отображался в списке
+        if ($active_customer_id !== null) {
+            $found = false;
+            foreach ($data['customers'] as $c) {
+                if ($c['id'] == $active_customer_id) {
+                    $found = true;
+                    break;
+                }
+            }
+            if (!$found) {
+                $active_cust = $this->Customer_model->get_by_id($active_customer_id, $user_id);
+                if ($active_cust) {
+                    $data['customers'][] = $active_cust;
+                    // Сортируем список заказчиков по алфавиту
+                    usort($data['customers'], function($a, $b) {
+                        return strcasecmp($a['name'], $b['name']);
+                    });
+                }
+            }
         }
 
         $data['active_customer_id'] = $active_customer_id;
@@ -494,5 +524,44 @@ class Customers extends MY_Controller {
         }
 
         return $branch;
+    }
+
+    /**
+     * AJAX-обработчик бесконечного скролла для сайдбара заказчиков
+     */
+    public function load_more_ajax() {
+        $user_id = $this->session->userdata('user_id');
+        $offset = (int)$this->input->post('offset');
+        $active_customer_id = $this->input->post('active_customer_id');
+        
+        $this->load->model('Settings_model');
+        $limit = (int)$this->Settings_model->get_setting('per_page', 25);
+        
+        $customers = $this->Customer_model->get_all($user_id, $limit, $offset);
+        if (empty($customers)) {
+            echo json_encode(['status' => 'success', 'html' => '', 'has_more' => false]);
+            return;
+        }
+        
+        // Рендерим HTML для элементов сайдбара
+        $html = '';
+        foreach ($customers as $c) {
+            $is_active = ($active_customer_id == $c['id']);
+            $active_classes = $is_active ? 'bg-blue-50 border-blue-500 text-blue-700' : 'border-transparent text-gray-600 hover:bg-gray-50';
+            
+            $html .= '<a href="' . site_url('customers/index/' . $c['id']) . '" class="customer-item block px-6 py-4 border-l-4 ' . $active_classes . ' transition-all font-medium text-lg">';
+            $html .= htmlspecialchars($c['name']);
+            $html .= '</a>';
+        }
+        
+        // Проверяем, есть ли еще заказчики
+        $next_customers = $this->Customer_model->get_all($user_id, 1, $offset + $limit);
+        $has_more = !empty($next_customers);
+        
+        echo json_encode([
+            'status' => 'success',
+            'html' => $html,
+            'has_more' => $has_more
+        ]);
     }
 }

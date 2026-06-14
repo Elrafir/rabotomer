@@ -82,9 +82,12 @@ class Customer_model extends CI_Model {
      * @param int $user_id ID авторизованного пользователя
      * @return array Список заказчиков
      */
-    public function get_all($user_id) {
+    public function get_all($user_id, $limit = NULL, $offset = NULL) {
         $this->db->where('user_id', $user_id);
         $this->db->order_by('name', 'ASC');
+        if ($limit !== NULL) {
+            $this->db->limit($limit, $offset);
+        }
         return $this->db->get('customers')->result_array();
     }
 

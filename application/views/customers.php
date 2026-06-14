@@ -24,7 +24,7 @@
             </div>
             
             <h3 class="text-xs uppercase tracking-wider font-bold mb-2 text-gray-400 pl-2"><?= lang('cust_list_title'); ?></h3>
-            <div class="flex-grow overflow-y-auto space-y-1 pr-1">
+            <div id="customersSidebarList" class="flex-grow overflow-y-auto space-y-1 pr-1">
                 <?php if (empty($customers)): ?>
                     <div class="text-center text-gray-400 py-8 text-xs italic"><?= lang('cust_empty_list'); ?></div>
                 <?php else: ?>
@@ -812,4 +812,37 @@
             }
         });
     }
+
+    // --- Бесконечный скролл заказчиков в сайдбаре ---
+    let custOffset = <?= isset($per_page) ? $per_page : 25; ?>;
+    let custLimit = <?= isset($per_page) ? $per_page : 25; ?>;
+    let custHasMore = true;
+    let custIsLoading = false;
+    const activeCustomerId = <?= isset($active_customer_id) ? $active_customer_id : 'null'; ?>;
+
+    $('#customersSidebarList').on('scroll', function() {
+        if (!custHasMore || custIsLoading) return;
+
+        let scrollTop = $(this).scrollTop();
+        let scrollHeight = $(this)[0].scrollHeight;
+        let innerHeight = $(this).innerHeight();
+
+        if (scrollTop + innerHeight >= scrollHeight - 50) {
+            custIsLoading = true;
+            
+            $.post('<?= site_url("customers/load_more_ajax"); ?>', { offset: custOffset, active_customer_id: activeCustomerId }, function(response) {
+                let res = JSON.parse(response);
+                if (res.status === 'success') {
+                    if (res.html && res.html.trim() !== '') {
+                        $('#customersSidebarList').append(res.html);
+                        custOffset += custLimit;
+                    }
+                    custHasMore = res.has_more;
+                }
+                custIsLoading = false;
+            }).fail(function() {
+                custIsLoading = false;
+            });
+        }
+    });
 </script>
