@@ -1,29 +1,4 @@
-/** @type {number|null} Таймер для отложенного показа аккордеона истории (1 сек) */
-let hoverAccordionTimer = null;
-
-/**
- * Запускает отложенный показ истории проекта при наведении.
- * @param {HTMLElement} btn Элемент кнопки, на которую навели курсор
- * @param {string|number} taskId Идентификатор задачи для загрузки истории
- */
-function startHoverAccordion(btn, taskId) {
-    if (hoverAccordionTimer) clearTimeout(hoverAccordionTimer);
-    hoverAccordionTimer = setTimeout(() => {
-        if (typeof toggleCascadeAccordion === 'function') {
-            toggleCascadeAccordion(taskId);
-        }
-    }, 1000);
-}
-
-/**
- * Отменяет отложенный показ истории, если мышь убрали раньше 1 секунды.
- */
-function cancelHoverAccordion() {
-    if (hoverAccordionTimer) {
-        clearTimeout(hoverAccordionTimer);
-        hoverAccordionTimer = null;
-    }
-}
+// Hover accordion logic was removed from here.
 
 // --- GLOBAL TIMER LOGIC ---
 /** @type {number|null} Глобальный интервал таймера (1 раз в секунду) */
@@ -57,6 +32,33 @@ function formatTime(totalSeconds) {
     return `${h}:${m}:${s}`;
 }
 
+// Функции для динамической иконки (Favicon)
+function createCircleFavicon(color) {
+    const canvas = document.createElement('canvas');
+    canvas.width = 32;
+    canvas.height = 32;
+    const ctx = canvas.getContext('2d');
+    ctx.beginPath();
+    ctx.arc(16, 16, 14, 0, 2 * Math.PI);
+    ctx.fillStyle = color;
+    ctx.fill();
+    return canvas.toDataURL('image/png');
+}
+
+const faviconGreen = createCircleFavicon('#10B981');
+const faviconRed = createCircleFavicon('#EF4444');
+const faviconDefault = 'data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>⏱️</text></svg>';
+
+function setFavicon(url) {
+    let link = document.querySelector("link[rel~='icon']");
+    if (!link) {
+        link = document.createElement('link');
+        link.rel = 'icon';
+        document.head.appendChild(link);
+    }
+    link.href = url;
+}
+
 /**
  * Обновляет дисплеи таймера (в виджете и панели) на основе прошедшего времени
  */
@@ -81,6 +83,7 @@ function updateGlobalTimerDisplay() {
         // Обновляем заголовок браузера
         if (!isPaused) {
             document.title = `🟢 ${timeStr} - ${currentTaskTitle}`;
+            setFavicon(faviconGreen);
         }
     }
 }
@@ -93,6 +96,7 @@ function blinkPausedTitle() {
     const timeStr = formatTime(initialSessionSeconds); // Время заморожено
     blinkState = !blinkState;
     document.title = blinkState ? `🔴 ПАУЗА - ${currentTaskTitle}` : `🔴 ${timeStr} - ${currentTaskTitle}`;
+    setFavicon(blinkState ? faviconRed : faviconDefault);
 }
 
 /**
@@ -124,12 +128,14 @@ function initGlobalTimer() {
         } else {
             updateGlobalTimerDisplay();
             globalTimerInterval = setInterval(updateGlobalTimerDisplay, 1000);
+            setFavicon(faviconGreen);
         }
     } else {
         // Таймер полностью остановлен
         isPaused = false;
         hideTimerUI();
         document.title = 'Тайм-трекер';
+        setFavicon(faviconDefault);
     }
 }
 
@@ -142,16 +148,20 @@ function showTimerUI() {
     $('#globalWidgetTitle').text(currentTaskTitle);
     $('#activeTimerTitle').text(currentTaskTitle);
     
-    // По умолчанию на всех страницах (и на дашборде тоже) показываем только виджет, а панель прячем
-    $('#activeTimerPanel').removeClass('translate-y-0').addClass('translate-y-full');
-    
-    // Анимированное появление
-    $('#globalFloatingWidgetContainer').removeClass('hidden');
-    setTimeout(() => {
-        $('#globalFloatingWidgetContainer')
-            .removeClass('opacity-0 scale-50 pointer-events-none')
-            .addClass('opacity-100 scale-100');
-    }, 10);
+    if (window.isTimerPanelOpen) {
+        toggleTimerPanelDOM(true);
+    } else {
+        // По умолчанию показываем только виджет, а панель прячем
+        $('#activeTimerPanel').removeClass('translate-y-0').addClass('translate-y-full');
+        
+        // Анимированное появление
+        $('#globalFloatingWidgetContainer').removeClass('hidden');
+        setTimeout(() => {
+            $('#globalFloatingWidgetContainer')
+                .removeClass('opacity-0 scale-50 pointer-events-none')
+                .addClass('opacity-100 scale-100');
+        }, 10);
+    }
     
     if (isPaused) {
         $('#timerDisplay').text(formatTime(initialSessionSeconds));
@@ -170,6 +180,12 @@ function showTimerUI() {
             .addClass('opacity-100 scale-100');
             
         $('#globalWidgetIcon').html('⏸'); // Иконка паузы
+        
+        // Обновляем логотип в шапке (состояние паузы)
+        $('#logo-emoji').text('⏸️');
+        $('#logo-svg').removeClass('text-white text-green-300').addClass('text-yellow-300 animate-pulse');
+        $('#logo-title').removeClass('text-white text-green-300').addClass('text-yellow-300 animate-pulse');
+        
     } else {
         // Если не на паузе, возвращаем стандартные классы
         $('#btnPauseDashboard').html(window.globalLang.btn_pause).removeClass('bg-green-500 hover:bg-green-400').addClass('bg-yellow-500 hover:bg-yellow-400');
@@ -183,6 +199,11 @@ function showTimerUI() {
             
         // SVG иконка циферблата с крутящейся стрелкой
         $('#globalWidgetIcon').html('<svg class="w-5 h-5 text-white drop-shadow-md" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" stroke-width="2.5"></circle><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 6v6l3.5 2" class="anim-spin-slow" style="transform-origin: 12px 12px;"></path></svg>');
+        
+        // Обновляем логотип в шапке (активное состояние)
+        $('#logo-emoji').text('⏱️');
+        $('#logo-svg').removeClass('text-white text-yellow-300 animate-pulse').addClass('text-green-300');
+        $('#logo-title').removeClass('text-white text-yellow-300 animate-pulse').addClass('text-green-300');
     }
 }
 
@@ -191,6 +212,11 @@ function showTimerUI() {
  */
 function hideTimerUI() {
     $('#activeTimerPanel').removeClass('translate-y-0').addClass('translate-y-full');
+    
+    // Возвращаем логотип в исходное (неактивное) состояние
+    $('#logo-emoji').text('💼');
+    $('#logo-svg').removeClass('text-green-300 text-yellow-300 animate-pulse').addClass('text-white');
+    $('#logo-title').removeClass('text-green-300 text-yellow-300 animate-pulse').addClass('text-white');
     
     // Анимированное скрытие плавающего виджета
     $('#globalFloatingWidgetContainer')
@@ -223,6 +249,7 @@ function toggleTimerPanelDOM(show) {
  * Показывает полноразмерную нижнюю панель таймера и скрывает плавающий виджет.
  */
 window.showTimerPanel = function() {
+    window.isTimerPanelOpen = true;
     if (document.startViewTransition) {
         // Подготовка: назначаем имена для начального состояния
         $('#globalFloatingWidgetContainer').css('view-transition-name', 'timer-morph');
@@ -245,6 +272,7 @@ window.showTimerPanel = function() {
  * Скрывает нижнюю панель таймера и возвращает плавающий виджет.
  */
 window.hideTimerPanel = function() {
+    window.isTimerPanelOpen = false;
     if (document.startViewTransition) {
         // Подготовка: назначаем имена для начального состояния
         $('#activeTimerPanel').css('view-transition-name', 'timer-morph').css('transition', 'none');
@@ -604,12 +632,15 @@ function closeGlobalAddModal() {
  * @param {HTMLSelectElement} selectElem Элемент выбора клиента
  */
 function updateRateGlobal(selectElem) {
-    const rate = $(selectElem).find(':selected').data('rate');
+    const val = $(selectElem).val();
     const row = $(selectElem).closest('form');
-    if (rate) {
-        row.find('.rate-input').val(rate);
+    
+    if (val === 'new') {
+        $('#newCustomerFields').removeClass('hidden');
+        $('#globalAddIsFixed').parent().find('.customer-select').removeClass('flex-1').addClass('w-full sm:w-1/3');
     } else {
-        row.find('.rate-input').val('');
+        $('#newCustomerFields').addClass('hidden');
+        $('#globalAddIsFixed').parent().find('.customer-select').addClass('flex-1').removeClass('w-full sm:w-1/3');
     }
 }
 
@@ -683,23 +714,23 @@ function loadAjaxPage(url, push = true) {
  */
 function updateActiveMenu(url) {
     // Снимаем выделение со всех ссылок в навбаре
-    $('nav a').removeClass('text-blue-200 underline');
+    $('nav a.transition-all').removeClass('opacity-100 nav-cloud-active').addClass('opacity-70 hover:opacity-100');
     
     // Ищем подходящую ссылку и подсвечиваем её
-    $('nav a').each(function() {
+    $('nav a.transition-all').each(function() {
         const linkHref = $(this).attr('href');
         if (!linkHref) return;
         
         // Если ссылка - это корень (dashboard)
         if (url === window.location.origin + '/' || url === window.location.origin) {
             if (linkHref === window.location.origin + '/' || linkHref === window.location.origin + '/tasks') {
-                $(this).addClass('text-blue-200 underline');
+                $(this).removeClass('opacity-70 hover:opacity-100').addClass('opacity-100 nav-cloud-active');
                 window.isDashboardPage = true; // Обновляем глобальный флаг
             }
         } 
         // Если другая страница
         else if (url.indexOf(linkHref) !== -1 && linkHref !== window.location.origin + '/') {
-            $(this).addClass('text-blue-200 underline');
+            $(this).removeClass('opacity-70 hover:opacity-100').addClass('opacity-100 nav-cloud-active');
             if (linkHref.indexOf('/tasks') !== -1) {
                 window.isDashboardPage = true;
             } else {
@@ -717,3 +748,400 @@ function updateActiveMenu(url) {
         }
     }
 }
+
+// --- AUTH & PROFILE FORMS ---
+$(document).on('submit', '#register-form', function(e) {
+    e.preventDefault();
+    let btn = $(this).find('button[type="submit"]');
+    let spinner = btn.find('.spinner');
+    let errorBox = $('#register-errors');
+    
+    btn.prop('disabled', true).addClass('opacity-75 cursor-not-allowed');
+    spinner.removeClass('hidden');
+    errorBox.addClass('hidden').html('');
+
+    $.post($(this).attr('action'), $(this).serialize(), function(response) {
+        try {
+            let res = JSON.parse(response);
+            if (res.status === 'success') {
+                loadAjaxPage('/', false); // Перенаправляем на главную
+            } else {
+                errorBox.removeClass('hidden').html(res.message);
+                btn.prop('disabled', false).removeClass('opacity-75 cursor-not-allowed');
+                spinner.addClass('hidden');
+            }
+        } catch (err) {
+            errorBox.removeClass('hidden').html("Произошла системная ошибка.");
+            btn.prop('disabled', false).removeClass('opacity-75 cursor-not-allowed');
+            spinner.addClass('hidden');
+        }
+    });
+});
+
+$(document).on('submit', '#profile-form', function(e) {
+    e.preventDefault();
+    let btn = $(this).find('button[type="submit"]');
+    let spinner = btn.find('.spinner');
+    let errorBox = $('#profile-errors');
+    
+    btn.prop('disabled', true).addClass('opacity-75 cursor-not-allowed');
+    spinner.removeClass('hidden');
+    errorBox.addClass('hidden').html('');
+
+    $.post($(this).attr('action'), $(this).serialize(), function(response) {
+        try {
+            let res = JSON.parse(response);
+            if (res.status === 'success') {
+                loadAjaxPage(window.location.href, false); // Перезагружаем профиль
+            } else {
+                errorBox.removeClass('hidden').html(res.message);
+                btn.prop('disabled', false).removeClass('opacity-75 cursor-not-allowed');
+                spinner.addClass('hidden');
+            }
+        } catch (err) {
+            errorBox.removeClass('hidden').html("Произошла системная ошибка.");
+            btn.prop('disabled', false).removeClass('opacity-75 cursor-not-allowed');
+            spinner.addClass('hidden');
+        }
+    });
+});
+
+// =========================================
+// ДИНАМИЧЕСКИЕ ТЕМЫ (AJAX ПЕРЕКЛЮЧЕНИЕ)
+// =========================================
+$(document).on('click', '.theme-selector', function(e) {
+    e.preventDefault();
+    
+    // Получаем саму нажатую кнопку-кружочек
+    let btn = $(this);
+    
+    // Получаем название выбранной темы из атрибута data-theme (например, 'theme-emerald')
+    let themeName = btn.data('theme');
+    
+    // Делаем AJAX POST-запрос. Используем базовый путь из формы профиля (если есть) 
+    // или строим относительный путь через index.php, чтобы избежать 500 ошибки.
+    // Получаем текущую прозрачность из ползунка, если он есть на странице
+    let opacity = $('#theme_opacity').length ? $('#theme_opacity').val() : '1.00';
+    let hue = $('#theme_hue').length ? $('#theme_hue').val() : '221';
+    
+    let ajaxUrl = window.location.origin + '/index.php/profile/save_theme_ajax';
+    
+    $.post(ajaxUrl, { theme: themeName, opacity: opacity, hue: hue }, function(response) {
+        try {
+            let res = JSON.parse(response);
+            
+            // Если бэкенд успешно сохранил тему в базу
+            if (res.status === 'success') {
+                // 1. Мгновенно меняем тему на фронтенде без перезагрузки:
+                // Удаляем все старые классы, начинающиеся с "theme-" у тега <body>
+                $('body').removeClass(function (index, className) {
+                    return (className.match(/(^|\s)theme-\S+/g) || []).join(' ');
+                });
+                
+                // И добавляем новый класс темы, чтобы CSS перекрасил интерфейс
+                $('body').addClass(themeName);
+                
+                // Управляем видимостью ползунка Свой цвет и инлайн стилями
+                if (themeName === 'theme-custom') {
+                    $('#custom_hue_container').removeClass('hidden');
+                    document.body.style.setProperty('--theme-h', hue);
+                } else {
+                    $('#custom_hue_container').addClass('hidden');
+                    document.body.style.removeProperty('--theme-h');
+                }
+                
+                // 2. Обновляем визуальное состояние кнопок (выделяем активную)
+                // Сначала убираем обводку активности у всех кружочков
+                $('.theme-selector').each(function() {
+                    $(this).removeClass('border-gray-800 ring-4').addClass('border-transparent hover:scale-110');
+                    $(this).css('box-shadow', 'none'); // удаляем inline-свечение
+                });
+                
+                // Добавляем обводку активности только для нажатого кружочка (чтобы он был выделен)
+                let ringHex = '#60a5fa';
+                if(themeName === 'theme-emerald') ringHex = '#34d399';
+                else if(themeName === 'theme-sunset') ringHex = '#fb923c';
+                else if(themeName === 'theme-berry') ringHex = '#fb7185';
+                else if(themeName === 'theme-night') ringHex = '#94a3b8';
+                else if(themeName === 'theme-ocean') ringHex = '#22d3ee';
+                else if(themeName === 'theme-lavender') ringHex = '#c084fc';
+                else if(themeName === 'theme-coffee') ringHex = '#fbbf24';
+                else if(themeName === 'theme-custom') ringHex = '#a855f7';
+                
+                btn.removeClass('border-transparent hover:scale-110')
+                   .addClass('border-gray-800 ring-4')
+                   .css('box-shadow', '0 0 0 4px ' + ringHex);
+                   
+            } else {
+                alert("Ошибка: " + res.message);
+            }
+        } catch (err) {
+            console.error("System Error: ", err);
+            alert("Произошла системная ошибка при сохранении темы.");
+        }
+    });
+});
+
+// Обработчик ползунка прозрачности темы (движение)
+$(document).on('input', '#theme_opacity', function() {
+    // Считываем значение от 0.05 до 1.00
+    let opacity = parseFloat($(this).val());
+    
+    // Обновляем бейджик с процентами (умножаем на 100 и округляем)
+    $('#opacity_value').text(Math.round(opacity * 100) + '%');
+    
+    // Мгновенно применяем прозрачность через CSS переменную к body (а не к documentElement, чтобы перекрыть inline стили из body.php)
+    document.body.style.setProperty('--theme-opacity', opacity);
+});
+
+// Обработчик ползунка прозрачности темы (отпускание/сохранение)
+$(document).on('change', '#theme_opacity', function() {
+    let opacity = $(this).val();
+    let currentTheme = 'theme-default';
+    let hue = $('#theme_hue').length ? $('#theme_hue').val() : '221';
+    
+    // Ищем, какая тема сейчас активна (у нее есть рамка ring-4)
+    $('.theme-selector').each(function() {
+        if ($(this).hasClass('ring-4')) {
+            currentTheme = $(this).data('theme');
+        }
+    });
+    
+    let ajaxUrl = window.location.origin + '/index.php/profile/save_theme_ajax';
+    
+    // Отправляем на сервер активную тему и новую прозрачность
+    $.post(ajaxUrl, { theme: currentTheme, opacity: opacity, hue: hue }, function(response) {
+        try {
+            let res = JSON.parse(response);
+            if (res.status !== 'success') {
+                alert("Ошибка сохранения прозрачности: " + res.message);
+            }
+        } catch (err) {
+            console.error("System Error: ", err);
+        }
+    });
+});
+
+// Обработчик ползунка тона (движение)
+$(document).on('input', '#theme_hue', function() {
+    let hue = $(this).val();
+    $('#hue_value').html(hue + '&deg;');
+    document.body.style.setProperty('--theme-h', hue);
+});
+
+// Обработчик ползунка тона (отпускание/сохранение)
+$(document).on('change', '#theme_hue', function() {
+    let hue = $(this).val();
+    let opacity = $('#theme_opacity').length ? $('#theme_opacity').val() : '1.00';
+    let currentTheme = 'theme-custom';
+    
+    let ajaxUrl = window.location.origin + '/index.php/profile/save_theme_ajax';
+    
+    $.post(ajaxUrl, { theme: currentTheme, opacity: opacity, hue: hue }, function(response) {
+        try {
+            let res = JSON.parse(response);
+            if (res.status !== 'success') {
+                alert("Ошибка сохранения цвета: " + res.message);
+            }
+        } catch (err) {
+            console.error("System Error: ", err);
+        }
+    });
+});
+
+// --- Глобальное плавающее модальное окно тем оформления ---
+
+function openThemeModal() {
+    $('#themeSettingsModal').removeClass('hidden');
+    setTimeout(() => {
+        $('#themeSettingsModal').removeClass('opacity-0');
+    }, 10);
+}
+
+function closeThemeModal() {
+    $('#themeSettingsModal').addClass('opacity-0');
+    setTimeout(() => {
+        $('#themeSettingsModal').addClass('hidden');
+    }, 200);
+}
+
+// Drag and drop логика для модального окна
+document.addEventListener('DOMContentLoaded', function() {
+    const modal = document.getElementById('themeSettingsModal');
+    const header = document.getElementById('themeSettingsModalHeader');
+    
+    if (!modal || !header) return;
+
+    let isDragging = false;
+    let currentX;
+    let currentY;
+    let initialX;
+    let initialY;
+    let xOffset = 0;
+    let yOffset = 0;
+
+    header.addEventListener('mousedown', dragStart);
+    document.addEventListener('mousemove', drag);
+    document.addEventListener('mouseup', dragEnd);
+
+    // Поддержка Touch
+    header.addEventListener('touchstart', dragStart, {passive: false});
+    document.addEventListener('touchmove', drag, {passive: false});
+    document.addEventListener('touchend', dragEnd);
+
+    function dragStart(e) {
+        if (e.type === "touchstart") {
+            initialX = e.touches[0].clientX - xOffset;
+            initialY = e.touches[0].clientY - yOffset;
+        } else {
+            initialX = e.clientX - xOffset;
+            initialY = e.clientY - yOffset;
+        }
+        
+        // Проверяем что кликнули именно по шапке, а не по кнопке закрытия
+        if (e.target.closest('button')) return;
+        
+        isDragging = true;
+        modal.classList.add('dragging-theme-modal');
+    }
+
+    function drag(e) {
+        if (isDragging) {
+            if (e.type === "touchmove") {
+                // e.preventDefault(); можно добавить для предотвращения скролла
+                currentX = e.touches[0].clientX - initialX;
+                currentY = e.touches[0].clientY - initialY;
+            } else {
+                currentX = e.clientX - initialX;
+                currentY = e.clientY - initialY;
+            }
+
+            xOffset = currentX;
+            yOffset = currentY;
+
+            setTranslate(currentX, currentY, modal);
+        }
+    }
+
+    function setTranslate(xPos, yPos, el) {
+        el.style.transform = `translate3d(${xPos}px, ${yPos}px, 0)`;
+    }
+
+    function dragEnd(e) {
+        initialX = currentX;
+        initialY = currentY;
+        isDragging = false;
+        modal.classList.remove('dragging-theme-modal');
+    }
+});
+
+// =========================================
+// ОБРАБОТЧИКИ КОРЗИНЫ (TRASH)
+// =========================================
+
+// Обработчик восстановления из корзины (SPA, делегирование)
+$(document).off('click', '.restore-trash-btn').on('click', '.restore-trash-btn', function() {
+    var taskId = $(this).data('task-id');
+    
+    // Запрашиваем подтверждение
+    if (!confirm(window.globalLang.js_confirm_restore)) {
+        return;
+    }
+    
+    // Блокируем кнопку на время запроса
+    var btn = $(this);
+    btn.prop('disabled', true).addClass('opacity-50');
+    
+    $.ajax({
+        url: window.globalApi.restore_trash,
+        method: 'POST',
+        data: { task_id: taskId },
+        dataType: 'json',
+        success: function(response) {
+            if (response.status === 'success') {
+                // Перезагружаем текущую страницу корзины через наш SPA загрузчик
+                loadAjaxPage(window.location.href);
+            } else {
+                alert(response.message || 'Ошибка восстановления');
+                btn.prop('disabled', false).removeClass('opacity-50');
+            }
+        },
+        error: function() {
+            alert('Ошибка сети при восстановлении');
+            btn.prop('disabled', false).removeClass('opacity-50');
+        }
+    });
+});
+
+// Обработчик полного (безвозвратного) удаления (SPA, делегирование)
+$(document).off('click', '.hard-delete-btn').on('click', '.hard-delete-btn', function() {
+    var taskId = $(this).data('task-id');
+    
+    if (!confirm(window.globalLang.js_confirm_hard_delete)) {
+        return;
+    }
+    
+    var btn = $(this);
+    btn.prop('disabled', true).addClass('opacity-50');
+    
+    $.ajax({
+        url: window.globalApi.hard_delete,
+        method: 'POST',
+        data: { task_id: taskId },
+        dataType: 'json',
+        success: function(response) {
+            if (response.status === 'success') {
+                loadAjaxPage(window.location.href);
+            } else {
+                alert(response.message || 'Ошибка удаления');
+                btn.prop('disabled', false).removeClass('opacity-50');
+            }
+        },
+        error: function() {
+            alert('Ошибка сети при удалении');
+            btn.prop('disabled', false).removeClass('opacity-50');
+        }
+    });
+});
+
+// Обработчик изменения выбора клиента для подгрузки ТЗ
+$(document).on('change', '.customer-select', function() {
+    var customerId = $(this).val();
+    var form = $(this).closest('form, #editTaskModal');
+    var specSelect = form.find('.spec-select');
+    var specContainer = form.find('.spec-container, #globalAddSpecContainer, #editTaskSpecContainer');
+    
+    if (!customerId || customerId === 'new') {
+        specSelect.html('<option value="">Связать с ТЗ...</option>');
+        specContainer.addClass('hidden');
+        return;
+    }
+    
+    // AJAX-запрос списка ТЗ
+    $.getJSON(window.location.origin + '/index.php/customers/get_specs_ajax/' + customerId, function(res) {
+        if (res.status === 'success') {
+            var html = '<option value="">Связать с ТЗ...</option>';
+            if (res.data && res.data.length > 0) {
+                res.data.forEach(function(spec) {
+                    html += '<option value="' + spec.id + '">' + spec.title + '</option>';
+                });
+                specSelect.html(html);
+                specContainer.removeClass('hidden');
+                
+                // Если у нас сохранен ранее выбранный specId, выбираем его
+                var savedSpecId = specSelect.data('pending-select');
+                if (savedSpecId) {
+                    specSelect.val(savedSpecId);
+                    specSelect.removeData('pending-select');
+                }
+            } else {
+                specSelect.html('<option value="">Нет созданных ТЗ</option>');
+                specContainer.addClass('hidden');
+            }
+        } else {
+            specSelect.html('<option value="">Ошибка загрузки ТЗ</option>');
+            specContainer.addClass('hidden');
+        }
+    });
+});
+

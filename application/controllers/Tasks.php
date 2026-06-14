@@ -36,11 +36,16 @@ class Tasks extends MY_Controller {
             $active_session['current_elapsed'] = time() - strtotime($active_session['start_time']);
         }
 
+        // Определяем права администратора для отображения дополнительных инструментов управления
+        $is_admin = ($this->session->userdata('group_id') == 1 || $this->session->userdata('username') === 'root');
+
         // Подготавливаем данные для передачи во view
         $data = [
             'tasks_tree' => $tasks_tree,
             'active_session' => $active_session,
-            'customers' => $this->Customer_model->get_all($user_id)
+            'customers' => $this->Customer_model->get_all($user_id),
+            'is_admin' => $is_admin,
+            'flat_tasks' => $raw_tasks // Плоский список задач для формы редактирования сессий
         ];
 
         // Рендерим страницу (header + body + контент + footer)
@@ -60,11 +65,32 @@ class Tasks extends MY_Controller {
             $title = $this->input->post('title');
             $parent_id = $this->input->post('parent_id');
             $customer_id = $this->input->post('customer_id');
+            
+            // Если выбран "Добавить нового клиента"
+            if ($customer_id === 'new') {
+                $new_customer_name = trim($this->input->post('new_customer_name') ?? '');
+                $new_customer_notes = trim($this->input->post('new_customer_notes') ?? '');
+                if (!empty($new_customer_name)) {
+                    $this->load->model('Customer_model');
+                    $customer_id = $this->Customer_model->add($user_id, $new_customer_name, $new_customer_notes);
+                } else {
+                    $customer_id = null; // Если имя не ввели
+                }
+            }
+            
             $is_fixed_price = $this->input->post('is_fixed_price') ? 1 : 0;
             $price = $this->input->post('price');
+            $spec_id = $this->input->post('spec_id') ?: null;
             
             // Сохраняем задачу в базу
-            $this->Task_model->add_task($user_id, $parent_id, $title, $customer_id, $is_fixed_price, $price);
+            if ($this->Task_model->add_task($user_id, $parent_id, $title, $customer_id, $is_fixed_price, $price, $spec_id)) {
+                $this->session->set_flashdata('success', 'Задача успешно добавлена!');
+            } else {
+                $db_error = $this->db->error();
+                $this->session->set_flashdata('error', 'Ошибка БД: ' . ($db_error['message'] ?? 'Неизвестная ошибка'));
+            }
+        } else {
+            $this->session->set_flashdata('error', 'Ошибка валидации: ' . validation_errors('', ' '));
         }
 
         // После создания задачи возвращаемся на главную страницу
@@ -228,6 +254,13 @@ class Tasks extends MY_Controller {
      * AJAX-обработчик для добавления сессии вручную
      */
     public function add_manual_ajax() {
+        // Проверяем права администратора
+        $is_admin = ($this->session->userdata('group_id') == 1 || $this->session->userdata('username') === 'root');
+        if (!$is_admin) {
+            echo json_encode(['status' => 'error', 'message' => 'Доступ запрещен']);
+            return;
+        }
+
         $user_id = $this->session->userdata('user_id');
 
         // Включаем валидацию
@@ -244,8 +277,14 @@ class Tasks extends MY_Controller {
             // Преобразуем формат, если он пришел с "T" из HTML5-инпута (datetime-local)
             // HTML5 отправляет: 2023-10-25T14:30
             // MySQL нужно: 2023-10-25 14:30:00
-            $start_time = str_replace('T', ' ', $start_time) . ':00';
-            $end_time = str_replace('T', ' ', $end_time) . ':00';
+            $start_time = str_replace('T', ' ', $start_time);
+            if (strlen($start_time) == 16) {
+                $start_time .= ':00';
+            }
+            $end_time = str_replace('T', ' ', $end_time);
+            if (strlen($end_time) == 16) {
+                $end_time .= ':00';
+            }
 
             // Простая валидация: конец должен быть больше начала
             if (strtotime($end_time) > strtotime($start_time)) {
@@ -266,9 +305,77 @@ class Tasks extends MY_Controller {
     }
 
     /**
+     * AJAX-обработчик для редактирования сессии (корректировка времени)
+     */
+    public function edit_session_ajax() {
+        // Проверяем права администратора
+        $is_admin = ($this->session->userdata('group_id') == 1 || $this->session->userdata('username') === 'root');
+        if (!$is_admin) {
+            echo json_encode(['status' => 'error', 'message' => 'Доступ запрещен']);
+            return;
+        }
+
+        $user_id = $this->session->userdata('user_id');
+
+        // Валидация входных данных
+        $this->form_validation->set_rules('session_id', 'ID сессии', 'required|numeric');
+        $this->form_validation->set_rules('task_id', 'Задача', 'required|numeric');
+        $this->form_validation->set_rules('start_time', 'Время начала', 'required');
+        $this->form_validation->set_rules('end_time', 'Время окончания', 'required');
+
+        if ($this->form_validation->run() !== FALSE) {
+            $session_id = $this->input->post('session_id');
+            $task_id = $this->input->post('task_id');
+            $start_time = $this->input->post('start_time');
+            $end_time = $this->input->post('end_time');
+            $note = $this->input->post('note');
+
+            // Форматируем время для MySQL
+            $start_time = str_replace('T', ' ', $start_time);
+            if (strlen($start_time) == 16) {
+                $start_time .= ':00';
+            }
+            $end_time = str_replace('T', ' ', $end_time);
+            if (strlen($end_time) == 16) {
+                $end_time .= ':00';
+            }
+
+            // Проверка хронологии
+            if (strtotime($end_time) <= strtotime($start_time)) {
+                echo json_encode(['status' => 'error', 'message' => lang('ajax_error_end_less_start')]);
+                return;
+            }
+
+            // Подготавливаем обновляемые данные
+            $update_data = [
+                'task_id' => $task_id,
+                'start_time' => $start_time,
+                'end_time' => $end_time,
+                'note' => $note
+            ];
+
+            // Обновляем запись в базе с проверкой принадлежности к текущему пользователю
+            if ($this->Task_model->update_session($session_id, $user_id, $update_data)) {
+                echo json_encode(['status' => 'success', 'message' => 'Сессия успешно сохранена']);
+            } else {
+                echo json_encode(['status' => 'error', 'message' => 'Не удалось обновить сессию или права ограничены']);
+            }
+        } else {
+            echo json_encode(['status' => 'error', 'message' => validation_errors(' ', ' ')]);
+        }
+    }
+
+    /**
      * AJAX-обработчик для полного удаления сессии
      */
     public function delete_session_ajax() {
+        // Проверяем права администратора
+        $is_admin = ($this->session->userdata('group_id') == 1 || $this->session->userdata('username') === 'root');
+        if (!$is_admin) {
+            echo json_encode(['status' => 'error', 'message' => 'Доступ запрещен']);
+            return;
+        }
+
         $user_id = $this->session->userdata('user_id');
         $session_id = $this->input->post('session_id');
 
@@ -296,8 +403,9 @@ class Tasks extends MY_Controller {
             $customer_id = $this->input->post('customer_id');
             $is_fixed_price = $this->input->post('is_fixed_price') ? 1 : 0;
             $price = $this->input->post('price');
+            $spec_id = $this->input->post('spec_id') ?: null;
 
-            if ($this->Task_model->update_task_details($task_id, $user_id, $title, $customer_id, $is_fixed_price, $price)) {
+            if ($this->Task_model->update_task_details($task_id, $user_id, $title, $customer_id, $is_fixed_price, $price, $spec_id)) {
                 echo json_encode(['status' => 'success']);
                 return;
             }
@@ -353,15 +461,32 @@ class Tasks extends MY_Controller {
      * Вспомогательный метод для построения дерева задач из плоского списка.
      * Здесь же мы рассчитываем время и сортируем (сначала активные, потом завершенные).
      */
-    private function _build_tree(array $elements, $parentId = null) {
+    private function _build_tree(array $elements, $parentId = null, $all_ids = null) {
         $branch = array();
         $user_id = $this->session->userdata('user_id');
 
-        // Сначала собираем все элементы текущего уровня
+        // При первом вызове собираем массив всех ID, которые есть в $elements
+        if ($all_ids === null) {
+            $all_ids = [];
+            foreach ($elements as $el) {
+                $all_ids[] = $el['id'];
+            }
+        }
+
         foreach ($elements as $element) {
-            if ($element['parent_id'] == $parentId) {
+            // Элемент считается "на этом уровне", если его parent_id совпадает с запрашиваемым
+            // ИЛИ если запрашивается корень ($parentId == null), а реальный родитель этой задачи отсутствует в списке $elements (сирота)
+            $is_match = ($element['parent_id'] == $parentId);
+            
+            if (!$is_match && $parentId === null && !empty($element['parent_id'])) {
+                if (!in_array($element['parent_id'], $all_ids)) {
+                    $is_match = true;
+                }
+            }
+
+            if ($is_match) {
                 // Ищем детей (рекурсия)
-                $children = $this->_build_tree($elements, $element['id']);
+                $children = $this->_build_tree($elements, $element['id'], $all_ids);
                 $element['children'] = $children ? $children : [];
 
                 // Считаем общее время задачи вместе со всеми её детьми
@@ -394,5 +519,63 @@ class Tasks extends MY_Controller {
         });
 
         return $branch;
+    }
+
+    /**
+     * Страница корзины (Trash)
+     * Рендерит представление с удаленными задачами.
+     */
+    public function trash() {
+        $user_id = $this->session->userdata('user_id');
+        
+        // Получаем плоский список всех удаленных задач
+        $flat_tasks = $this->Task_model->get_trashed_tasks($user_id);
+        
+        // Преобразуем плоский список в иерархическое дерево (как на дашборде)
+        $data['tasks_tree'] = $this->_build_tree($flat_tasks);
+        
+        // Задаем заголовок страницы
+        $data['title'] = 'Корзина';
+        
+        // Рендерим страницу через базовый метод, который сам решит AJAX это или нет и подгрузит шапку с футером
+        $this->render_page('trash', $data);
+    }
+
+    /**
+     * AJAX-обработчик восстановления задачи из корзины
+     */
+    public function restore_from_trash_ajax() {
+        $user_id = $this->session->userdata('user_id');
+        $task_id = $this->input->post('task_id');
+
+        // Проверяем, передан ли ID задачи
+        if (!empty($task_id)) {
+            // Вызываем модель для каскадного восстановления
+            if ($this->Task_model->restore_from_trash($task_id, $user_id)) {
+                echo json_encode(['status' => 'success']);
+                return;
+            }
+        }
+        // В случае ошибки возвращаем JSON с описанием
+        echo json_encode(['status' => 'error', 'message' => 'Не удалось восстановить задачу.']);
+    }
+
+    /**
+     * AJAX-обработчик окончательного удаления задачи из базы
+     */
+    public function hard_delete_ajax() {
+        $user_id = $this->session->userdata('user_id');
+        $task_id = $this->input->post('task_id');
+
+        // Проверяем, передан ли ID задачи
+        if (!empty($task_id)) {
+            // Вызываем модель для физического удаления записи и её детей
+            if ($this->Task_model->hard_delete_task($task_id, $user_id)) {
+                echo json_encode(['status' => 'success']);
+                return;
+            }
+        }
+        // В случае ошибки возвращаем JSON
+        echo json_encode(['status' => 'error', 'message' => 'Не удалось окончательно удалить задачу.']);
     }
 }

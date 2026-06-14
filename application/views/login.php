@@ -31,6 +31,13 @@
             <input type="password" id="password" name="password" class="w-full bg-gray-50 border border-gray-300 rounded-xl px-5 py-4 text-xl focus:ring-2 focus:ring-blue-500 focus:outline-none" placeholder="<?= lang('login_password_placeholder'); ?>" required>
         </div>
 
+        <div class="flex items-center justify-between">
+            <label class="flex items-center text-gray-700 cursor-pointer">
+                <input type="checkbox" name="remember_me" value="1" class="w-5 h-5 text-blue-600 border-gray-300 rounded focus:ring-blue-500">
+                <span class="ml-2 text-lg">Запомнить меня</span>
+            </label>
+        </div>
+
         <div>
             <!-- Большая и заметная кнопка входа -->
             <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-5 px-4 rounded-xl text-2xl shadow-lg transition-colors">
@@ -39,4 +46,14 @@
         </div>
 
     <?php echo form_close(); ?>
+
+    <!-- Ссылка на регистрацию (AJAX) -->
+    <div class="mt-8 text-center">
+        <p class="text-gray-600 text-lg">Нет аккаунта? 
+            <a href="<?= site_url('auth/register'); ?>" class="text-blue-600 font-bold hover:underline ajax-link" onclick="event.preventDefault(); loadAjaxPage(this.href);">
+                Зарегистрироваться
+            </a>
+        </p>
+    </div>
 </div>
+

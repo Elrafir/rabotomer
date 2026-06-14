@@ -69,6 +69,8 @@ class Reports extends MY_Controller {
             $grouped_data[$date_key]['tasks'][] = [
                 'task_id' => $row['id'],
                 'title' => $row['title'],
+                'parent_id' => $row['parent_id'],
+                'parent_title' => $row['parent_title'],
                 'color' => $row['color'],
                 'customer_name' => $row['customer_name'],
                 'is_fixed' => $is_fixed,
@@ -104,6 +106,9 @@ class Reports extends MY_Controller {
         $total_archive_h = floor($total_archive_seconds / 3600);
         $total_archive_m = floor(($total_archive_seconds % 3600) / 60);
 
+        // Формируем результирующий массив данных для отображения во вьюшке.
+        // Добавляем параметр left_sidebar_view со значением 'sidebars/statistics',
+        // чтобы подключить левое меню навигации и стандартизировать интерфейс страницы.
         $data = [
             'start_date' => $start_date,
             'end_date' => $end_date,
@@ -111,10 +116,11 @@ class Reports extends MY_Controller {
             'archive_data' => $archive_data,
             'total_time_formatted' => $total_time_formatted,
             'total_archive_formatted' => sprintf(lang('time_format_hours_mins'), $total_archive_h, $total_archive_m),
-            'total_earned' => $total_earned_period
+            'total_earned' => $total_earned_period,
+            'left_sidebar_view' => 'sidebars/statistics' // Подключение левой панели статистики и навигации
         ];
 
-        // Рендерим через каноничный сборщик
+        // Рендерим через каноничный сборщик, передавая подготовленный массив данных
         $this->render_page('reports', $data);
     }
 }

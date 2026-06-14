@@ -11,6 +11,11 @@ CREATE TABLE IF NOT EXISTS `users` (
     `id` INT UNSIGNED AUTO_INCREMENT PRIMARY KEY COMMENT 'Уникальный ID пользователя',
     `username` VARCHAR(50) NOT NULL UNIQUE COMMENT 'Имя пользователя (логин)',
     `password` VARCHAR(255) NOT NULL COMMENT 'Хэш пароля (используется password_hash)',
+    `last_name` VARCHAR(50) DEFAULT NULL,
+    `group_id` INT DEFAULT 2,
+    `user_theme` VARCHAR(50) DEFAULT 'theme-default',
+    `user_theme_opacity` DECIMAL(3,2) DEFAULT 1.00,
+    `remember_token` VARCHAR(64) DEFAULT NULL,
     `created_at` DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT 'Дата и время регистрации'
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='Пользователи системы';
 

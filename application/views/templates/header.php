@@ -6,6 +6,7 @@
     <title><?php echo isset($title) ? $title : 'Тайм-трекер'; ?></title>
     <link rel="icon" type="image/svg+xml" href="<?php echo base_url('assets/img/clock-icon.svg'); ?>">
     
+
     <!-- Локальное подключение Tailwind CSS -->
     <link href="<?php echo base_url('assets/css/tailwind.min.css'); ?>" rel="stylesheet">
     <link href="<?php echo base_url('assets/css/main.css?v='.time()); ?>" rel="stylesheet">

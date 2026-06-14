@@ -17,11 +17,14 @@ class Task_model extends CI_Model {
      * Возвращает плоский массив, который потом можно преобразовать в дерево в контроллере.
      */
     public function get_user_tasks($user_id) {
-        $this->db->select('tasks.*, customers.name as customer_name');
+        $this->db->select('tasks.*, customers.name as customer_name, customer_specs.title as spec_title');
         $this->db->from('tasks');
         $this->db->join('customers', 'customers.id = tasks.customer_id', 'left');
+        $this->db->join('customer_specs', 'customer_specs.id = tasks.spec_id', 'left');
         // Жесткая фильтрация по пользователю
         $this->db->where('tasks.user_id', $user_id);
+        // Исключаем задачи в корзине
+        $this->db->where('tasks.deleted_at IS NULL', null, false);
         // Сортировка по времени создания по убыванию
         $this->db->order_by('tasks.created_at', 'ASC');
         $query = $this->db->get();
@@ -33,7 +36,7 @@ class Task_model extends CI_Model {
     /**
      * Создать новую задачу или подзадачу.
      */
-    public function add_task($user_id, $parent_id, $title, $customer_id = NULL, $is_fixed_price = 0, $price = 0) {
+    public function add_task($user_id, $parent_id, $title, $customer_id = NULL, $is_fixed_price = 0, $price = 0, $spec_id = NULL) {
         // Подготавливаем данные для вставки
         $data = [
             'user_id' => $user_id,
@@ -43,7 +46,8 @@ class Task_model extends CI_Model {
             'created_at' => date('Y-m-d H:i:s'),
             'customer_id' => empty($customer_id) ? NULL : $customer_id,
             'is_fixed_price' => $is_fixed_price ? 1 : 0,
-            'price' => (float)$price
+            'price' => (float)$price,
+            'spec_id' => empty($spec_id) ? NULL : $spec_id
         ];
 
         // Выполняем вставку через Query Builder
@@ -298,14 +302,11 @@ class Task_model extends CI_Model {
             $this->restore_task_recursive($child['id'], $user_id);
         }
 
-        // Восстанавливаем родителя, если он есть, чтобы задача не висела в скрытом родительском проекте
-        $this->db->select('parent_id');
-        $this->db->where('id', $task_id);
-        $this->db->where('user_id', $user_id);
-        $task = $this->db->get('tasks')->row_array();
-        if (!empty($task['parent_id'])) {
+        // Восстанавливаем всех родителей вверх по иерархии, чтобы задача не висела в воздухе
+        $parent_ids = $this->get_all_parent_ids($task_id, $user_id);
+        if (!empty($parent_ids)) {
             $this->db->set('status', 'active');
-            $this->db->where('id', $task['parent_id']);
+            $this->db->where_in('id', $parent_ids);
             $this->db->where('user_id', $user_id);
             $this->db->update('tasks');
         }
@@ -333,6 +334,28 @@ class Task_model extends CI_Model {
         $this->db->order_by('time_sessions.end_time', 'DESC');
         
         return $this->db->get()->result_array();
+    }
+
+    /**
+     * Получить все ID родительских задач (всю иерархию вверх до корня)
+     */
+    public function get_all_parent_ids($task_id, $user_id) {
+        $parent_ids = [];
+        $current_id = $task_id;
+        while ($current_id) {
+            $this->db->select('parent_id');
+            $this->db->where('id', $current_id);
+            $this->db->where('user_id', $user_id);
+            $task = $this->db->get('tasks')->row_array();
+            
+            if (!empty($task['parent_id'])) {
+                $parent_ids[] = $task['parent_id'];
+                $current_id = $task['parent_id'];
+            } else {
+                break;
+            }
+        }
+        return $parent_ids;
     }
 
     /**
@@ -396,6 +419,22 @@ class Task_model extends CI_Model {
     }
 
     /**
+     * Обновление существующей сессии времени.
+     * Обязательно проверяется принадлежность сессии пользователю ($user_id) в целях безопасности.
+     * 
+     * @param int $session_id ID изменяемой сессии
+     * @param int $user_id ID владельца сессии
+     * @param array $data Массив обновляемых полей (start_time, end_time, task_id, note)
+     * @return bool Результат выполнения операции
+     */
+    public function update_session($session_id, $user_id, $data) {
+        $this->db->where('id', $session_id);
+        $this->db->where('user_id', $user_id);
+        return $this->db->update('time_sessions', $data);
+    }
+
+
+    /**
      * Получить список сессий конкретной задачи (для вывода в модальном окне).
      * Берем все завершенные сессии и сортируем по убыванию даты.
      */
@@ -423,11 +462,12 @@ class Task_model extends CI_Model {
     /**
      * Обновление деталей задачи (Название, Клиент, Финансы)
      */
-    public function update_task_details($task_id, $user_id, $new_title, $customer_id, $is_fixed_price, $price) {
+    public function update_task_details($task_id, $user_id, $new_title, $customer_id, $is_fixed_price, $price, $spec_id = NULL) {
         $this->db->set('title', $new_title);
         $this->db->set('customer_id', empty($customer_id) ? NULL : $customer_id);
         $this->db->set('is_fixed_price', $is_fixed_price ? 1 : 0);
         $this->db->set('price', (float)$price);
+        $this->db->set('spec_id', empty($spec_id) ? NULL : $spec_id);
         
         $this->db->where('id', $task_id);
         $this->db->where('user_id', $user_id);
@@ -436,13 +476,21 @@ class Task_model extends CI_Model {
     }
 
     /**
-     * Удаление задачи (каскадное).
-     * Благодаря ON DELETE CASCADE в БД, удаление корневой задачи повлечет удаление подзадач и сессий.
+     * Мягкое удаление задачи (каскадное).
+     * Перемещает задачу и все её подзадачи в корзину (устанавливает deleted_at = NOW()).
      */
     public function delete_task_cascade($task_id, $user_id) {
-        $this->db->where('id', $task_id);
+        // Получаем массив ID самой задачи и всех её подзадач
+        $ids_to_delete = $this->get_task_and_children_ids($task_id);
+        
+        if (empty($ids_to_delete)) return false;
+
+        // Помечаем все найденные задачи как удаленные
+        $this->db->where_in('id', $ids_to_delete);
         $this->db->where('user_id', $user_id);
-        $this->db->delete('tasks');
+        $this->db->set('deleted_at', date('Y-m-d H:i:s'));
+        $this->db->update('tasks');
+        
         return $this->db->affected_rows() > 0;
     }
 
@@ -484,9 +532,10 @@ class Task_model extends CI_Model {
         $end_date_full = $end_date . ' 23:59:59';
         $start_date_full = $start_date . ' 00:00:00';
         // Группируем по DATE(start_time) и task_id
-        $this->db->select('DATE(time_sessions.start_time) as report_date, tasks.id, tasks.title, tasks.color, tasks.is_fixed_price, tasks.price, customers.name as customer_name, SUM(TIMESTAMPDIFF(SECOND, time_sessions.start_time, time_sessions.end_time)) as total_seconds');
+        $this->db->select('DATE(time_sessions.start_time) as report_date, tasks.id, tasks.title, tasks.parent_id, parent_tasks.title as parent_title, tasks.color, tasks.is_fixed_price, tasks.price, customers.name as customer_name, SUM(TIMESTAMPDIFF(SECOND, time_sessions.start_time, time_sessions.end_time)) as total_seconds');
         $this->db->from('time_sessions');
         $this->db->join('tasks', 'tasks.id = time_sessions.task_id');
+        $this->db->join('tasks as parent_tasks', 'parent_tasks.id = tasks.parent_id', 'left');
         $this->db->join('customers', 'customers.id = tasks.customer_id', 'left');
         
         $this->db->where('time_sessions.user_id', $user_id);
@@ -527,6 +576,63 @@ class Task_model extends CI_Model {
         $this->db->where('id', $task_id);
         $this->db->where('user_id', $user_id);
         $this->db->update('tasks');
+        return $this->db->affected_rows() > 0;
+    }
+
+    /**
+     * Получить все удаленные задачи (в корзине) для пользователя.
+     * Возвращает плоский список, контроллер построит дерево.
+     */
+    public function get_trashed_tasks($user_id) {
+        $this->db->select('tasks.*, customers.name as customer_name');
+        $this->db->from('tasks');
+        $this->db->join('customers', 'customers.id = tasks.customer_id', 'left');
+        $this->db->where('tasks.user_id', $user_id);
+        // Только удаленные
+        $this->db->where('tasks.deleted_at IS NOT NULL', null, false);
+        $this->db->order_by('tasks.deleted_at', 'DESC'); // Сортируем по дате удаления
+        $query = $this->db->get();
+        return $query->result_array();
+    }
+
+    /**
+     * Восстановить задачу из корзины (каскадно).
+     * Снимает отметку deleted_at у самой задачи и всех её подзадач, а также восстанавливает всех родителей по цепочке.
+     */
+    public function restore_from_trash($task_id, $user_id) {
+        // Получаем массив ID (самой задачи и её детей)
+        $ids_to_restore = $this->get_task_and_children_ids($task_id);
+        
+        if (empty($ids_to_restore)) return false;
+
+        // Получаем всех родителей, чтобы восстановить цепочку и избежать подвешивания в воздухе
+        $parent_ids = $this->get_all_parent_ids($task_id, $user_id);
+        if (!empty($parent_ids)) {
+            $ids_to_restore = array_unique(array_merge($ids_to_restore, $parent_ids));
+        }
+
+        $this->db->where_in('id', $ids_to_restore);
+        $this->db->where('user_id', $user_id);
+        $this->db->set('deleted_at', NULL); // Сбрасываем флаг
+        $this->db->update('tasks');
+        
+        return $this->db->affected_rows() > 0;
+    }
+
+    /**
+     * Окончательное удаление (каскадно).
+     * Безвозвратно удаляет задачу и все подзадачи из БД.
+     */
+    public function hard_delete_task($task_id, $user_id) {
+        // Получаем массив ID
+        $ids_to_delete = $this->get_task_and_children_ids($task_id);
+        
+        if (empty($ids_to_delete)) return false;
+
+        $this->db->where_in('id', $ids_to_delete);
+        $this->db->where('user_id', $user_id);
+        $this->db->delete('tasks');
+        
         return $this->db->affected_rows() > 0;
     }
 }

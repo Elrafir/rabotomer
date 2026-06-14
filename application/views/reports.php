@@ -1,9 +1,17 @@
 <!-- application/views/reports.php -->
-<div class="max-w-6xl mx-auto min-h-[80vh] pb-32">
+<!-- 
+  Изменена обертка страницы: убран класс max-w-6xl mx-auto для корректного отображения 
+  в трехколоночном шаблоне при подключении левого бокового меню. Теперь контент 
+  растягивается на всю доступную ширину центральной колонки.
+-->
+<div class="w-full min-h-[80vh] pb-32">
     
     <!-- Заголовок страницы -->
-    <div class="flex justify-between items-center mb-6">
-        <h1 class="text-3xl font-black text-gray-800"><?= lang('reports_title'); ?></h1>
+    <div class="flex justify-between items-end mb-4">
+        <div class="flex items-center gap-6">
+            <img src="<?= base_url('assets/img/reports_logo.png') ?>" alt="Reports Logo" class="w-16 h-16 object-cover rounded-2xl shadow-sm">
+            <h1 class="text-3xl font-black text-gray-800"><?= lang('reports_title'); ?></h1>
+        </div>
     </div>
 
     <!-- Компактная панель фильтров -->
@@ -35,7 +43,7 @@
                     <span class="text-gray-600 text-sm font-bold"><?= lang('reports_lbl_to'); ?></span>
                     <input type="date" id="dateEnd" name="end" value="<?= htmlspecialchars($end_date ?? ''); ?>" class="px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none">
                 </div>
-                <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-6 rounded-lg text-sm shadow-sm transition-colors">
+                <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-6 rounded-lg text-sm shadow-sm transition-colors" style="z-index: 0;">
                     <?= lang('reports_btn_show'); ?>
                 </button>
             <?php echo form_close(); ?>
@@ -94,9 +102,22 @@
                                                 <div class="w-3 h-3 rounded-full shadow-sm border border-gray-200" style="background-color: <?= $row['color'] ? $row['color'] : '#e5e7eb'; ?>"></div>
                                             </td>
                                             <td class="py-2 px-2 font-medium text-gray-800">
-                                                <?= htmlspecialchars($row['title'] ?? ''); ?>
-                                                <?php if (!empty($row['customer_name'])): ?>
-                                                    <span class="text-xs text-gray-400 ml-1">[<?= htmlspecialchars($row['customer_name'] ?? ''); ?>]</span>
+                                                <?php if (!empty($row['parent_id'])): ?>
+                                                    <div class="text-xs text-gray-400 mb-0.5 flex items-center gap-1">
+                                                        <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14"></path></svg>
+                                                        <?= htmlspecialchars($row['parent_title'] ?? 'Неизвестный проект'); ?>
+                                                    </div>
+                                                    <div class="pl-4 border-l-2 border-gray-100 flex items-center">
+                                                        <?= htmlspecialchars($row['title'] ?? ''); ?>
+                                                        <?php if (!empty($row['customer_name'])): ?>
+                                                            <span class="text-xs text-gray-400 ml-1">[<?= htmlspecialchars($row['customer_name'] ?? ''); ?>]</span>
+                                                        <?php endif; ?>
+                                                    </div>
+                                                <?php else: ?>
+                                                    <?= htmlspecialchars($row['title'] ?? ''); ?>
+                                                    <?php if (!empty($row['customer_name'])): ?>
+                                                        <span class="text-xs text-gray-400 ml-1">[<?= htmlspecialchars($row['customer_name'] ?? ''); ?>]</span>
+                                                    <?php endif; ?>
                                                 <?php endif; ?>
                                             </td>
                                             <td class="py-2 px-4 text-right font-bold text-blue-600 w-32 whitespace-nowrap">

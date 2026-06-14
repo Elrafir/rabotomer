@@ -72,3 +72,258 @@
     from { transform: rotate(0deg); }
     to { transform: rotate(360deg); }
 }
+
+/* =========================================
+   ДИНАМИЧЕСКИЕ ТЕМЫ ОФОРМЛЕНИЯ (HSL MATH)
+   ========================================= */
+
+/* Адаптивная типографика (100% OFF-LINE): Мы находимся в изолированной сети без интернета.
+   Поэтому мы не используем Google Fonts. Вместо этого используем нативный стек системных шрифтов (system-ui).
+   Они бесплатны, лежат локально в самой ОС (iOS, Android, Linux Mint, Windows)
+   и рендерятся аппаратно и молниеносно, без попыток выкачать шрифты из внешней сети. */
+body, .font-sans {
+    font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif !important;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    letter-spacing: -0.015em;
+    font-weight: 400;
+}
+
+/* Элегантный трекинг (расстояние между буквами) для всех заголовков.
+   Придает более премиальный вид. */
+h1, h2, h3, h4 {
+    letter-spacing: -0.025em; 
+    font-weight: 700;
+}
+
+/* Добавляем мягкие, не громоздкие тени (shadow-md) для основных кнопок, 
+   чтобы элементы интерфейса выглядели объемно, но аккуратно. */
+body .bg-blue-600 {
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+}
+
+/* 1. Базовые настройки для динамического расчета */
+body {
+    /* Базовый HSL (по умолчанию Синий: H:221, S:83%, L:53%) */
+    --theme-h: 221;
+    --theme-s: 83%;
+    --theme-l: 53%;
+
+    /* МАШИННАЯ МАТЕМАТИКА HSL */
+    /* Комплементарный цвет (+180 градусов). Браузер сам сделает по модулю 360 */
+    --comp-h: calc(var(--theme-h) + 180);
+
+    /* Гармоничный фон (+15 градусов к базе, 15% насыщенности, 96% светлоты) */
+    --bg-h: calc(var(--theme-h) + 15);
+    --bg-s: 15%;
+    --bg-l: 96%;
+
+    /* 2. Генерация финальных цветов с учетом ползунка (--theme-opacity) */
+    /* Для фонов и акцентов: */
+    --theme-color-main: hsla(var(--theme-h), var(--theme-s), var(--theme-l), var(--theme-opacity, 1));
+    --theme-color-hover: hsla(var(--theme-h), var(--theme-s), calc(var(--theme-l) - 10%), var(--theme-opacity, 1));
+    --theme-color-light: hsla(var(--theme-h), var(--theme-s), 95%, var(--theme-opacity, 1));
+    
+    /* Солидные (непрозрачные) цвета для кнопок, чтобы они не растворялись при низком --theme-opacity */
+    --theme-color-solid: hsla(var(--theme-h), var(--theme-s), var(--theme-l), 1);
+    --theme-color-hover-solid: hsla(var(--theme-h), var(--theme-s), calc(var(--theme-l) - 10%), 1);
+    
+    /* Контрастный акцент (комплементарный цвет): */
+    --theme-comp-color: hsla(var(--comp-h), 80%, 50%, 1);
+
+    /* ДИНАМИЧЕСКИЙ КОНТРАСТ ТЕКСТА (БИНАРНЫЙ ТРИГГЕР) */
+    /* Базовая светлота текста для глубоких тем - почти белый (98%) */
+    --base-text-l: 98%;
+    
+    /* 
+       Проблема "65% ползунка": Если плавно менять цвет текста, на средних значениях он сливается с фоном.
+       Решение: Делаем жесткий "переключатель" (threshold) через CSS функцию clamp().
+       Если opacity > 0.65, то --is-dense становится 1. Если ниже — становится 0.
+    */
+    --is-dense: clamp(0, (var(--theme-opacity, 1) - 0.65) * 10000, 1);
+    --is-light: calc(1 - var(--is-dense));
+    
+    /* Если тема плотная (--is-dense = 1), берем базовый цвет (белый для темных тем).
+       Если тема светлая (--is-light = 1), берем глубокий темный (15%). */
+    --text-l: calc(var(--is-dense) * var(--base-text-l) + var(--is-light) * 15%);
+    
+    /* Итоговый цвет шрифта для блоков: тот же тон и насыщенность, но умная светлота */
+    --text-contrast: hsl(var(--theme-h), var(--theme-s), var(--text-l));
+}
+
+/* 3. Задаем базовые тона (H, S, L) для каждой темы и динамический контраст текста */
+body.theme-default { --theme-h: 221; --theme-s: 83%; --theme-l: 53%; --base-text-l: 98%; }
+body.theme-emerald { --theme-h: 161; --theme-s: 94%; --theme-l: 30%; --base-text-l: 98%; } 
+body.theme-berry   { --theme-h: 347; --theme-s: 77%; --theme-l: 50%; --base-text-l: 98%; } 
+body.theme-night   { --theme-h: 215; --theme-s: 19%; --theme-l: 35%; --base-text-l: 98%; } 
+body.theme-ocean   { --theme-h: 192; --theme-s: 91%; --theme-l: 36%; --base-text-l: 98%; } 
+body.theme-custom  { --theme-s: 85%; --theme-l: 50%; --base-text-l: 98%; } /* Тон (H) задается динамически через инлайн-стиль */
+
+/* Для светлых/пастельных тем (sunset, lavender, coffee) текст всегда темный (15%), 
+   потому что на их густом фоне белый читается плохо в любом случае. */
+body.theme-sunset   { --theme-h: 22;  --theme-s: 93%; --theme-l: 47%; --base-text-l: 15%; } 
+body.theme-lavender { --theme-h: 271; --theme-s: 81%; --theme-l: 56%; --base-text-l: 15%; } 
+body.theme-coffee   { --theme-h: 32;  --theme-s: 96%; --theme-l: 44%; --base-text-l: 15%; }
+body.theme-mint     { --theme-h: 160; --theme-s: 84%; --theme-l: 39%; --base-text-l: 98%; }
+body.theme-gold     { --theme-h: 43;  --theme-s: 96%; --theme-l: 50%; --base-text-l: 15%; }
+body.theme-black    { --theme-h: 0;   --theme-s: 0%;  --theme-l: 15%; --base-text-l: 98%; }
+
+/* 4. Применяем расчетные цвета к Tailwind классам (перекрашиваем интерфейс) */
+/* Важное правило адаптации: текстовые элементы внутри цветных блоков теперь используют --text-contrast */
+body .bg-blue-600, body button.bg-blue-600, body .bg-green-600, body .bg-purple-600, body .bg-red-500 { 
+    position: relative;
+    z-index: 1;
+    border: none;
+    transition: all 0.2s ease;
+}
+/* Переопределяем синие кнопки на динамический цвет темы (солидный, без прозрачности) */
+body button.bg-blue-600, body a.bg-blue-600 {
+    background: linear-gradient(to right, var(--theme-color-solid), var(--theme-color-hover-solid)) !important;
+    color: var(--text-contrast) !important;
+}
+
+/* Переопределяем шапку на цвет темы с прозрачностью */
+body nav.bg-blue-600 {
+    background: var(--theme-color-main) !important;
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+}
+
+/* Свечение (Glow) для ВСЕХ цветных кнопок */
+body button.bg-blue-600::before, body a.bg-blue-600::before,
+body button.bg-green-600::before, body a.bg-green-600::before,
+body button.bg-purple-600::before, body a.bg-purple-600::before,
+body button.bg-red-500::before, body a.bg-red-500::before {
+    content: "";
+    position: absolute;
+    inset: -2px;
+    border-radius: inherit;
+    filter: blur(8px);
+    opacity: 0.3;
+    z-index: -1;
+    transition: opacity 0.3s ease;
+    pointer-events: none;
+}
+/* Задаем цвет свечения соответственно кнопке */
+body button.bg-blue-600::before, body a.bg-blue-600::before { background: linear-gradient(to right, var(--theme-color-solid), var(--theme-color-hover-solid)); }
+body button.bg-green-600::before, body a.bg-green-600::before { background: linear-gradient(to right, #16a34a, #15803d); } /* green-600 to green-700 */
+body button.bg-purple-600::before, body a.bg-purple-600::before { background: linear-gradient(to right, #9333ea, #7e22ce); } /* purple-600 to purple-700 */
+body button.bg-red-500::before, body a.bg-red-500::before { background: linear-gradient(to right, #ef4444, #b91c1c); } /* red-500 to red-700 */
+
+body button.bg-blue-600:hover::before, body a.bg-blue-600:hover::before,
+body button.bg-green-600:hover::before, body a.bg-green-600:hover::before,
+body button.bg-purple-600:hover::before, body a.bg-purple-600:hover::before,
+body button.bg-red-500:hover::before, body a.bg-red-500:hover::before {
+    opacity: 0.6;
+}
+
+body button.bg-blue-600:active, body a.bg-blue-600:active,
+body button.bg-green-600:active, body a.bg-green-600:active,
+body button.bg-purple-600:active, body a.bg-purple-600:active,
+body button.bg-red-500:active, body a.bg-red-500:active {
+    transform: scale(0.95);
+}
+/* Переводим все белые тексты (например в навигации или на кнопках) на наш адаптивный цвет */
+body .text-white {
+    color: var(--text-contrast) !important;
+}
+body .hover\:bg-blue-700:hover { background-color: var(--theme-color-hover) !important; }
+body .text-blue-600 { color: var(--theme-color-main) !important; }
+body .text-blue-500 { color: var(--theme-color-main) !important; }
+body .text-blue-700 { color: var(--theme-color-hover) !important; }
+body .bg-blue-50 { background-color: var(--theme-color-light) !important; }
+body .hover\:bg-blue-100:hover, body .bg-blue-100 { background-color: var(--theme-color-light) !important; }
+body .text-blue-200 { color: var(--theme-color-light) !important; }
+body .focus\:ring-blue-500:focus { --tw-ring-color: var(--theme-color-main) !important; }
+
+/* 5. Применяем гармоничные фоны к приложению и контейнерам */
+body.bg-gray-100 {
+    background-color: var(--theme-app-bg, #f3f4f6) !important;
+}
+
+body .bg-white {
+    background-color: var(--theme-card-bg, #ffffff) !important;
+}
+
+body .bg-gray-50 {
+    background-color: hsla(var(--bg-h), var(--bg-s), 95%, 1) !important;
+}
+
+/* Эксперимент: Применяем комплементарный (контрастный) цвет для некоторых акцентов таймера */
+body .text-emerald-600 {
+    color: var(--theme-comp-color) !important;
+}
+
+/* =========================================
+   ГЛОБАЛЬНЫЕ СТИЛИ ЭЛЕМЕНТОВ (ПО ВЫБОРУ)
+   ========================================= */
+
+/* ИНПУТЫ: Внутри как Вариант 2 (Glassmorphic), Рамка при фокусе как Вариант 1 (Soft UI) */
+input[type="text"], input[type="email"], input[type="password"], input[type="number"], textarea, select {
+    background-color: rgba(255, 255, 255, 0.5) !important;
+    backdrop-filter: blur(4px);
+    border: 1px solid rgba(255, 255, 255, 0.5) !important;
+    box-shadow: inset 0 2px 4px 0 rgba(0, 0, 0, 0.06) !important;
+    color: #1f2937 !important; /* text-gray-800 */
+    transition: all 0.2s ease !important;
+}
+input[type="text"]:focus, input[type="email"]:focus, input[type="password"]:focus, input[type="number"]:focus, textarea:focus, select:focus {
+    background-color: var(--theme-card-bg) !important;
+    border-color: var(--theme-color-main) !important;
+    /* Имитация focus:ring-4 через box-shadow */
+    box-shadow: inset 0 2px 4px 0 rgba(0, 0, 0, 0.06), 0 0 0 4px hsla(var(--theme-h), var(--theme-s), var(--theme-l), 0.15) !important;
+    outline: none !important;
+}
+input::placeholder, textarea::placeholder {
+    color: #6b7280 !important; /* gray-500 */
+}
+
+
+/* Эффект "тучки" для активного пункта меню */
+.nav-cloud-active {
+    position: relative;
+    z-index: 1;
+}
+.nav-cloud-active::before {
+    content: "";
+    position: absolute;
+    top: -75%;
+    bottom: -75%;
+    left: -30%;
+    right: -30%;
+    background: radial-gradient(ellipse at center, rgba(255, 255, 255, 0.55) 0%, rgba(255, 255, 255, 0) 70%);
+    z-index: -1;
+    pointer-events: none;
+}
+
+
+/* Выпадающее меню профиля */
+.profile-dropdown-content {
+    display: none;
+}
+.profile-dropdown-wrapper:hover .profile-dropdown-content {
+    display: block;
+    animation: fadeIn 0.2s ease;
+}
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(-5px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+/* Пользовательский цвет при наведении на кнопку остановки */
+.hover-stop-blue:hover {
+    background-color: rgb(0, 196, 255) !important;
+    border-color: rgb(0, 196, 255) !important;
+    color: white !important;
+}
+
+/* Стили для модалки тем (Theme Modal) */
+.theme-modal-base {
+    background-color: rgba(255, 255, 255, 0.9) !important; /* 90% opacity white by default */
+    transition: background-color 0.3s ease, backdrop-filter 0.3s ease;
+}
+
+.dragging-theme-modal {
+    background-color: var(--theme-card-bg) !important; /* fallback to transparent theme color when dragging */
+    cursor: grabbing !important;
+}

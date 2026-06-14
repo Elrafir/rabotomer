@@ -24,6 +24,7 @@ $lang['btn_add'] = 'Добавить';
 $lang['btn_add_subtask'] = '+ Подзадача';
 $lang['btn_edit'] = 'Редактировать';
 $lang['btn_delete'] = 'Удалить';
+$lang['btn_to_trash'] = 'В корзину';
 
 // ============================================
 // Статусы
@@ -82,7 +83,7 @@ $lang['modal_btn_delete_title'] = 'Удалить сессию';
 // ============================================
 $lang['js_confirm_complete'] = 'Вы уверены, что хотите завершить эту задачу и все её подзадачи?';
 $lang['js_confirm_delete'] = 'Точно удалить эту сессию времени?';
-$lang['js_confirm_delete_task'] = 'Внимание! При удалении задачи удалятся все её подзадачи и сессии времени. Продолжить?';
+$lang['js_confirm_delete_task'] = 'Отправить задачу и все её подзадачи в корзину? (Оттуда их можно будет восстановить)';
 $lang['js_alert_fill_fields'] = 'Заполните оба поля времени!';
 $lang['js_prompt_stop_timer'] = 'Краткий результат работы (необязательно):';
 
@@ -212,3 +213,124 @@ $lang['finance_earned'] = 'Заработано:';
 $lang['finance_no_customer'] = 'Клиент не выбран';
 $lang['finance_without_customer'] = 'Без заказчика';
 $lang['finance_badge_fixed'] = 'ФИКС';
+
+// Дополнительные ключи для Заказчиков и ТЗ
+$lang['nav_stats_calc'] = 'Статистика и расчёты';
+$lang['nav_calculations'] = 'Калькуляция';
+$lang['cust_title_and_spec'] = 'Заказчики и ТЗ';
+$lang['cust_list_title'] = 'Список заказчиков';
+$lang['cust_empty_list'] = 'Заказчиков нет';
+$lang['cust_no_customers_title'] = 'У вас пока нет заказчиков';
+$lang['cust_no_customers_desc'] = 'Создайте своего первого заказчика при помощи кнопки слева, чтобы начать работу.';
+$lang['cust_info_btn'] = 'Подробнее (Инфо)';
+$lang['cust_delete_confirm'] = 'Вы действительно хотите удалить заказчика и все его ТЗ?';
+$lang['cust_linked_tasks'] = 'Связанные задачи';
+$lang['cust_no_tasks'] = 'К этому заказчику пока не привязано ни одной задачи.';
+$lang['cust_specs_title'] = 'Технические задания (ТЗ)';
+$lang['cust_create_spec_btn'] = 'Создать ТЗ';
+$lang['cust_no_specs'] = 'Технических заданий не создано. Нажмите кнопку выше, чтобы добавить новое ТЗ.';
+$lang['cust_created_at'] = 'Создано:';
+$lang['cust_price_badge'] = 'Ценник:';
+$lang['cust_prepayment_badge'] = 'Предоплата:';
+$lang['cust_payment_badge'] = 'Оплата:';
+$lang['cust_delete_spec_confirm'] = 'Удалить это ТЗ со всеми прикрепленными файлами?';
+$lang['cust_spec_linked_tasks'] = 'Связанные задачи:';
+$lang['cust_spec_no_linked_tasks'] = 'Нет связанных задач';
+$lang['cust_attached_files_title'] = 'Прикрепленные файлы и ссылки';
+$lang['cust_no_files'] = 'Нет файлов';
+$lang['cust_file_link'] = 'Ссылка';
+$lang['cust_download_title'] = 'Скачать';
+$lang['cust_dropzone_text'] = 'Перетащите файлы сюда или';
+$lang['cust_dropzone_select'] = 'выберите на диске';
+$lang['cust_details_title'] = 'Детали заказчика';
+$lang['cust_name_label'] = 'Название / Имя';
+$lang['cust_notes_label'] = 'Заметки / Контакты';
+$lang['cust_no_notes'] = 'Нет примечаний';
+$lang['cust_default_price_label'] = 'Ценник по умолчанию (руб.)';
+$lang['cust_default_prepayment_label'] = 'Предоплата по умолчанию (руб.)';
+$lang['cust_default_payment_type_label'] = 'Тип оплаты по умолчанию';
+$lang['cust_edit_customer_title'] = 'Редактировать заказчика';
+$lang['cust_new_spec_title'] = 'Новое техническое задание';
+$lang['cust_spec_title_label'] = 'Название ТЗ';
+$lang['cust_spec_title_placeholder'] = 'Например: Разработка модуля авторизации';
+$lang['cust_price_label'] = 'Ценник (руб.)';
+$lang['cust_prepayment_label'] = 'Предоплата (руб.)';
+$lang['cust_payment_type_label'] = 'Тип оплаты';
+$lang['cust_link_tasks_label'] = 'Привязать задачи';
+$lang['cust_no_tasks_available'] = 'Нет доступных задач для привязки';
+$lang['cust_spec_content_label'] = 'Содержимое (Требования)';
+$lang['cust_save_spec_btn'] = 'Сохранить ТЗ';
+$lang['cust_edit_spec_title'] = 'Редактировать ТЗ';
+$lang['cust_save_changes_btn'] = 'Сохранить изменения';
+$lang['cust_spec_desc_placeholder'] = 'Опишите требования к ТЗ...';
+
+$lang['js_confirm_delete_file'] = 'Вы действительно хотите удалить этот файл ТЗ?';
+$lang['js_err_system_upload'] = 'Произошла системная ошибка при загрузке файла';
+$lang['js_err_upload_fail'] = 'Ошибка отправки файла на сервер';
+$lang['js_err_delete_file_fail'] = 'Произошла ошибка при удалении файла';
+$lang['js_err_enter_url'] = 'Введите URL-адрес ссылки';
+$lang['js_err_add_link_fail'] = 'Ошибка при добавлении ссылки';
+$lang['js_err_enter_url_download'] = 'Введите URL-адрес для скачивания';
+$lang['js_err_download_url_fail'] = 'Ошибка при скачивании файла';
+
+// Общие ключи для форм и таблиц
+$lang['lbl_actions'] = 'Действия';
+$lang['lbl_task'] = 'Задача';
+$lang['lbl_select_task'] = 'Выберите задачу...';
+$lang['lbl_start_time'] = 'Время начала';
+$lang['lbl_end_time'] = 'Время окончания';
+$lang['lbl_note_result'] = 'Заметка / Результат';
+$lang['lbl_what_was_done_placeholder'] = 'Что было сделано...';
+$lang['lbl_session_add'] = 'Добавить сессию';
+$lang['lbl_session_edit'] = 'Редактировать сессию';
+
+// JS ошибки и оповещения
+$lang['js_err_required_fields'] = 'Заполните все обязательные поля!';
+$lang['js_err_system_save'] = 'Произошла системная ошибка при сохранении';
+$lang['js_err_system_save_changes'] = 'Произошла системная ошибка при сохранении изменений';
+$lang['js_err_system_delete'] = 'Произошла системная ошибка при удалении';
+$lang['js_err_delete_session_fail'] = 'Произошла ошибка при удалении сессии';
+
+// Дополнительные ключи для дашборда
+$lang['dash_subtasks_count'] = 'Подзадач';
+$lang['dash_stop_timer_title'] = 'Остановить сессию';
+$lang['dash_stop_timer_btn'] = 'Остановить?';
+$lang['dash_finalize_title'] = 'Финализировать задачу';
+$lang['dash_finalize_desc'] = 'Завершает данную задачу и все вложенные в нее подзадачи.';
+$lang['dash_edit_properties_title'] = 'Редактировать свойства задачи';
+$lang['dash_manual_adjust_title'] = 'Ручная корректировка времени';
+$lang['dash_add_new_client'] = '+ Добавить нового клиента';
+$lang['dash_client_name_placeholder'] = 'Имя клиента';
+$lang['dash_client_notes_placeholder'] = 'Заметки';
+$lang['dash_link_spec_label'] = 'Техническое задание (ТЗ)';
+$lang['dash_link_spec_placeholder'] = 'Связать с ТЗ...';
+$lang['js_confirm_restore_task'] = 'Восстановить задачу?';
+$lang['js_err_enter_task_title'] = 'Введите название задачи!';
+
+// Дополнительные ключи для шаблона body.php и тем оформления
+$lang['nav_trash'] = 'Корзина';
+$lang['body_theme_config'] = 'Настроить оформление';
+$lang['body_edit_profile'] = 'Редактировать профиль';
+$lang['body_logout'] = 'Выйти';
+$lang['body_widget_stop_session'] = 'Завершить текущую сессию';
+$lang['body_widget_collapse'] = 'свернуть';
+$lang['body_theme_color'] = 'Цвет интерфейса';
+$lang['body_theme_bg_opacity'] = 'Плотность фона';
+$lang['body_theme_hue'] = 'Тон (Hue)';
+
+// Названия тем
+$lang['theme_name_default'] = 'Синий';
+$lang['theme_name_emerald'] = 'Изумрудный';
+$lang['theme_name_sunset'] = 'Закат';
+$lang['theme_name_berry'] = 'Ягодный';
+$lang['theme_name_night'] = 'Ночь';
+$lang['theme_name_ocean'] = 'Океан';
+$lang['theme_name_lavender'] = 'Лаванда';
+$lang['theme_name_coffee'] = 'Кофе';
+$lang['theme_name_mint'] = 'Мятный';
+$lang['theme_name_gold'] = 'Золотой';
+$lang['theme_name_black'] = 'Черный';
+$lang['theme_name_custom'] = 'Свой цвет';
+
+
+

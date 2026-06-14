@@ -15,10 +15,11 @@ if (!function_exists('hex2rgba')) {
 
 // Рекурсивная функция для вывода дерева задач (максимум 3 уровня)
 if (!function_exists('render_task_tree')) {
-    function render_task_tree($tasks, $level = 1, $active_session = null) {
+    function render_task_tree($tasks, $level = 1, $active_session = null, $parent_breadcrumb = '') {
         if (empty($tasks) || $level > 3) return;
         
-        echo '<ul class="space-y-2 ' . ($level > 1 ? 'ml-4 pl-4 border-l-2 border-gray-200 mt-2 hidden task-children' : '') . '">';
+        $ul_style = ($level > 1) ? 'style="display: none;"' : '';
+        echo '<ul class="space-y-2 ' . ($level > 1 ? 'ml-4 pl-4 border-l-2 border-gray-200 mt-2 task-children' : '') . '" ' . $ul_style . '>';
         $completed_subtasks_count = 0;
         
         foreach ($tasks as $task) {
@@ -26,88 +27,151 @@ if (!function_exists('render_task_tree')) {
             $is_active = ($active_session && $active_session['task_id'] == $task['id']);
             $is_completed = ($task['status'] === 'completed');
             
+            $current_title = htmlspecialchars($task['title'] ?? '');
+            $breadcrumb = $parent_breadcrumb === '' ? $current_title : $parent_breadcrumb . ' / ' . $current_title;
+            
+            $modal_title = $breadcrumb;
+            if ($has_children) {
+                $modal_title .= ' 🗂️';
+            }
+            
             // Если задача завершена, приглушаем её цвет (прозрачность)
             $task_classes = 'p-3 rounded-xl shadow-sm border border-gray-100 transition-shadow hover:shadow-md';
+            $li_display = '';
             if ($is_completed) {
                 $task_classes .= ' opacity-60';
                 if ($level == 1) {
-                    $task_classes .= ' hidden-completed-root hidden';
+                    $task_classes .= ' hidden-completed-root';
+                    $li_display = 'display: none;';
                 } else {
-                    $task_classes .= ' hidden-completed-subtask hidden';
+                    $task_classes .= ' hidden-completed-subtask';
                     $completed_subtasks_count++;
+                    $li_display = 'display: none;';
                 }
             }
             
             $pale_bg = hex2rgba($task['color'], 0.1);
-            echo '<li class="' . $task_classes . '" style="background-color: ' . $pale_bg . ';">';
+            echo '<li class="' . $task_classes . '" data-task-id="' . $task['id'] . '" style="background-color: ' . $pale_bg . '; ' . $li_display . '">';
             echo '<div class="flex justify-between items-center">';
             
-            // Левая часть: Название + Время (Стрелки раскрытия убраны, клик всё еще работает)
-            echo '<div class="flex items-center gap-3 cursor-pointer select-none ' . ($has_children ? 'toggle-children' : '') . '">';
+            // Левая часть: Название + Время
+            echo '<div class="flex items-center gap-2 cursor-pointer select-none ' . ($has_children ? 'toggle-children' : '') . '">';
 
-            // Название задачи
+            // 1. Кружок выбора цвета
             $color_bg = !empty($task['color']) ? "background-color: {$task['color']};" : "background-color: #e5e7eb;";
-            echo '<div class="tree-dot w-4 h-4 rounded-full shadow-sm border border-gray-200 flex-shrink-0" style="' . $color_bg . '" onclick="openColorPicker(event, ' . $task['id'] . ')" title="' . lang('reports_color_task') . '"></div>';
-            echo '<span class="text-lg font-medium ' . ($is_completed ? 'text-gray-500 line-through' : 'text-gray-800') . '">' . htmlspecialchars($task['title'] ?? '') . '</span>';
-            
-            if (!empty($task['customer_name'])) {
-                echo '<span class="text-sm text-gray-400 ml-2">[' . htmlspecialchars($task['customer_name'] ?? '') . ']</span>';
+            echo '<div class="tree-dot w-4 h-4 rounded-full shadow-sm border border-gray-200 flex-shrink-0 ml-1" style="' . $color_bg . '" onclick="event.stopPropagation(); openColorPicker(event, ' . $task['id'] . ')" title="' . lang('reports_color_task') . '"></div>';
+
+            // 2. Кнопка "Добавить подзадачу"
+            if ($level < 3 && !$is_completed) {
+                echo '<button onclick="event.stopPropagation(); toggleAddForm(' . $task['id'] . ')" class="text-gray-400 hover:text-green-600 transition-colors w-6 h-6 flex items-center justify-center flex-shrink-0" title="' . lang('btn_add_subtask') . '">';
+                echo '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M12 4v16m8-8H4"></path></svg>';
+                echo '</button>';
+            } else {
+                echo '<div class="w-1 h-6"></div>'; // небольшой отступ для выравнивания если кнопки нет
             }
+
+            // 3. Название задачи
+            echo '<span class="task-title-text text-lg font-medium ' . ($is_completed ? 'text-gray-500 line-through' : 'text-gray-800') . '">' . htmlspecialchars($task['title'] ?? '') . '</span>';
+            
+            // 4. Заказчик
+            if (!empty($task['customer_name'])) {
+                echo '<span class="text-sm text-gray-400">[' . htmlspecialchars($task['customer_name'] ?? '') . ']</span>';
+            }
+
+            // 5. Счетчик подзадач и стрелочка
+            if ($has_children) {
+                $children_count = count($task['children']);
+                echo '<div class="flex items-center gap-1 ml-3 text-gray-400 hover:text-gray-700 transition-colors" title="Показать/скрыть подзадачи">';
+                echo '<span class="text-xs font-medium bg-gray-100 px-2 py-0.5 rounded-full border border-gray-200 shadow-sm">Подзадач: ' . $children_count . '</span>';
+                echo '<div class="w-5 h-5 flex items-center justify-center">';
+                echo '<svg class="w-4 h-4 transition-transform duration-200 icon-expand" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M19 9l-7 7-7-7"></path></svg>';
+                echo '</div>';
+                echo '</div>';
+            }
+
             echo '</div>'; // Конец левой части
             
-            // Вывод времени
-            echo '<span class="text-base font-bold text-gray-400 ml-4">[' . htmlspecialchars($task['formatted_time'] ?? '') . ']</span>';
+            // Контейнер для таймера и кнопок (прижат вправо)
+            echo '<div class="flex items-center gap-4 ml-auto pl-4 flex-shrink-0">';
             
-            // Правая часть: Кнопка Старт, Готово и Подзадача
-            echo '<div class="flex items-center gap-2 btn-group-fixed">';
+            // Вывод времени (фиксированная ширина для идеального выравнивания)
+            $timer_classes = 'text-sm font-bold w-36 text-center px-4 py-1.5 rounded-full bg-white shadow-sm border block flex-shrink-0 ';
+            if ($is_active) {
+                $timer_classes .= 'text-green-500 border-green-200 animate-pulse';
+            } else {
+                $timer_classes .= 'text-[#800000] border-gray-200';
+            }
+            echo '<span class="' . $timer_classes . '">' . htmlspecialchars($task['formatted_time'] ?? '') . '</span>';
             
-            // Если задача НЕ завершена, показываем элементы управления
+            // Правая часть (кнопки) - фиксированная ширина, чтобы таймер стоял как влитой
+            echo '<div class="flex items-center justify-end gap-2 w-[290px] relative">';
+            
             if (!$is_completed) {
-                if ($level < 3) {
-                    echo '<button onclick="toggleAddForm(' . $task['id'] . ')" class="bg-gray-100 hover:bg-gray-200 text-gray-600 font-bold py-2 px-3 rounded-lg text-sm transition-colors" title="' . lang('btn_add_subtask') . '">' . lang('btn_add_subtask') . '</button>';
-                }
-                
                 // Кнопка СТАРТ (если таймер не тут)
                 if (!$is_active) {
-                    echo '<button onclick="startTimer(' . $task['id'] . ')" class="bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-4 rounded-lg text-sm shadow-md transition-all active:scale-95 flex items-center gap-2">';
+                    echo '<button onclick="startTimer(' . $task['id'] . ')" class="bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-4 rounded-lg text-sm shadow-md transition-all active:scale-95 flex items-center gap-2 flex-shrink-0">';
                     echo lang('btn_start');
                     echo '</button>';
                 } else {
-                    echo '<span class="text-green-500 font-bold text-sm px-3 py-1 border border-green-500 rounded-lg bg-green-50 animate-pulse">' . lang('status_active') . '</span>';
+                    echo '<button onclick="stopTimer()" class="group text-green-500 hover-stop-blue font-bold text-sm px-3 py-1 border border-green-500 rounded-lg bg-green-50 hover:animate-none animate-pulse transition-colors shadow-sm flex-shrink-0" title="' . htmlspecialchars(lang('dash_stop_timer_title'), ENT_QUOTES) . '">';
+                    echo '<span class="group-hover:hidden whitespace-nowrap">' . lang('status_active') . '</span>';
+                    echo '<span class="hidden group-hover:inline-flex items-center gap-1.5 whitespace-nowrap"><svg class="w-4 h-4 drop-shadow-sm" viewBox="0 0 24 24"><path d="M8.4 2H15.6L22 8.4V15.6L15.6 22H8.4L2 15.6V8.4L8.4 2Z" fill="white"/><text x="12" y="14.5" fill="#dc2626" font-size="6.5" font-family="sans-serif" font-weight="900" text-anchor="middle">STOP</text></svg> ' . lang('dash_stop_timer_btn') . '</span>';
+                    echo '</button>';
                 }
 
-                // Кнопка ГОТОВО
-                echo '<button onclick="completeTask(' . $task['id'] . ')" class="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded-lg text-sm shadow-md transition-all active:scale-95 flex items-center gap-2">';
-                echo lang('btn_done');
+                // Кнопка ГОТОВО с кастомным тултипом
+                echo '<div class="relative group inline-block flex-shrink-0">';
+                echo '<button onclick="completeTask(' . $task['id'] . ')" class="bg-gradient-to-br from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 text-white p-2 rounded-lg shadow-md transition-all active:scale-95 flex items-center justify-center">';
+                echo '<span class="text-xl leading-none">🏁</span>';
                 echo '</button>';
+                echo '<div class="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-3 hidden group-hover:block w-64 p-4 bg-white rounded-2xl shadow-2xl border border-gray-100 z-[9999] opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none">';
+                echo '<h4 class="font-black text-gray-800 mb-1 text-sm">Финализировать задачу</h4>';
+                echo '<p class="text-xs text-gray-500 leading-tight">' . lang('dash_finalize_desc') . '</p>';
+                // Треугольник (хвостик) тултипа
+                echo '<div class="absolute -bottom-2 left-1/2 transform -translate-x-1/2 w-4 h-4 bg-white border-b border-r border-gray-100 rotate-45"></div>';
+                echo '</div>';
+                echo '</div>';
 
-                // Кнопка РУЧНОЙ КОРРЕКТИРОВКИ
-                echo '<button onclick="openEditModal(' . $task['id'] . ', \'' . htmlspecialchars($task['title'] ?? '') . '\')" class="bg-gray-200 hover:bg-gray-300 text-gray-700 font-bold py-2 px-3 rounded-lg text-sm shadow-md transition-all active:scale-95 flex items-center gap-2" title="Ручная корректировка времени">';
-                echo '🕒';
-                echo '</button>';
-
-                // Кнопка РЕДАКТИРОВАТЬ
-                echo '<button onclick="editTaskTitle(' . $task['id'] . ', \'' . htmlspecialchars($task['title'] ?? '') . '\')" class="bg-gray-100 hover:bg-gray-200 text-gray-500 hover:text-gray-700 font-bold py-2 px-3 rounded-lg text-sm transition-colors" title="' . lang('btn_edit') . '">';
+                // Кнопка РЕДАКТИРОВАНИЯ СВОЙСТВ ЗАДАЧИ
+                echo '<button onclick="openEditTaskModal(' . $task['id'] . ', \'' . addslashes($task['title'] ?? '') . '\', \'' . ($task['customer_id'] ?? '') . '\', \'' . ($task['is_fixed_price'] ?? '0') . '\', \'' . ($task['price'] ?? '') . '\')" class="bg-gray-200 hover:bg-gray-300 text-gray-700 font-bold py-2 px-3 rounded-lg text-sm shadow-md transition-all active:scale-95 flex items-center gap-2 flex-shrink-0" title="' . htmlspecialchars(lang('dash_edit_properties_title'), ENT_QUOTES) . '">';
                 echo '✏️';
                 echo '</button>';
 
-                // Кнопка УДАЛИТЬ
-                echo '<button onclick="deleteTaskCascade(' . $task['id'] . ')" class="bg-red-50 hover:bg-red-100 text-red-500 hover:text-red-700 font-bold py-2 px-3 rounded-lg text-sm transition-colors" title="' . lang('btn_delete') . '">';
+                // Кнопка РУЧНОЙ КОРРЕКТИРОВКИ
+                echo '<button onclick="openEditModal(' . $task['id'] . ', \'' . addslashes($modal_title) . '\', \'' . htmlspecialchars($task['hex_color'] ?? '#ffffff') . '\')" class="bg-gray-200 hover:bg-gray-300 text-gray-700 font-bold py-2 px-3 rounded-lg text-sm shadow-md transition-all active:scale-95 flex items-center gap-2 flex-shrink-0" title="' . htmlspecialchars(lang('dash_manual_adjust_title'), ENT_QUOTES) . '">';
+                echo '✍️';
+                echo '</button>';
+
+
+                // Удаление (в корзину)
+                echo '<button onclick="deleteTaskCascade(' . $task['id'] . ')" class="bg-red-50 hover:bg-red-100 text-red-500 hover:text-red-700 font-bold py-2 px-3 rounded-lg text-sm transition-colors flex-shrink-0" title="' . lang('btn_to_trash') . '">';
                 echo '🗑️';
                 echo '</button>';
             } else {
                 // Если завершена, просто выводим бейдж и кнопку восстановления
-                echo '<span class="text-gray-500 font-bold text-sm px-3 py-1 border border-gray-300 rounded-lg bg-gray-100">' . lang('status_completed') . '</span>';
-                echo '<button onclick="restoreTask(' . $task['id'] . ')" class="bg-yellow-50 hover:bg-yellow-100 text-yellow-600 font-bold py-2 px-3 rounded-lg text-sm transition-colors" title="' . lang('btn_restore') . '">🔄</button>';
+                echo '<span class="text-gray-500 font-bold text-sm px-3 py-1 border border-gray-300 rounded-lg bg-gray-100 flex-shrink-0">' . lang('status_completed') . '</span>';
+                echo '<button onclick="restoreTask(' . $task['id'] . ')" class="text-gray-400 hover:text-gray-600 font-bold py-2 px-3 rounded-lg text-sm transition-colors flex-shrink-0" title="' . lang('btn_restore') . '">';
+                echo '♻️';
+                echo '</button>';
+                echo '<button onclick="deleteTaskCascade(' . $task['id'] . ')" class="text-red-400 hover:text-red-600 font-bold py-2 px-3 rounded-lg text-sm transition-colors flex-shrink-0" title="' . lang('btn_to_trash') . '">';
+                echo '🗑️';
+                echo '</button>';
             }
 
-            // Кнопка Каскадной Модалки (Доступна всегда, содержит логику аккордеона по ховеру)
-            echo '<button onmouseenter="startHoverAccordion(this, ' . $task['id'] . ')" onmouseleave="cancelHoverAccordion()" onclick="openCascadeModal(' . $task['id'] . ', \'' . htmlspecialchars($task['title'] ?? '') . '\')" class="bg-purple-50 hover:bg-purple-100 text-purple-600 font-bold py-2 px-3 rounded-lg text-sm transition-colors" title="' . lang('cascade_history_title') . ' (Полная)">';
+            // Кнопка Каскадной Модалки и стрелочка аккордеона
+            echo '<div class="flex items-stretch shadow-sm rounded-lg overflow-hidden">';
+            echo '<button onclick="openCascadeModal(' . $task['id'] . ', \'' . addslashes($modal_title) . '\', \'' . htmlspecialchars($task['hex_color'] ?? '#ffffff') . '\')" class="bg-purple-50 hover:bg-purple-100 text-purple-600 font-bold py-2 px-3 text-sm transition-colors border-r border-purple-100" title="' . lang('cascade_history_title') . ' (Полная)">';
             echo '📜';
             echo '</button>';
+            echo '<button onclick="toggleInlineHistory(' . $task['id'] . ', this)" class="bg-purple-50 hover:bg-purple-100 text-purple-600 flex items-center justify-center px-1 transition-colors" title="Быстрый просмотр истории">';
+            echo '<svg class="w-4 h-4 transition-transform duration-200 inline-arrow" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>';
+            echo '</button>';
+            echo '</div>';
             
-            echo '</div>'; // Конец правой части
-            echo '</div>'; // Конец строки задачи
+            echo '</div>'; // Конец правой части (w-[290px])
+            echo '</div>'; // Конец обертки Таймер+Кнопки
+            
+            echo '</div>'; // Конец строки задачи (justify-between)
             
             // Скрытый контейнер для аккордеона каскадной истории
             echo '<div id="inline-history-' . $task['id'] . '" class="hidden pl-8 bg-gray-50 border-l-2 border-gray-300 text-sm p-2 mb-2 rounded-b-xl shadow-inner"></div>';
@@ -124,14 +188,21 @@ if (!function_exists('render_task_tree')) {
                 $ci =& get_instance();
                 $customers = $ci->load->get_var('customers');
                 
-                echo '<select name="customer_id" class="customer-select px-4 py-2 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none" onchange="updateRate(this)">';
+                echo '<div class="flex flex-col gap-2">';
+                echo '<select name="customer_id" class="customer-select px-4 py-2 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none" onchange="updateRateSubtask(this)">';
                 echo '<option value="">' . lang('finance_no_customer') . '</option>';
+                echo '<option value="new" class="font-bold text-blue-600">' . lang('dash_add_new_client') . '</option>';
                 if (!empty($customers)) {
                     foreach ($customers as $c) {
-                        echo '<option value="' . $c['id'] . '" data-rate="' . $c['hourly_rate'] . '">' . htmlspecialchars($c['name'] ?? '') . '</option>';
+                        echo '<option value="' . $c['id'] . '">' . htmlspecialchars($c['name'] ?? '') . '</option>';
                     }
                 }
                 echo '</select>';
+                echo '<div class="new-customer-fields hidden flex gap-2">';
+                echo '<input type="text" name="new_customer_name" placeholder="' . htmlspecialchars(lang('dash_client_name_placeholder'), ENT_QUOTES) . '" class="w-full px-4 py-2 bg-white border border-blue-300 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none shadow-sm">';
+                echo '<input type="text" name="new_customer_notes" placeholder="' . htmlspecialchars(lang('dash_client_notes_placeholder'), ENT_QUOTES) . '" class="w-full px-4 py-2 bg-white border border-blue-300 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none shadow-sm">';
+                echo '</div>';
+                echo '</div>';
                 
                 echo '<select name="is_fixed_price" class="px-4 py-2 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none">';
                 echo '<option value="0">' . lang('finance_hourly') . '</option>';
@@ -168,11 +239,23 @@ if (!function_exists('render_task_tree')) {
     <!-- Блок добавления корневого проекта удален и перенесен в глобальное модальное окно (body.php) -->
 
     <!-- Список задач -->
-    <div class="flex justify-between items-end mb-6">
-        <h2 class="text-4xl font-black text-gray-800"><?= lang('dash_tree_title'); ?></h2>
+    <div class="flex justify-between items-end mb-4">
+        <div class="flex items-center gap-6 w-1/3">
+            <img src="<?= base_url('assets/img/time_tree.png') ?>" alt="Time Tree" class="w-16 h-16 object-cover rounded-2xl shadow-sm">
+            <h2 class="text-3xl font-black text-gray-800"><?= lang('dash_tree_title'); ?></h2>
+        </div>
+        
+        <!-- Кнопка добавления по центру -->
+        <div class="flex-1 flex justify-center pb-2">
+            <button onclick="openGlobalAddModal()" class="bg-green-600 flex items-center gap-2 hover:opacity-90 text-white font-black py-2 px-8 rounded-full text-lg shadow-lg transition-transform transform hover:scale-105 active:scale-95" title="<?= lang('btn_add'); ?>">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M12 4v16m8-8H4"></path></svg>
+                <?= lang('btn_add'); ?>
+            </button>
+        </div>
+
         <!-- Живой поиск -->
-        <div class="w-1/3">
-            <input type="text" id="searchTaskInput" placeholder="<?= lang('dash_search_placeholder'); ?>" class="w-full px-5 py-3 bg-gray-50 border border-gray-200 rounded-xl text-xl focus:ring-2 focus:ring-blue-500 focus:outline-none shadow-sm">
+        <div class="w-1/3 flex justify-end">
+            <input type="text" id="searchTaskInput" placeholder="<?= lang('dash_search_placeholder'); ?>" class="w-full max-w-sm px-5 py-3 bg-gray-50 border border-gray-200 rounded-xl text-xl focus:ring-2 focus:ring-blue-500 focus:outline-none shadow-sm">
         </div>
     </div>
     
@@ -200,10 +283,14 @@ if (!function_exists('render_task_tree')) {
 
 
 <!-- Модальное окно для ручной корректировки времени -->
-<div id="editTimeModal" class="hidden fixed inset-0 z-[100] bg-black bg-opacity-50 flex items-center justify-center p-4">
-    <div class="bg-white rounded-3xl shadow-2xl w-full max-w-4xl p-6 md:p-8 transform transition-all max-h-[90vh] flex flex-col">
-        <h3 class="text-2xl font-bold mb-2 text-gray-800 flex-shrink-0"><?= lang('modal_history_title'); ?></h3>
-        <p class="text-gray-500 mb-4 text-lg flex-shrink-0"><?= lang('modal_edit_task'); ?> <span id="modalTaskTitle" class="font-bold text-gray-700"></span></p>
+<div id="editTimeModal" onclick="closeEditModal()" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4" style="z-index: 99999;">
+    <div id="editModalBody" onclick="event.stopPropagation()" class="bg-white rounded-3xl shadow-2xl w-full max-w-4xl p-6 md:p-8 transform transition-all max-h-[90vh] flex flex-col relative">
+        <!-- Кнопка закрытия -->
+        <button onclick="closeEditModal()" class="absolute top-6 right-6 text-gray-400 hover:text-gray-700 transition-colors bg-white/50 backdrop-blur-md rounded-full p-2 shadow-sm">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+        </button>
+        <h3 class="text-xs uppercase tracking-wider font-bold mb-1 text-gray-500 flex-shrink-0"><?= lang('modal_history_title'); ?></h3>
+        <p class="text-gray-800 mb-4 text-xl flex-shrink-0 truncate w-full block overflow-hidden text-ellipsis whitespace-nowrap"><?= lang('modal_edit_task'); ?> <span id="modalTaskTitle" class="font-bold"></span></p>
         
         <input type="hidden" id="modalTaskId">
 
@@ -256,24 +343,28 @@ if (!function_exists('render_task_tree')) {
 </div>
 
 <!-- Панель выбора цвета (Color Picker) -->
-<div id="colorPickerPopover" class="hidden absolute z-[110] bg-white rounded-xl shadow-xl border border-gray-100 p-3 flex flex-wrap gap-2 w-48">
-    <button onclick="saveColor('#ef4444')" style="background-color: #ef4444;" class="w-8 h-8 rounded-full hover:scale-110 transition-transform shadow-sm"></button>
-    <button onclick="saveColor('#f97316')" style="background-color: #f97316;" class="w-8 h-8 rounded-full hover:scale-110 transition-transform shadow-sm"></button>
-    <button onclick="saveColor('#f59e0b')" style="background-color: #f59e0b;" class="w-8 h-8 rounded-full hover:scale-110 transition-transform shadow-sm"></button>
-    <button onclick="saveColor('#10b981')" style="background-color: #10b981;" class="w-8 h-8 rounded-full hover:scale-110 transition-transform shadow-sm"></button>
-    <button onclick="saveColor('#06b6d4')" style="background-color: #06b6d4;" class="w-8 h-8 rounded-full hover:scale-110 transition-transform shadow-sm"></button>
-    <button onclick="saveColor('#3b82f6')" style="background-color: #3b82f6;" class="w-8 h-8 rounded-full hover:scale-110 transition-transform shadow-sm"></button>
-    <button onclick="saveColor('#6366f1')" style="background-color: #6366f1;" class="w-8 h-8 rounded-full hover:scale-110 transition-transform shadow-sm"></button>
-    <button onclick="saveColor('#a855f7')" style="background-color: #a855f7;" class="w-8 h-8 rounded-full hover:scale-110 transition-transform shadow-sm"></button>
-    <button onclick="saveColor('#ec4899')" style="background-color: #ec4899;" class="w-8 h-8 rounded-full hover:scale-110 transition-transform shadow-sm"></button>
-    <button onclick="saveColor('')" style="background-color: #e5e7eb;" class="w-8 h-8 rounded-full border-2 border-gray-400 border-dashed hover:scale-110 transition-transform shadow-sm" title="<?= lang('reports_no_color'); ?>"></button>
+<div id="colorPickerPopover" class="hidden absolute bg-white rounded-lg shadow-xl border border-gray-200 p-1.5 grid grid-cols-5 gap-1.5 w-max" style="z-index: 99999; background-color: #ffffff !important;">
+    <button onclick="saveColor('#ef4444')" style="background-color: #ef4444;" class="w-5 h-5 rounded-full hover:scale-125 transition-transform shadow-sm"></button>
+    <button onclick="saveColor('#f97316')" style="background-color: #f97316;" class="w-5 h-5 rounded-full hover:scale-125 transition-transform shadow-sm"></button>
+    <button onclick="saveColor('#f59e0b')" style="background-color: #f59e0b;" class="w-5 h-5 rounded-full hover:scale-125 transition-transform shadow-sm"></button>
+    <button onclick="saveColor('#10b981')" style="background-color: #10b981;" class="w-5 h-5 rounded-full hover:scale-125 transition-transform shadow-sm"></button>
+    <button onclick="saveColor('#06b6d4')" style="background-color: #06b6d4;" class="w-5 h-5 rounded-full hover:scale-125 transition-transform shadow-sm"></button>
+    <button onclick="saveColor('#3b82f6')" style="background-color: #3b82f6;" class="w-5 h-5 rounded-full hover:scale-125 transition-transform shadow-sm"></button>
+    <button onclick="saveColor('#6366f1')" style="background-color: #6366f1;" class="w-5 h-5 rounded-full hover:scale-125 transition-transform shadow-sm"></button>
+    <button onclick="saveColor('#a855f7')" style="background-color: #a855f7;" class="w-5 h-5 rounded-full hover:scale-125 transition-transform shadow-sm"></button>
+    <button onclick="saveColor('#ec4899')" style="background-color: #ec4899;" class="w-5 h-5 rounded-full hover:scale-125 transition-transform shadow-sm"></button>
+    <button onclick="saveColor('')" style="background-color: #e5e7eb;" class="w-5 h-5 rounded-full border border-gray-400 hover:scale-125 transition-transform shadow-sm flex items-center justify-center" title="<?= lang('reports_no_color'); ?>"><svg class="w-3 h-3 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg></button>
 </div>
 
 <!-- Модальное окно для Каскадной Истории -->
-<div id="cascadeHistoryModal" class="hidden fixed inset-0 z-[110] bg-black bg-opacity-50 flex items-center justify-center p-4">
-    <div class="bg-white rounded-3xl shadow-2xl w-full max-w-4xl p-6 md:p-8 transform transition-all flex flex-col max-h-[70vh]">
-        <h3 class="text-2xl font-bold mb-2 text-gray-800 flex-shrink-0"><?= lang('cascade_history_title'); ?></h3>
-        <p class="text-gray-500 mb-4 text-lg flex-shrink-0"><span id="cascadeModalTaskTitle" class="font-bold text-gray-700"></span></p>
+<div id="cascadeHistoryModal" onclick="closeCascadeModal()" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4" style="z-index: 99999;">
+    <div id="cascadeModalBody" onclick="event.stopPropagation()" class="bg-white rounded-3xl shadow-2xl w-full max-w-4xl p-8 transform transition-all relative flex flex-col h-[85vh]">
+        <!-- Кнопка закрытия -->
+        <button onclick="closeCascadeModal()" class="absolute top-6 right-6 text-gray-400 hover:text-gray-700 transition-colors bg-white/50 backdrop-blur-md rounded-full p-2 shadow-sm">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+        </button>
+        <h3 class="text-xs uppercase tracking-wider font-bold mb-1 text-gray-500 flex-shrink-0"><?= lang('cascade_history_title'); ?></h3>
+        <p class="text-gray-800 mb-4 text-xl flex-shrink-0 truncate w-full block overflow-hidden text-ellipsis whitespace-nowrap"><span id="cascadeModalTaskTitle" class="font-bold"></span></p>
         
         <div class="mb-4">
             <input type="text" id="cascadeSearchInput" placeholder="<?= lang('cascade_search_placeholder'); ?>" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:outline-none">
@@ -347,18 +438,20 @@ if (!function_exists('render_task_tree')) {
 
 <script>
     // URL-ы для AJAX (оставлены для совместимости локальных функций дашборда)
-    var api = window.globalApi;
+    window.api = window.globalApi;
 
     // Скрипт для подстановки ставки
-    function updateRate(selectElem) {
-        var selectedOption = selectElem.options[selectElem.selectedIndex];
-        var rate = selectedOption.getAttribute('data-rate');
-        if (rate !== null && rate !== "") {
-            var container = $(selectElem).closest('form');
-            if (container.length === 0) {
-                container = $(selectElem).parent().parent();
-            }
-            container.find('.rate-input').val(rate);
+    function updateRateSubtask(selectElem) {
+        var val = $(selectElem).val();
+        var container = $(selectElem).closest('form');
+        if (container.length === 0) {
+            container = $(selectElem).parent().parent();
+        }
+        
+        if (val === 'new') {
+            container.find('.new-customer-fields').removeClass('hidden');
+        } else {
+            container.find('.new-customer-fields').addClass('hidden');
         }
     }
 
@@ -378,16 +471,36 @@ if (!function_exists('render_task_tree')) {
     }
 
     $(document).on('click', '.toggle-children', function() {
+        var li = $(this).closest('li');
+        var taskId = li.data('task-id');
         var icon = $(this).find('.icon-expand');
-        var childrenList = $(this).closest('li').find('> ul.task-children');
+        var childrenList = li.find('> ul.task-children');
         
-        childrenList.slideToggle(200);
+        childrenList.slideToggle(200, function() {
+            var expandedTasks = JSON.parse(localStorage.getItem('expandedTasks') || '{}');
+            expandedTasks[taskId] = childrenList.is(':visible');
+            localStorage.setItem('expandedTasks', JSON.stringify(expandedTasks));
+        });
         
-        if (icon.hasClass('rotate-90')) {
-            icon.removeClass('rotate-90');
+        if (icon.hasClass('rotate-180')) {
+            icon.removeClass('rotate-180');
         } else {
-            icon.addClass('rotate-90');
+            icon.addClass('rotate-180');
         }
+    });
+
+    $(document).ready(function() {
+        var expandedTasks = JSON.parse(localStorage.getItem('expandedTasks') || '{}');
+        $('li[data-task-id]').each(function() {
+            var taskId = $(this).data('task-id');
+            if (expandedTasks[taskId] === true) {
+                var childrenList = $(this).find('> ul.task-children');
+                if (childrenList.length > 0) {
+                    childrenList.show();
+                    $(this).find('> div .toggle-children .icon-expand').addClass('rotate-180');
+                }
+            }
+        });
     });
 
     // Логика кнопок старт, стоп и пауза теперь работает через main.js
@@ -425,7 +538,7 @@ if (!function_exists('render_task_tree')) {
      * AJAX-обработчик кнопки "Восстановить"
      */
     function restoreTask(taskId) {
-        if (!confirm("Восстановить задачу?")) {
+        if (!confirm("<?= htmlspecialchars(lang('js_confirm_restore_task'), ENT_QUOTES); ?>")) {
             return;
         }
 
@@ -442,9 +555,12 @@ if (!function_exists('render_task_tree')) {
     /**
      * Открытие модального окна для корректировки времени
      */
-    function openEditModal(taskId, title) {
+    function openEditModal(taskId, title, hexColor = '#ffffff') {
         $('#modalTaskId').val(taskId);
         $('#modalTaskTitle').text(title);
+        if (hexColor === '') hexColor = '#ffffff';
+        // Устанавливаем красивый градиентный фон с легким оттенком цвета задачи (opacity ~15%)
+        $('#editModalBody').css('background', 'linear-gradient(135deg, #ffffff 30%, ' + hexColor + '33 100%)');
         $('#modalStartTime').val('');
         $('#modalEndTime').val('');
         $('#modalNote').val('');
@@ -516,18 +632,21 @@ if (!function_exists('render_task_tree')) {
     /**
      * Логика для Каскадного Аккордеона
      */
-    function toggleCascadeAccordion(taskId) {
+    function toggleInlineHistory(taskId, btn) {
         var container = $('#inline-history-' + taskId);
+        var svg = $(btn).find('.inline-arrow');
         
         // Если контейнер уже открыт, просто скрываем его
         if (!container.hasClass('hidden') && container.html().trim() !== '') {
-            container.slideUp(200, function() {
+            container.slideUp(150, function() {
                 container.addClass('hidden').html(''); // Очищаем после скрытия
             });
+            svg.removeClass('rotate-180');
             return;
         }
         
-        container.html('<div class="py-2 px-4 text-gray-400 italic"><?= lang('modal_loading'); ?></div>').removeClass('hidden').hide().slideDown(200);
+        svg.addClass('rotate-180');
+        container.html('<div class="py-2 px-4 text-gray-400 italic"><?= lang('modal_loading'); ?></div>').removeClass('hidden').hide().slideDown(150);
 
         $.post(api.get_cascading, { task_id: taskId }, function(response) {
             var res = JSON.parse(response);
@@ -567,11 +686,56 @@ if (!function_exists('render_task_tree')) {
         });
     }
 
+    function openEditTaskModal(taskId, title, customerId, isFixedPrice, price) {
+        $('#editTaskId').val(taskId);
+        $('#editTaskTitleInput').val(title);
+        $('#editTaskCustomer').val(customerId);
+        $('#editTaskIsFixed').val(isFixedPrice);
+        $('#editTaskPrice').val(price);
+        $('#editTaskModal').removeClass('hidden');
+    }
+
+    function closeEditTaskModal() {
+        $('#editTaskModal').addClass('hidden');
+    }
+
+    function saveTaskTitle() {
+        var taskId = $('#editTaskId').val();
+        var title = $('#editTaskTitleInput').val();
+        var customerId = $('#editTaskCustomer').val();
+        var isFixedPrice = $('#editTaskIsFixed').val();
+        var price = $('#editTaskPrice').val();
+
+        if (!title) {
+            alert('<?= htmlspecialchars(lang('js_err_enter_task_title'), ENT_QUOTES); ?>');
+            return;
+        }
+
+        $.post(api.edit_title, { 
+            task_id: taskId, 
+            title: title, 
+            customer_id: customerId, 
+            is_fixed_price: isFixedPrice, 
+            price: price 
+        }, function(response) {
+            var res = JSON.parse(response);
+            if (res.status === 'success') {
+                closeEditTaskModal();
+                window.location.reload();
+            } else {
+                alert(res.message);
+            }
+        });
+    }
+
     /**
      * Логика для Каскадной Модалки
      */
-    function openCascadeModal(taskId, title) {
+    function openCascadeModal(taskId, title, hexColor = '#ffffff') {
         $('#cascadeModalTaskTitle').text(title);
+        if (hexColor === '') hexColor = '#ffffff';
+        // Устанавливаем красивый градиентный фон с легким оттенком цвета задачи (opacity ~15%)
+        $('#cascadeModalBody').css('background', 'linear-gradient(135deg, #ffffff 30%, ' + hexColor + '33 100%)');
         $('#cascadeModalSessionsList').html('<tr><td colspan="4" class="px-4 py-8 text-center text-gray-400"><?= lang('modal_loading'); ?></td></tr>');
         $('#cascadeHistoryModal').removeClass('hidden');
 
@@ -670,9 +834,8 @@ if (!function_exists('render_task_tree')) {
         } else {
             // Сканируем все LI в дереве
             $('.task-tree-root li').each(function() {
-                // Ищем span, который содержит название задачи
-                // Он находится внутри первого .flex div, имеет текст
-                var taskName = $(this).find('> div:first-child > div:first-child > span.text-2xl').text().toLowerCase();
+                // Ищем span с классом task-title-text
+                var taskName = $(this).find('.task-title-text').first().text().toLowerCase();
                 
                 if (taskName.indexOf(value) > -1) {
                     $(this).show();

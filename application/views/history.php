@@ -1,6 +1,25 @@
-<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-    <div class="flex justify-between items-end mb-8">
-        <h2 class="text-4xl font-black text-gray-800"><?= lang('history_title'); ?></h2>
+<!-- 
+  Страница журнала сессий (История).
+  Отображается в центральной колонке трехколоночного шаблона.
+  Левая колонка содержит меню 'sidebars/statistics'.
+  
+  Для администраторов доступен полноценный CRUD (создание, редактирование, удаление)
+  над собственными сессиями времени.
+-->
+<div class="w-full">
+    <div class="flex justify-between items-end mb-4">
+        <div class="flex items-center gap-6">
+            <img src="<?= base_url('assets/img/history_logo.png') ?>" alt="History Logo" class="w-16 h-16 object-cover rounded-2xl shadow-sm">
+            <h2 class="text-3xl font-black text-gray-800"><?= lang('history_title'); ?></h2>
+        </div>
+        
+        <!-- Кнопка создания новой сессии вручную. Видна только администраторам. -->
+        <?php if (!empty($is_admin)): ?>
+            <button onclick="openAddSessionModal()" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-xl shadow-lg transition-colors flex items-center gap-2">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
+                <?= lang('lbl_session_add'); ?>
+            </button>
+        <?php endif; ?>
     </div>
 
     <?php if (empty($sessions)): ?>
@@ -18,6 +37,10 @@
                             <th class="px-6 py-4 w-1/4"><?= lang('history_col_task'); ?></th>
                             <th class="px-6 py-4 w-1/6"><?= lang('history_col_duration'); ?></th>
                             <th class="px-6 py-4 w-auto"><?= lang('history_col_note'); ?></th>
+                            <!-- Дополнительная колонка действий для администраторов -->
+                            <?php if (!empty($is_admin)): ?>
+                                <th class="px-6 py-4 w-[120px] text-right"><?= lang('lbl_actions'); ?></th>
+                            <?php endif; ?>
                         </tr>
                     </thead>
                     <tbody class="divide-y divide-gray-100">
@@ -53,6 +76,19 @@
                                         <span class="text-gray-300">—</span>
                                     <?php endif; ?>
                                 </td>
+                                <!-- Кнопки действий (редактирование, удаление) для администраторов -->
+                                <?php if (!empty($is_admin)): ?>
+                                    <td class="px-6 py-5 text-right whitespace-nowrap">
+                                        <div class="flex justify-end gap-2">
+                                            <button onclick="openEditSessionModal(<?= $s['id'] ?>, <?= $s['task_id'] ?>, '<?= date('Y-m-d\TH:i', strtotime($s['start_time'])) ?>', '<?= date('Y-m-d\TH:i', strtotime($s['end_time'])) ?>', '<?= addslashes($s['note_safe']) ?>')" class="bg-gray-100 hover:bg-gray-200 text-gray-600 p-2 rounded-lg transition-colors" title="<?= htmlspecialchars(lang('btn_edit'), ENT_QUOTES); ?>">
+                                                ✏️
+                                            </button>
+                                            <button onclick="deleteSession(<?= $s['id'] ?>)" class="bg-red-50 hover:bg-red-100 text-red-600 p-2 rounded-lg transition-colors" title="<?= htmlspecialchars(lang('btn_delete'), ENT_QUOTES); ?>">
+                                                🗑️
+                                            </button>
+                                        </div>
+                                    </td>
+                                <?php endif; ?>
                             </tr>
                         <?php endforeach; ?>
                     </tbody>
@@ -61,3 +97,209 @@
         </div>
     <?php endif; ?>
 </div>
+
+<?php if (!empty($is_admin)): ?>
+    <!-- Модальное окно добавления сессии -->
+    <div id="addSessionModal" onclick="closeAddSessionModal()" class="hidden fixed inset-0 z-[120] bg-black bg-opacity-50 flex items-center justify-center p-4">
+        <div onclick="event.stopPropagation()" class="bg-white rounded-3xl shadow-2xl w-full max-w-md p-8 transform transition-all relative">
+            <button onclick="closeAddSessionModal()" class="absolute top-6 right-6 text-gray-400 hover:text-gray-600">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+            </button>
+            <h3 class="text-2xl font-bold mb-6 text-gray-800"><?= lang('lbl_session_add'); ?></h3>
+            
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-gray-700 text-sm font-bold mb-2"><?= lang('lbl_task'); ?></label>
+                    <select id="add_task_id" class="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none">
+                        <option value=""><?= lang('lbl_select_task'); ?></option>
+                        <?php if (!empty($tasks)): ?>
+                            <?php foreach ($tasks as $t): ?>
+                                <option value="<?= $t['id'] ?>"><?= htmlspecialchars($t['title']) ?> <?= !empty($t['customer_name']) ? '['.htmlspecialchars($t['customer_name']).']' : '' ?></option>
+                            <?php endforeach; ?>
+                        <?php endif; ?>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-gray-700 text-sm font-bold mb-2"><?= lang('lbl_start_time'); ?></label>
+                    <input type="datetime-local" id="add_start_time" class="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none">
+                </div>
+                <div>
+                    <label class="block text-gray-700 text-sm font-bold mb-2"><?= lang('lbl_end_time'); ?></label>
+                    <input type="datetime-local" id="add_end_time" class="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none">
+                </div>
+                <div>
+                    <label class="block text-gray-700 text-sm font-bold mb-2"><?= lang('lbl_note_result'); ?></label>
+                    <textarea id="add_note" rows="3" class="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none" placeholder="<?= htmlspecialchars(lang('lbl_what_was_done_placeholder'), ENT_QUOTES); ?>"></textarea>
+                </div>
+                
+                <button onclick="submitAddSession()" class="w-full mt-4 bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded-xl shadow-lg transition-colors">
+                    <?= lang('btn_save'); ?>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Модальное окно редактирования сессии -->
+    <div id="editSessionModal" onclick="closeEditSessionModal()" class="hidden fixed inset-0 z-[120] bg-black bg-opacity-50 flex items-center justify-center p-4">
+        <div onclick="event.stopPropagation()" class="bg-white rounded-3xl shadow-2xl w-full max-w-md p-8 transform transition-all relative">
+            <button onclick="closeEditSessionModal()" class="absolute top-6 right-6 text-gray-400 hover:text-gray-600">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+            </button>
+            <h3 class="text-2xl font-bold mb-6 text-gray-800"><?= lang('lbl_session_edit'); ?></h3>
+            
+            <input type="hidden" id="edit_session_id">
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-gray-700 text-sm font-bold mb-2"><?= lang('lbl_task'); ?></label>
+                    <select id="edit_task_id" class="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none">
+                        <option value=""><?= lang('lbl_select_task'); ?></option>
+                        <?php if (!empty($tasks)): ?>
+                            <?php foreach ($tasks as $t): ?>
+                                <option value="<?= $t['id'] ?>"><?= htmlspecialchars($t['title']) ?> <?= !empty($t['customer_name']) ? '['.htmlspecialchars($t['customer_name']).']' : '' ?></option>
+                            <?php endforeach; ?>
+                        <?php endif; ?>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-gray-700 text-sm font-bold mb-2"><?= lang('lbl_start_time'); ?></label>
+                    <input type="datetime-local" id="edit_start_time" class="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none">
+                </div>
+                <div>
+                    <label class="block text-gray-700 text-sm font-bold mb-2"><?= lang('lbl_end_time'); ?></label>
+                    <input type="datetime-local" id="edit_end_time" class="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none">
+                </div>
+                <div>
+                    <label class="block text-gray-700 text-sm font-bold mb-2"><?= lang('lbl_note_result'); ?></label>
+                    <textarea id="edit_note" rows="3" class="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none" placeholder="<?= htmlspecialchars(lang('lbl_what_was_done_placeholder'), ENT_QUOTES); ?>"></textarea>
+                </div>
+                
+                <button onclick="submitEditSession()" class="w-full mt-4 bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded-xl shadow-lg transition-colors">
+                    <?= lang('btn_save'); ?> изменения
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Клиентские скрипты для AJAX CRUD операций над сессиями -->
+    <script>
+        // Открытие модального окна добавления сессии
+        function openAddSessionModal() {
+            $('#add_task_id').val('');
+            $('#add_start_time').val('');
+            $('#add_end_time').val('');
+            $('#add_note').val('');
+            $('#addSessionModal').removeClass('hidden');
+        }
+
+        // Закрытие модального окна добавления сессии
+        function closeAddSessionModal() {
+            $('#addSessionModal').addClass('hidden');
+        }
+
+        // Открытие модального окна редактирования сессии с предзаполнением
+        function openEditSessionModal(sessionId, taskId, startTime, endTime, note) {
+            $('#edit_session_id').val(sessionId);
+            $('#edit_task_id').val(taskId);
+            $('#edit_start_time').val(startTime);
+            $('#edit_end_time').val(endTime);
+            $('#edit_note').val(note);
+            $('#editSessionModal').removeClass('hidden');
+        }
+
+        // Закрытие модального окна редактирования сессии
+        function closeEditSessionModal() {
+            $('#editSessionModal').addClass('hidden');
+        }
+
+        // AJAX-отправка новой сессии на сохранение
+        function submitAddSession() {
+            var taskId = $('#add_task_id').val();
+            var startTime = $('#add_start_time').val();
+            var endTime = $('#add_end_time').val();
+            var note = $('#add_note').val();
+
+            if (!taskId || !startTime || !endTime) {
+                alert('<?= htmlspecialchars(lang('js_err_required_fields'), ENT_QUOTES); ?>');
+                return;
+            }
+
+            $.post('<?= site_url("history/add_session_ajax") ?>', {
+                task_id: taskId,
+                start_time: startTime,
+                end_time: endTime,
+                note: note
+            }, function(response) {
+                try {
+                    var res = JSON.parse(response);
+                    if (res.status === 'success') {
+                        closeAddSessionModal();
+                        window.location.reload(); // Перезагружаем для обновления списка сессий
+                    } else {
+                        alert(res.message);
+                    }
+                } catch(e) {
+                    console.error(e);
+                    alert('<?= htmlspecialchars(lang('js_err_system_save'), ENT_QUOTES); ?>');
+                }
+            });
+        }
+
+        // AJAX-отправка изменений сессии на обновление
+        function submitEditSession() {
+            var sessionId = $('#edit_session_id').val();
+            var taskId = $('#edit_task_id').val();
+            var startTime = $('#edit_start_time').val();
+            var endTime = $('#edit_end_time').val();
+            var note = $('#edit_note').val();
+
+            if (!sessionId || !taskId || !startTime || !endTime) {
+                alert('<?= htmlspecialchars(lang('js_err_required_fields'), ENT_QUOTES); ?>');
+                return;
+            }
+
+            $.post('<?= site_url("history/edit_session_ajax") ?>', {
+                session_id: sessionId,
+                task_id: taskId,
+                start_time: startTime,
+                end_time: endTime,
+                note: note
+            }, function(response) {
+                try {
+                    var res = JSON.parse(response);
+                    if (res.status === 'success') {
+                        closeEditSessionModal();
+                        window.location.reload(); // Перезагружаем для отображения измененных данных
+                    } else {
+                        alert(res.message);
+                    }
+                } catch(e) {
+                    console.error(e);
+                    alert('<?= htmlspecialchars(lang('js_err_system_save_changes'), ENT_QUOTES); ?>');
+                }
+            });
+        }
+
+        // AJAX-запрос на удаление выбранной сессии с подтверждением
+        function deleteSession(sessionId) {
+            if (!confirm('<?= htmlspecialchars(lang('js_confirm_delete'), ENT_QUOTES); ?>')) {
+                return;
+            }
+
+            $.post('<?= site_url("history/delete_session_ajax") ?>', {
+                session_id: sessionId
+            }, function(response) {
+                try {
+                    var res = JSON.parse(response);
+                    if (res.status === 'success') {
+                        window.location.reload(); // Перезагружаем для обновления списка
+                    } else {
+                        alert(res.message);
+                    }
+                } catch(e) {
+                    console.error(e);
+                    alert('<?= htmlspecialchars(lang('js_err_delete_session_fail'), ENT_QUOTES); ?>');
+                }
+            });
+        }
+    </script>
+<?php endif; ?>
