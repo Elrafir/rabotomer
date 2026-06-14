@@ -79,23 +79,52 @@ class Reports extends MY_Controller {
         // Получаем флаг "Показывать архивные" (1 — показать все, 0 — только активные), по умолчанию 1
         $show_archived = $this->input->post('show_archived') !== null ? (int)$this->input->post('show_archived') : ($this->input->get('show_archived') !== null ? (int)$this->input->get('show_archived') : 1);
         
-        // Получаем фильтр по заказчикам (по умолчанию 'all' - все)
-        $customer_filter = $this->input->post('customer_filter') ?: ($this->input->get('customer_filter') ?: 'all');
+        // Загружаем модель калькуляций
+        $this->load->model('Calculation_model');
+
+        // Получаем фильтры по заказчикам (массив)
+        $customer_filters = $this->input->post('customer_filters') ?: ($this->input->get('customer_filters') ?: []);
+        if (is_string($customer_filters)) {
+            $customer_filters = explode(',', $customer_filters);
+        }
+
+        // Получаем фильтры по калькуляциям (массив)
+        $calculation_filters = $this->input->post('calculation_filters') ?: ($this->input->get('calculation_filters') ?: []);
+        if (is_string($calculation_filters)) {
+            $calculation_filters = explode(',', $calculation_filters);
+        }
+
+        // Получаем фильтры по ТЗ (массив)
+        $spec_filters = $this->input->post('spec_filters') ?: ($this->input->get('spec_filters') ?: []);
+        if (is_string($spec_filters)) {
+            $spec_filters = explode(',', $spec_filters);
+        }
         
         // Получаем выбранный тип сортировки (по умолчанию 'time' - по времени)
         $sort_by = $this->input->post('sort_by') ?: ($this->input->get('sort_by') ?: 'time');
 
         // ВРЕМЕННЫЙ ДЕБАГ: записываем параметры в лог-файл
-        file_put_contents(FCPATH . 'reports_debug.txt', date('Y-m-d H:i:s') . " | time_slice | GET: " . json_encode($_GET) . " | customer_filter: " . $customer_filter . " | sort_by: " . $sort_by . "\n", FILE_APPEND);
+        file_put_contents(FCPATH . 'reports_debug.txt', date('Y-m-d H:i:s') . " | time_slice | GET: " . json_encode($_GET) . " | customer_filters: " . json_encode($customer_filters) . " | sort_by: " . $sort_by . "\n", FILE_APPEND);
 
         // Извлекаем идентификатор текущего пользователя из сессии
         $user_id = $this->session->userdata('user_id');
         
         // Загружаем список всех заказчиков пользователя
         $customers = $this->Customer_model->get_all($user_id);
+
+        // Загружаем список всех калькуляций пользователя
+        $calculations = $this->Calculation_model->get_packages($user_id);
+
+        // Загружаем список всех ТЗ пользователя с именами заказчиков
+        $this->db->select('customer_specs.*, customers.name as customer_name');
+        $this->db->from('customer_specs');
+        $this->db->join('customers', 'customers.id = customer_specs.customer_id');
+        $this->db->where('customers.user_id', $user_id);
+        $this->db->order_by('customer_specs.title', 'ASC');
+        $specs = $this->db->get()->result_array();
         
         // Запрашиваем расчетные данные временного среза у нашей модели статистики с фильтрацией и сортировкой
-        $report_data = $this->Stats_model->get_time_slice($user_id, $start_date, $end_date, $show_archived, $customer_filter, $sort_by);
+        $report_data = $this->Stats_model->get_time_slice($user_id, $start_date, $end_date, $show_archived, $customer_filters, $calculation_filters, $spec_filters, $sort_by);
         
         // Подготавливаем массив данных для рендеринга шаблона
         $data = [
@@ -117,12 +146,17 @@ class Reports extends MY_Controller {
             'month_end' => $month_end,
             // Передаем текущее состояние фильтра архивных
             'show_archived' => $show_archived,
-            // Передаем активный фильтр по заказчику
-            'customer_filter' => $customer_filter,
+            // Передаем активные фильтры
+            'customer_filters' => $customer_filters,
+            'calculation_filters' => $calculation_filters,
+            'spec_filters' => $spec_filters,
             // Передаем активный тип сортировки
             'sort_by' => $sort_by,
             // Передаем список заказчиков для выпадающего меню фильтрации
             'customers' => $customers,
+            // Передаем списки калькуляций и ТЗ
+            'calculations' => $calculations,
+            'specs' => $specs,
             // Общее затраченное время текстом
             'total_time_formatted' => $report_data['formatted_total_time'],
             // Список проектов с подсчитанными процентами и долями
@@ -145,34 +179,68 @@ class Reports extends MY_Controller {
         // Получаем флаг отображения архивных (1 — показывать, 0 — скрыть), по умолчанию 1
         $show_archived = $this->input->post('show_archived') !== null ? (int)$this->input->post('show_archived') : ($this->input->get('show_archived') !== null ? (int)$this->input->get('show_archived') : 1);
         
-        // Получаем фильтр по заказчикам (по умолчанию 'all' - все)
-        $customer_filter = $this->input->post('customer_filter') ?: ($this->input->get('customer_filter') ?: 'all');
+        // Загружаем модель калькуляций
+        $this->load->model('Calculation_model');
+
+        // Получаем фильтры по заказчикам (массив)
+        $customer_filters = $this->input->post('customer_filters') ?: ($this->input->get('customer_filters') ?: []);
+        if (is_string($customer_filters)) {
+            $customer_filters = explode(',', $customer_filters);
+        }
+
+        // Получаем фильтры по калькуляциям (массив)
+        $calculation_filters = $this->input->post('calculation_filters') ?: ($this->input->get('calculation_filters') ?: []);
+        if (is_string($calculation_filters)) {
+            $calculation_filters = explode(',', $calculation_filters);
+        }
+
+        // Получаем фильтры по ТЗ (массив)
+        $spec_filters = $this->input->post('spec_filters') ?: ($this->input->get('spec_filters') ?: []);
+        if (is_string($spec_filters)) {
+            $spec_filters = explode(',', $spec_filters);
+        }
         
         // Получаем выбранный тип сортировки (по умолчанию 'time' - по времени)
         $sort_by = $this->input->post('sort_by') ?: ($this->input->get('sort_by') ?: 'time');
 
         // ВРЕМЕННЫЙ ДЕБАГ: записываем параметры в лог-файл
-        file_put_contents(FCPATH . 'reports_debug.txt', date('Y-m-d H:i:s') . " | project_slice | GET: " . json_encode($_GET) . " | customer_filter: " . $customer_filter . " | sort_by: " . $sort_by . "\n", FILE_APPEND);
+        file_put_contents(FCPATH . 'reports_debug.txt', date('Y-m-d H:i:s') . " | project_slice | GET: " . json_encode($_GET) . " | customer_filters: " . json_encode($customer_filters) . " | sort_by: " . $sort_by . "\n", FILE_APPEND);
 
         // Получаем идентификатор текущего пользователя
         $user_id = $this->session->userdata('user_id');
         
         // Загружаем список всех заказчиков пользователя
         $customers = $this->Customer_model->get_all($user_id);
+
+        // Загружаем список всех калькуляций пользователя
+        $calculations = $this->Calculation_model->get_packages($user_id);
+
+        // Загружаем список всех ТЗ пользователя с именами заказчиков
+        $this->db->select('customer_specs.*, customers.name as customer_name');
+        $this->db->from('customer_specs');
+        $this->db->join('customers', 'customers.id = customer_specs.customer_id');
+        $this->db->where('customers.user_id', $user_id);
+        $this->db->order_by('customer_specs.title', 'ASC');
+        $specs = $this->db->get()->result_array();
         
         // Запрашиваем дерево проектов с каскадными суммами времени у модели с учетом фильтров
-        $projects_tree = $this->Stats_model->get_project_slice($user_id, $show_archived, $customer_filter, $sort_by);
+        $projects_tree = $this->Stats_model->get_project_slice($user_id, $show_archived, $customer_filters, $calculation_filters, $spec_filters, $sort_by);
         
         // Наполняем массив данных для передачи во вьюху
         $data = [
             // Флаг архива для инпутов
             'show_archived' => $show_archived,
-            // Передаем активный фильтр по заказчику
-            'customer_filter' => $customer_filter,
+            // Передаем активные фильтры
+            'customer_filters' => $customer_filters,
+            'calculation_filters' => $calculation_filters,
+            'spec_filters' => $spec_filters,
             // Передаем активный тип сортировки
             'sort_by' => $sort_by,
             // Передаем список заказчиков для выпадающего меню
             'customers' => $customers,
+            // Передаем списки калькуляций и ТЗ
+            'calculations' => $calculations,
+            'specs' => $specs,
             // Готовое дерево проектов с подсчитанным временем
             'projects_tree' => $projects_tree,
             // Левое меню статистики

@@ -26,10 +26,15 @@
         'start_date' => $start_date, 
         'end_date' => $end_date, 
         'show_archived' => $show_archived,
-        // Передаем новые параметры фильтрации по заказчикам и сортировки во View тулбара
-        'customer_filter' => $customer_filter,
+        // Передаем массивы выбранных множественных фильтров
+        'customer_filters' => $customer_filters,
+        'calculation_filters' => $calculation_filters,
+        'spec_filters' => $spec_filters,
         'sort_by' => $sort_by,
+        // Передаем справочники
         'customers' => $customers,
+        'calculations' => $calculations,
+        'specs' => $specs,
         'today_start' => $today_start,
         'today_end' => $today_end,
         'yesterday_start' => $yesterday_start,

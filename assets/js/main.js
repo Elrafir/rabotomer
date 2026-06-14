@@ -1173,7 +1173,7 @@ function refreshStatistics() {
     // Получаем состояние чекбокса: 1 если выбран (показывать архив), 0 если снят (скрыть архив)
     const showArchived = $('#filter-show-archived').is(':checked') ? 1 : 0;
     
-    // Инициализируем массив для сборки GET параметров запроса
+    // Инициализируем массив для хранения GET параметров запроса
     const params = [];
     
     // Всегда добавляем флаг архивных в параметры запроса
@@ -1191,11 +1191,20 @@ function refreshStatistics() {
         params.push('end=' + $('#stat-date-end').val());
     }
 
-    // Если на странице присутствует выпадающий список заказчиков
-    if ($('#filter-customer').length) {
-        // Добавляем фильтр по заказчику в параметры GET-запроса
-        params.push('customer_filter=' + $('#filter-customer').val());
-    }
+    // Собираем множественные фильтры заказчиков
+    $('input[name="customer_filters[]"]:checked').each(function() {
+        params.push('customer_filters[]=' + encodeURIComponent($(this).val()));
+    });
+
+    // Собираем множественные фильтры калькуляций
+    $('input[name="calculation_filters[]"]:checked').each(function() {
+        params.push('calculation_filters[]=' + encodeURIComponent($(this).val()));
+    });
+
+    // Собираем множественные фильтры ТЗ
+    $('input[name="spec_filters[]"]:checked').each(function() {
+        params.push('spec_filters[]=' + encodeURIComponent($(this).val()));
+    });
 
     // Если на странице присутствует выпадающий список сортировки
     if ($('#filter-sort').length) {
@@ -1216,9 +1225,9 @@ $(document).on('change', '#filter-show-archived', function() {
     refreshStatistics();
 });
 
-// Обработчик изменения выпадающего списка заказчиков
-$(document).on('change', '#filter-customer', function() {
-    // Вызываем AJAX-обновление статистики при изменении заказчика
+// Обработчик изменения чекбоксов фильтрации заказчиков, калькуляций и ТЗ
+$(document).on('change', 'input[name="customer_filters[]"], input[name="calculation_filters[]"], input[name="spec_filters[]"]', function() {
+    // Вызываем AJAX-обновление статистики при изменении любого фильтра
     refreshStatistics();
 });
 
@@ -1242,20 +1251,39 @@ $(document).on('click', '#chip-hide-archived', function() {
     refreshStatistics();
 });
 
-// Обработчик клика по чипсу сброса заказчика
-$(document).on('click', '#chip-customer', function() {
-    // Сбрасываем значение селектора заказчика на дефолтное (all)
-    $('#filter-customer').val('all');
-    // Мгновенно перезагружаем статистику для сброса фильтра
+// Обработчик клика по чипсу сброса конкретного заказчика
+$(document).on('click', '.chip-customer-item', function() {
+    const val = $(this).data('value');
+    // Снимаем отметку с чекбокса соответствующего заказчика
+    $('input[name="customer_filters[]"][value="' + val + '"]').prop('checked', false);
+    // Перезагружаем статистику
     refreshStatistics();
 });
 
-// Обработчик клика по чипсу сброса сортировки
-$(document).on('click', '#chip-sort', function() {
-    // Сбрасываем тип сортировки на дефолтный (time)
-    $('#filter-sort').val('time');
-    // Мгновенно перезагружаем статистику для сброса фильтра
+// Обработчик клика по чипсу сброса конкретной калькуляции
+$(document).on('click', '.chip-calculation-item', function() {
+    const val = $(this).data('value');
+    // Снимаем отметку с чекбокса соответствующей калькуляции
+    $('input[name="calculation_filters[]"][value="' + val + '"]').prop('checked', false);
+    // Перезагружаем статистику
     refreshStatistics();
+});
+
+// Обработчик клика по чипсу сброса конкретного ТЗ
+$(document).on('click', '.chip-spec-item', function() {
+    const val = $(this).data('value');
+    // Снимаем отметку с чекбокса соответствующего ТЗ
+    $('input[name="spec_filters[]"][value="' + val + '"]').prop('checked', false);
+    // Перезагружаем статистику
+    refreshStatistics();
+});
+
+// Обработчик клика по кнопке открытия встроенной выдвижной панели фильтров
+$(document).on('click', '#btn-open-filters', function(e) {
+    // Предотвращаем стандартный переход по клику
+    e.preventDefault();
+    // Переключаем видимость панели фильтров с анимацией slide
+    $('#filters-drawer').slideToggle(200);
 });
 
 // Обработчик клика по быстрым кнопкам дат (Сегодня, Вчера, Неделя, Месяц)
@@ -1308,54 +1336,6 @@ $(document).on('click', '.btn-fast-date', function(e) {
     
     // Запускаем AJAX-обновление статистики с новым выбранным периодом
     refreshStatistics();
-});
-
-// Обработчик клика по кнопке открытия модального окна фильтров
-$(document).on('click', '#btn-open-filters', function(e) {
-    // Предотвращаем стандартный переход по клику
-    e.preventDefault();
-    
-    // Отображаем модальное окно фильтров, удаляя скрывающий класс hidden
-    $('#modal-filters').removeClass('hidden');
-    
-    // Анимируем появление бэкдропа и карточки через плавное изменение прозрачности и масштаба
-    setTimeout(function() {
-        // Устанавливаем полную непрозрачность
-        $('#modal-filters').removeClass('opacity-0').addClass('opacity-100');
-        // Возвращаем карточку к исходному масштабу 100%
-        $('#modal-filters').find('.transform').removeClass('scale-95').addClass('scale-100');
-    }, 50);
-});
-
-/**
- * Вспомогательная функция для плавного закрытия модального окна фильтров с обратной анимацией.
- */
-function closeFiltersStatsModal() {
-    // Анимируем уменьшение карточки модалки
-    $('#modal-filters').find('.transform').removeClass('scale-100').addClass('scale-95');
-    // Скрываем прозрачность бэкдропа
-    $('#modal-filters').removeClass('opacity-100').addClass('opacity-0');
-    
-    // Полностью скрываем блок из DOM через 300мс после завершения анимации
-    setTimeout(function() {
-        // Добавляем класс hidden
-        $('#modal-filters').addClass('hidden');
-    }, 300);
-}
-
-// Обработчик закрытия по крестику на модалке или кнопке "Применить"
-$(document).on('click', '#btn-close-filters-modal, #btn-apply-filters', function(e) {
-    // Вызываем функцию скрытия модалки
-    closeFiltersStatsModal();
-});
-
-// Обработчик закрытия модалки при клике на внешнюю область (темный фон)
-$(document).on('click', '#modal-filters', function(e) {
-    // Если клик произошел по самому оверлею, а не по внутреннему контейнеру карточки
-    if ($(e.target).closest('.transform').length === 0) {
-        // Закрываем модальное окно
-        closeFiltersStatsModal();
-    }
 });
 
 // Обработчик плавного раскрытия подразделов дерева задач (аккордеон) в проектном срезе

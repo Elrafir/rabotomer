@@ -154,10 +154,15 @@ if (!function_exists('render_stats_project_tree')) {
     $this->load->view('reports/toolbar', [
         'show_dates' => false, 
         'show_archived' => $show_archived,
-        // Передаем активный фильтр по заказчикам, сортировке и список всех клиентов
-        'customer_filter' => $customer_filter,
+        // Передаем массивы выбранных множественных фильтров
+        'customer_filters' => $customer_filters,
+        'calculation_filters' => $calculation_filters,
+        'spec_filters' => $spec_filters,
         'sort_by' => $sort_by,
-        'customers' => $customers
+        // Передаем справочники
+        'customers' => $customers,
+        'calculations' => $calculations,
+        'specs' => $specs
     ]); 
     ?>
 

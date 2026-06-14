@@ -27,7 +27,7 @@ class Stats_model extends CI_Model {
      * @param bool $show_archived Флаг отображения архивных (завершенных) задач
      * @return array Массив со статистикой: общее время и список проектов с долей времени
      */
-    public function get_time_slice($user_id, $start_date, $end_date, $show_archived, $customer_filter = 'all', $sort_by = 'time') {
+    public function get_time_slice($user_id, $start_date, $end_date, $show_archived, $customer_filters = [], $calculation_filters = [], $spec_filters = [], $sort_by = 'time') {
         // Формируем дату и время начала первого рабочего дня (с 05:00:00)
         $start_date_full = $start_date . ' 05:00:00';
         
@@ -43,8 +43,8 @@ class Stats_model extends CI_Model {
         // Инициализируем массив для хранения детальных данных о задачах
         $task_map = [];
 
-        // Выбираем поля задачи, включая ID и имя заказчика через LEFT JOIN
-        $this->db->select('tasks.id, tasks.parent_id, tasks.title, tasks.status, tasks.color, tasks.customer_id, customers.name as customer_name');
+        // Выбираем поля задачи, включая ID, связь с ТЗ и имя заказчика через LEFT JOIN
+        $this->db->select('tasks.id, tasks.parent_id, tasks.title, tasks.status, tasks.color, tasks.customer_id, tasks.spec_id, customers.name as customer_name');
         
         // Указываем источник данных - таблицу tasks
         $this->db->from('tasks');
@@ -64,11 +64,6 @@ class Stats_model extends CI_Model {
         // Получаем массив всех активных и завершенных задач в виде ассоциативного массива
         $all_tasks = $query_tasks->result_array();
 
-        // ВРЕМЕННЫЙ ДЕБАГ: пишем ключи и структуру первой задачи
-        if (!empty($all_tasks)) {
-            file_put_contents(FCPATH . 'reports_debug.txt', "  [tasks query] row keys: " . implode(', ', array_keys($all_tasks[0])) . " | first row data: " . json_encode($all_tasks[0]) . "\n", FILE_APPEND);
-        }
-
         // Проходим циклом по всем извлеченным задачам для заполнения карт в памяти
         foreach ($all_tasks as $task) {
             // Запоминаем связь: ID задачи -> ID её родителя (или null для корня)
@@ -76,6 +71,24 @@ class Stats_model extends CI_Model {
             
             // Сохраняем полную информацию о задаче по её уникальному идентификатору
             $task_map[$task['id']] = $task;
+        }
+
+        // Загружаем маппинг задач по калькуляциям пользователя для фильтрации
+        $task_packages_map = [];
+        // Выбираем ID задачи и ID пакета калькуляции
+        $this->db->select('calculation_package_tasks.task_id, calculation_package_tasks.package_id');
+        // Из таблицы связей пакетов и задач
+        $this->db->from('calculation_package_tasks');
+        // Соединяем с таблицей пакетов калькуляций
+        $this->db->join('calculation_packages', 'calculation_packages.id = calculation_package_tasks.package_id');
+        // Фильтруем по ID пользователя
+        $this->db->where('calculation_packages.user_id', $user_id);
+        // Выполняем запрос к БД
+        $package_mappings = $this->db->get()->result_array();
+        // Заполняем массив связей в памяти
+        foreach ($package_mappings as $mapping) {
+            // Записываем ID пакета в массив для конкретной задачи
+            $task_packages_map[$mapping['task_id']][] = (int)$mapping['package_id'];
         }
 
         // Запрашиваем из базы данных агрегированное время сессий за указанный период
@@ -131,24 +144,77 @@ class Stats_model extends CI_Model {
                 continue;
             }
 
-            // Получаем эффективный ID заказчика (с подъемом по иерархии)
-            $effective_customer_id = $this->_get_effective_customer_id($tid, $parent_map, $task_map);
+            // Проверяем фильтрацию по заказчикам (множественный выбор)
+            if (!empty($customer_filters)) {
+                // Получаем эффективный ID заказчика (с подъемом по иерархии)
+                $effective_customer_id = $this->_get_effective_customer_id($tid, $parent_map, $task_map);
+                // Флаг совпадения фильтра
+                $match_customer = false;
+                // Проверяем, есть ли 'none' (без заказчика) и эффективный ID равен null
+                if (in_array('none', $customer_filters) && $effective_customer_id === null) {
+                    // Устанавливаем флаг совпадения в true
+                    $match_customer = true;
+                }
+                // Проверяем, если эффективный ID не null и присутствует в массиве выбранных заказчиков
+                if (!$match_customer && $effective_customer_id !== null && in_array((string)$effective_customer_id, $customer_filters)) {
+                    // Устанавливаем флаг совпадения в true
+                    $match_customer = true;
+                }
+                // Если совпадение не найдено, исключаем задачу из результатов
+                if (!$match_customer) {
+                    // Переходим к следующей итерации цикла
+                    continue;
+                }
+            }
 
-            // ВРЕМЕННЫЙ ДЕБАГ: логгируем сопоставление заказчика
-            file_put_contents(FCPATH . 'reports_debug.txt', "  -> task_id: {$tid} | title: " . $task_map[$tid]['title'] . " | effective_cust_id: " . var_export($effective_customer_id, true) . " | filter: " . var_export($customer_filter, true) . "\n", FILE_APPEND);
+            // Проверяем фильтрацию по пакетам калькуляции (множественный выбор)
+            if (!empty($calculation_filters)) {
+                // Получаем эффективные ID пакетов калькуляции (с подъемом по иерархии)
+                $effective_pkgs = $this->_get_effective_package_ids($tid, $parent_map, $task_packages_map);
+                // Флаг совпадения фильтра калькуляций
+                $match_calc = false;
+                // Проверяем, есть ли 'none' (вне калькуляций) и массив пакетов пуст
+                if (in_array('none', $calculation_filters) && empty($effective_pkgs)) {
+                    // Устанавливаем флаг совпадения в true
+                    $match_calc = true;
+                }
+                // Проверяем пересечение эффективных пакетов с выбранными фильтрами
+                if (!$match_calc && !empty($effective_pkgs)) {
+                    // Ищем общие элементы между массивами
+                    $intersect = array_intersect($effective_pkgs, array_map('intval', $calculation_filters));
+                    // Если пересечение не пустое, то задача подходит
+                    if (!empty($intersect)) {
+                        // Устанавливаем флаг совпадения в true
+                        $match_calc = true;
+                    }
+                }
+                // Если совпадение не найдено, исключаем задачу из результатов
+                if (!$match_calc) {
+                    // Переходим к следующей итерации цикла
+                    continue;
+                }
+            }
 
-            // Если применен фильтр по заказчикам
-            if ($customer_filter !== 'all') {
-                if ($customer_filter === 'none') {
-                    // Исключаем задачи с заданным заказчиком
-                    if ($effective_customer_id !== null) {
-                        continue;
-                    }
-                } else {
-                    // Исключаем задачи, чей эффективный заказчик не совпадает с выбранным
-                    if ((string)$effective_customer_id !== (string)$customer_filter) {
-                        continue;
-                    }
+            // Проверяем фильтрацию по ТЗ (техническим заданиям)
+            if (!empty($spec_filters)) {
+                // Получаем эффективный ID ТЗ (с подъемом по иерархии)
+                $effective_spec_id = $this->_get_effective_spec_id($tid, $parent_map, $task_map);
+                // Флаг совпадения фильтра ТЗ
+                $match_spec = false;
+                // Проверяем, есть ли 'none' (вне ТЗ) и эффективный ID ТЗ равен null
+                if (in_array('none', $spec_filters) && $effective_spec_id === null) {
+                    // Устанавливаем флаг совпадения в true
+                    $match_spec = true;
+                }
+                // Проверяем, если эффективный ID ТЗ не null и присутствует в массиве выбранных ТЗ
+                if (!$match_spec && $effective_spec_id !== null && in_array((string)$effective_spec_id, $spec_filters)) {
+                    // Устанавливаем флаг совпадения в true
+                    $match_spec = true;
+                }
+                // Если совпадение не найдено, исключаем задачу из результатов
+                if (!$match_spec) {
+                    // Переходим к следующей итерации цикла
+                    continue;
                 }
             }
 
@@ -267,9 +333,9 @@ class Stats_model extends CI_Model {
      * @param bool $show_archived Флаг отображения архивных (завершенных) задач
      * @return array Иерархическое дерево проектов и подзадач со временем
      */
-    public function get_project_slice($user_id, $show_archived, $customer_filter = 'all', $sort_by = 'time') {
-        // Выбираем поля задачи, включая ID и имя заказчика через LEFT JOIN
-        $this->db->select('tasks.id, tasks.parent_id, tasks.title, tasks.status, tasks.color, tasks.customer_id, customers.name as customer_name');
+    public function get_project_slice($user_id, $show_archived, $customer_filters = [], $calculation_filters = [], $spec_filters = [], $sort_by = 'time') {
+        // Выбираем поля задачи, включая ID, связь с ТЗ и имя заказчика через LEFT JOIN
+        $this->db->select('tasks.id, tasks.parent_id, tasks.title, tasks.status, tasks.color, tasks.customer_id, tasks.spec_id, customers.name as customer_name');
         
         // Указываем таблицу задач
         $this->db->from('tasks');
@@ -307,6 +373,24 @@ class Stats_model extends CI_Model {
             $parent_map[$t['id']] = $t['parent_id'];
         }
 
+        // Загружаем маппинг задач по калькуляциям пользователя
+        $task_packages_map = [];
+        // Выбираем ID задачи и ID пакета калькуляции
+        $this->db->select('calculation_package_tasks.task_id, calculation_package_tasks.package_id');
+        // Из таблицы связей пакетов и задач
+        $this->db->from('calculation_package_tasks');
+        // Соединяем с таблицей пакетов калькуляций
+        $this->db->join('calculation_packages', 'calculation_packages.id = calculation_package_tasks.package_id');
+        // Фильтруем по ID пользователя
+        $this->db->where('calculation_packages.user_id', $user_id);
+        // Выполняем запрос к БД
+        $package_mappings = $this->db->get()->result_array();
+        // Заполняем массив связей в памяти
+        foreach ($package_mappings as $mapping) {
+            // Записываем ID пакета в массив для конкретной задачи
+            $task_packages_map[$mapping['task_id']][] = (int)$mapping['package_id'];
+        }
+
         // Цикл проверки каждой задачи на пригодность к показу
         foreach ($all_tasks_map as $id => $task) {
             // 1. Проверяем цепочку активности (если архивные скрыты)
@@ -314,17 +398,77 @@ class Stats_model extends CI_Model {
                 continue;
             }
 
-            // 2. Проверяем фильтр заказчика
-            if ($customer_filter !== 'all') {
+            // 2. Проверяем фильтрацию по заказчикам (множественный выбор)
+            if (!empty($customer_filters)) {
+                // Получаем эффективный ID заказчика (с подъемом по иерархии)
                 $effective_customer_id = $this->_get_effective_customer_id($id, $parent_map, $all_tasks_map);
-                if ($customer_filter === 'none') {
-                    if ($effective_customer_id !== null) {
-                        continue;
+                // Флаг совпадения фильтра
+                $match_customer = false;
+                // Проверяем, есть ли 'none' (без заказчика) и эффективный ID равен null
+                if (in_array('none', $customer_filters) && $effective_customer_id === null) {
+                    // Устанавливаем флаг совпадения в true
+                    $match_customer = true;
+                }
+                // Проверяем, если эффективный ID не null и присутствует в массиве выбранных заказчиков
+                if (!$match_customer && $effective_customer_id !== null && in_array((string)$effective_customer_id, $customer_filters)) {
+                    // Устанавливаем флаг совпадения в true
+                    $match_customer = true;
+                }
+                // Если совпадение не найдено, исключаем задачу из результатов
+                if (!$match_customer) {
+                    // Переходим к следующему элементу
+                    continue;
+                }
+            }
+
+            // 3. Проверяем фильтрацию по калькуляциям
+            if (!empty($calculation_filters)) {
+                // Получаем эффективные ID пакетов калькуляции (с подъемом по иерархии)
+                $effective_pkgs = $this->_get_effective_package_ids($id, $parent_map, $task_packages_map);
+                // Флаг совпадения фильтра калькуляций
+                $match_calc = false;
+                // Проверяем, есть ли 'none' (вне калькуляций) и массив пакетов пуст
+                if (in_array('none', $calculation_filters) && empty($effective_pkgs)) {
+                    // Устанавливаем флаг совпадения в true
+                    $match_calc = true;
+                }
+                // Проверяем пересечение эффективных пакетов с выбранными фильтрами
+                if (!$match_calc && !empty($effective_pkgs)) {
+                    // Ищем общие элементы между массивами
+                    $intersect = array_intersect($effective_pkgs, array_map('intval', $calculation_filters));
+                    // Если пересечение не пустое, то задача подходит
+                    if (!empty($intersect)) {
+                        // Устанавливаем флаг совпадения в true
+                        $match_calc = true;
                     }
-                } else {
-                    if ((string)$effective_customer_id !== (string)$customer_filter) {
-                        continue;
-                    }
+                }
+                // Если совпадение не найдено, исключаем задачу из результатов
+                if (!$match_calc) {
+                    // Переходим к следующему элементу
+                    continue;
+                }
+            }
+
+            // 4. Проверяем фильтрацию по ТЗ
+            if (!empty($spec_filters)) {
+                // Получаем эффективный ID ТЗ (с подъемом по иерархии)
+                $effective_spec_id = $this->_get_effective_spec_id($id, $parent_map, $all_tasks_map);
+                // Флаг совпадения фильтра ТЗ
+                $match_spec = false;
+                // Проверяем, есть ли 'none' (вне ТЗ) и эффективный ID ТЗ равен null
+                if (in_array('none', $spec_filters) && $effective_spec_id === null) {
+                    // Устанавливаем флаг совпадения в true
+                    $match_spec = true;
+                }
+                // Проверяем, если эффективный ID ТЗ не null и присутствует в массиве выбранных ТЗ
+                if (!$match_spec && $effective_spec_id !== null && in_array((string)$effective_spec_id, $spec_filters)) {
+                    // Устанавливаем флаг совпадения в true
+                    $match_spec = true;
+                }
+                // Если совпадение не найдено, исключаем задачу из результатов
+                if (!$match_spec) {
+                    // Переходим к следующему элементу
+                    continue;
                 }
             }
 
@@ -564,5 +708,70 @@ class Stats_model extends CI_Model {
         
         // Возвращаем null, если заказчик не задан во всей цепочке
         return null;
+    }
+
+    /**
+     * Вспомогательный метод для определения эффективного ТЗ (технического задания) задачи.
+     * Ищет привязанное ТЗ у самой задачи или поднимается по дереву к родительским задачам.
+     */
+    private function _get_effective_spec_id($task_id, $parent_map, $task_map) {
+        // Устанавливаем текущий ID для подъема по иерархии
+        $curr_id = $task_id;
+        
+        // Защитный счетчик от бесконечных циклов
+        $loop_guard = 0;
+        
+        // Поднимаемся по дереву задач вверх
+        while ($curr_id !== null && $loop_guard < 100) {
+            // Проверяем наличие задачи в карте
+            if (isset($task_map[$curr_id])) {
+                // Если у задачи заполнен ID ТЗ, возвращаем его
+                if (!empty($task_map[$curr_id]['spec_id'])) {
+                    return (int)$task_map[$curr_id]['spec_id'];
+                }
+                // Переходим к родителю
+                $curr_id = $parent_map[$curr_id] ?? null;
+            } else {
+                // Прерываем поиск при выходе за пределы карты
+                break;
+            }
+            // Инкрементируем счетчик шагов
+            $loop_guard++;
+        }
+        
+        // Возвращаем null, если ТЗ не задано во всей цепочке
+        return null;
+    }
+
+    /**
+     * Вспомогательный метод для определения эффективных ID пакетов калькуляций задачи.
+     * Собирает все пакеты калькуляций, к которым привязана сама задача или её родительские задачи.
+     */
+    private function _get_effective_package_ids($task_id, $parent_map, $task_packages_map) {
+        // Устанавливаем текущий ID для подъема по иерархии
+        $curr_id = $task_id;
+        
+        // Защитный счетчик от бесконечных циклов
+        $loop_guard = 0;
+        
+        // Массив для хранения всех найденных ID пакетов
+        $pkg_ids = [];
+        
+        // Поднимаемся по дереву задач вверх
+        while ($curr_id !== null && $loop_guard < 100) {
+            // Если для текущей задачи есть привязанные пакеты калькуляций
+            if (isset($task_packages_map[$curr_id])) {
+                // Слияние найденных пакетов с результирующим массивом
+                $pkg_ids = array_merge($pkg_ids, $task_packages_map[$curr_id]);
+            }
+            // Переходим к родителю
+            $curr_id = $parent_map[$curr_id] ?? null;
+            
+            // Инкрементируем счетчик шагов
+            $loop_guard++;
+        }
+        
+        // Возвращаем массив уникальных ID пакетов калькуляций
+        return array_unique($pkg_ids);
     }
 }
