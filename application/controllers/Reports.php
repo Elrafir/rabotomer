@@ -84,7 +84,10 @@ class Reports extends MY_Controller {
         
         // Получаем выбранный тип сортировки (по умолчанию 'time' - по времени)
         $sort_by = $this->input->post('sort_by') ?: ($this->input->get('sort_by') ?: 'time');
-        
+
+        // ВРЕМЕННЫЙ ДЕБАГ: записываем параметры в лог-файл
+        file_put_contents(FCPATH . 'reports_debug.txt', date('Y-m-d H:i:s') . " | time_slice | GET: " . json_encode($_GET) . " | customer_filter: " . $customer_filter . " | sort_by: " . $sort_by . "\n", FILE_APPEND);
+
         // Извлекаем идентификатор текущего пользователя из сессии
         $user_id = $this->session->userdata('user_id');
         
@@ -147,7 +150,10 @@ class Reports extends MY_Controller {
         
         // Получаем выбранный тип сортировки (по умолчанию 'time' - по времени)
         $sort_by = $this->input->post('sort_by') ?: ($this->input->get('sort_by') ?: 'time');
-        
+
+        // ВРЕМЕННЫЙ ДЕБАГ: записываем параметры в лог-файл
+        file_put_contents(FCPATH . 'reports_debug.txt', date('Y-m-d H:i:s') . " | project_slice | GET: " . json_encode($_GET) . " | customer_filter: " . $customer_filter . " | sort_by: " . $sort_by . "\n", FILE_APPEND);
+
         // Получаем идентификатор текущего пользователя
         $user_id = $this->session->userdata('user_id');
         

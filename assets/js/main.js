@@ -1216,6 +1216,18 @@ $(document).on('change', '#filter-show-archived', function() {
     refreshStatistics();
 });
 
+// Обработчик изменения выпадающего списка заказчиков
+$(document).on('change', '#filter-customer', function() {
+    // Вызываем AJAX-обновление статистики при изменении заказчика
+    refreshStatistics();
+});
+
+// Обработчик изменения типа сортировки
+$(document).on('change', '#filter-sort', function() {
+    // Вызываем AJAX-обновление статистики при изменении сортировки
+    refreshStatistics();
+});
+
 // Обработчик изменения ручных полей ввода календарей (даты начала или конца)
 $(document).on('change', '#stat-date-start, #stat-date-end', function() {
     // Перезагружаем статистику с новыми датами
@@ -1226,6 +1238,22 @@ $(document).on('change', '#stat-date-start, #stat-date-end', function() {
 $(document).on('click', '#chip-hide-archived', function() {
     // Принудительно устанавливаем чекбокс в дефолтное состояние (checked = true)
     $('#filter-show-archived').prop('checked', true);
+    // Мгновенно перезагружаем статистику для сброса фильтра
+    refreshStatistics();
+});
+
+// Обработчик клика по чипсу сброса заказчика
+$(document).on('click', '#chip-customer', function() {
+    // Сбрасываем значение селектора заказчика на дефолтное (all)
+    $('#filter-customer').val('all');
+    // Мгновенно перезагружаем статистику для сброса фильтра
+    refreshStatistics();
+});
+
+// Обработчик клика по чипсу сброса сортировки
+$(document).on('click', '#chip-sort', function() {
+    // Сбрасываем тип сортировки на дефолтный (time)
+    $('#filter-sort').val('time');
     // Мгновенно перезагружаем статистику для сброса фильтра
     refreshStatistics();
 });

@@ -64,6 +64,11 @@ class Stats_model extends CI_Model {
         // Получаем массив всех активных и завершенных задач в виде ассоциативного массива
         $all_tasks = $query_tasks->result_array();
 
+        // ВРЕМЕННЫЙ ДЕБАГ: пишем ключи и структуру первой задачи
+        if (!empty($all_tasks)) {
+            file_put_contents(FCPATH . 'reports_debug.txt', "  [tasks query] row keys: " . implode(', ', array_keys($all_tasks[0])) . " | first row data: " . json_encode($all_tasks[0]) . "\n", FILE_APPEND);
+        }
+
         // Проходим циклом по всем извлеченным задачам для заполнения карт в памяти
         foreach ($all_tasks as $task) {
             // Запоминаем связь: ID задачи -> ID её родителя (или null для корня)
@@ -128,6 +133,9 @@ class Stats_model extends CI_Model {
 
             // Получаем эффективный ID заказчика (с подъемом по иерархии)
             $effective_customer_id = $this->_get_effective_customer_id($tid, $parent_map, $task_map);
+
+            // ВРЕМЕННЫЙ ДЕБАГ: логгируем сопоставление заказчика
+            file_put_contents(FCPATH . 'reports_debug.txt', "  -> task_id: {$tid} | title: " . $task_map[$tid]['title'] . " | effective_cust_id: " . var_export($effective_customer_id, true) . " | filter: " . var_export($customer_filter, true) . "\n", FILE_APPEND);
 
             // Если применен фильтр по заказчикам
             if ($customer_filter !== 'all') {
