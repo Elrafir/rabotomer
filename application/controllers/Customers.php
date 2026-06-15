@@ -85,8 +85,43 @@ class Customers extends MY_Controller {
                 $this->load->model('Task_model');
                 $raw_tasks = $this->Task_model->get_user_tasks($user_id);
                 
-                // Строим иерархическое дерево задач заказчика
-                $data['customer_tasks_tree'] = $this->_build_customer_tasks_tree($raw_tasks, $active_customer_id);
+                // Отбираем только корневые задачи
+                $root_tasks = array_filter($raw_tasks, function($task) use ($active_customer_id) {
+                    return $task['parent_id'] === NULL && $task['customer_id'] == $active_customer_id;
+                });
+
+                // По умолчанию фильтруем корневые задачи, оставляя только активные
+                $root_tasks = array_filter($root_tasks, function($task) {
+                    return $task['status'] === 'active';
+                });
+
+                // Сортируем корневые задачи: сначала активные, потом завершенные, внутри по дате создания DESC
+                usort($root_tasks, function($a, $b) {
+                    if ($a['status'] !== $b['status']) {
+                        return $a['status'] === 'active' ? -1 : 1;
+                    }
+                    return strcmp($b['created_at'], $a['created_at']);
+                });
+
+                // Первая порция для рендеринга
+                $sliced_root_tasks = array_slice($root_tasks, 0, $per_page);
+
+                // Строим дерево задач для этого среза
+                $customer_tasks_tree = [];
+                foreach ($sliced_root_tasks as $root_task) {
+                    $children = $this->_build_customer_tasks_tree($raw_tasks, $active_customer_id, $root_task['id']);
+                    $root_task['children'] = $children ? $children : [];
+
+                    // Считаем время
+                    $total_seconds = $this->Task_model->get_task_time_recursive($root_task['id'], $user_id);
+                    $hours = floor($total_seconds / 3600);
+                    $minutes = floor(($total_seconds % 3600) / 60);
+                    $root_task['formatted_time'] = sprintf(lang('time_format_hours_mins'), $hours, $minutes);
+
+                    $customer_tasks_tree[] = $root_task;
+                }
+                $data['customer_tasks_tree'] = $customer_tasks_tree;
+                $data['customer_tasks_has_more'] = (count($root_tasks) > $per_page);
             }
         }
 
@@ -166,7 +201,7 @@ class Customers extends MY_Controller {
     /**
      * Создание нового ТЗ для заказчика и привязка выбранных задач
      */
-    public function add_spec() {
+     public function add_spec() {
         $user_id = $this->session->userdata('user_id');
         $customer_id = $this->input->post('customer_id');
         $title = trim($this->input->post('title') ?? '');
@@ -174,11 +209,12 @@ class Customers extends MY_Controller {
         $price = $this->input->post('price') ?: 0.00;
         $prepayment = $this->input->post('prepayment') ?: 0.00;
         $payment_type = $this->input->post('payment_type') ?: 'hourly';
+        $files_dir = $this->input->post('files_dir') ?: NULL;
         $linked_tasks = $this->input->post('linked_tasks'); // Массив ID привязываемых задач
 
         if (!empty($customer_id) && !empty($title)) {
             // Сохраняем ТЗ в базе
-            $spec_id = $this->Customer_model->add_spec($customer_id, $title, $content, $price, $prepayment, $payment_type);
+            $spec_id = $this->Customer_model->add_spec($customer_id, $title, $content, $price, $prepayment, $payment_type, $files_dir);
 
             // Обрабатываем привязку задач
             if (!empty($linked_tasks) && is_array($linked_tasks)) {
@@ -204,10 +240,11 @@ class Customers extends MY_Controller {
         $price = $this->input->post('price') ?: 0.00;
         $prepayment = $this->input->post('prepayment') ?: 0.00;
         $payment_type = $this->input->post('payment_type') ?: 'hourly';
+        $files_dir = $this->input->post('files_dir') ?: NULL;
         $linked_tasks = $this->input->post('linked_tasks'); // Массив ID привязанных задач
 
         if (!empty($spec_id) && !empty($title)) {
-            $this->Customer_model->update_spec($spec_id, $title, $content, $price, $prepayment, $payment_type);
+            $this->Customer_model->update_spec($spec_id, $title, $content, $price, $prepayment, $payment_type, $files_dir);
 
             // Отвязываем все задачи от этого ТЗ, чтобы связать заново
             $this->db->where('spec_id', $spec_id);
@@ -262,6 +299,11 @@ class Customers extends MY_Controller {
      * Загрузка файла для конкретного ТЗ через AJAX
      */
     public function upload_file() {
+        if (ob_get_level() > 0) {
+            ob_clean();
+        }
+        header('Content-Type: application/json');
+
         $spec_id = $this->input->post('spec_id');
         $spec = $this->Customer_model->get_spec($spec_id);
         
@@ -270,7 +312,15 @@ class Customers extends MY_Controller {
             return;
         }
 
-        $upload_dir = FCPATH . 'uploads/specs/';
+        // Получаем директорию загрузки из настроек
+        $this->load->model('Settings_model');
+        $upload_dir_setting = $this->Settings_model->get_setting('upload_dir', 'uploads/specs/');
+        if (substr($upload_dir_setting, 0, 1) === '/' || substr($upload_dir_setting, 1, 1) === ':') {
+            $upload_dir = rtrim($upload_dir_setting, '/') . '/';
+        } else {
+            $upload_dir = FCPATH . rtrim($upload_dir_setting, '/') . '/';
+        }
+
         if (!is_dir($upload_dir)) {
             mkdir($upload_dir, 0755, true);
         }
@@ -312,7 +362,16 @@ class Customers extends MY_Controller {
     public function download_file($file_id) {
         $file = $this->Customer_model->get_spec_file($file_id);
         if ($file) {
-            $filepath = FCPATH . 'uploads/specs/' . $file['filename'];
+            // Получаем директорию загрузки из настроек
+            $this->load->model('Settings_model');
+            $upload_dir_setting = $this->Settings_model->get_setting('upload_dir', 'uploads/specs/');
+            if (substr($upload_dir_setting, 0, 1) === '/' || substr($upload_dir_setting, 1, 1) === ':') {
+                $upload_dir = rtrim($upload_dir_setting, '/') . '/';
+            } else {
+                $upload_dir = FCPATH . rtrim($upload_dir_setting, '/') . '/';
+            }
+
+            $filepath = $upload_dir . $file['filename'];
             if (file_exists($filepath)) {
                 $this->load->helper('download');
                 force_download($file['orig_name'], file_get_contents($filepath));
@@ -328,11 +387,25 @@ class Customers extends MY_Controller {
      * @param int $file_id ID удаляемого файла
      */
     public function delete_file($file_id) {
+        if (ob_get_level() > 0) {
+            ob_clean();
+        }
+        header('Content-Type: application/json');
+
         $file = $this->Customer_model->get_spec_file($file_id);
         if ($file) {
             // Удаляем физический файл только если это не внешняя ссылка
             if ($file['is_link'] == 0) {
-                $filepath = FCPATH . 'uploads/specs/' . $file['filename'];
+                // Получаем директорию загрузки из настроек
+                $this->load->model('Settings_model');
+                $upload_dir_setting = $this->Settings_model->get_setting('upload_dir', 'uploads/specs/');
+                if (substr($upload_dir_setting, 0, 1) === '/' || substr($upload_dir_setting, 1, 1) === ':') {
+                    $upload_dir = rtrim($upload_dir_setting, '/') . '/';
+                } else {
+                    $upload_dir = FCPATH . rtrim($upload_dir_setting, '/') . '/';
+                }
+
+                $filepath = $upload_dir . $file['filename'];
                 if (file_exists($filepath)) {
                     unlink($filepath);
                 }
@@ -348,6 +421,11 @@ class Customers extends MY_Controller {
      * AJAX-метод добавления внешней ссылки в качестве вложения ТЗ
      */
     public function add_link_ajax() {
+        if (ob_get_level() > 0) {
+            ob_clean();
+        }
+        header('Content-Type: application/json');
+
         $spec_id = $this->input->post('spec_id');
         $url = trim($this->input->post('url') ?? '');
         $title = trim($this->input->post('title') ?? '');
@@ -383,6 +461,11 @@ class Customers extends MY_Controller {
      * AJAX-метод скачивания файла из интернета и сохранения его в ТЗ
      */
     public function download_from_url_ajax() {
+        if (ob_get_level() > 0) {
+            ob_clean();
+        }
+        header('Content-Type: application/json');
+
         $spec_id = $this->input->post('spec_id');
         $url = trim($this->input->post('url') ?? '');
         
@@ -441,7 +524,15 @@ class Customers extends MY_Controller {
         // Защита и хеширование имени файла на сервере
         $encrypted_name = md5(uniqid(mt_rand(), true)) . '.' . pathinfo($orig_name, PATHINFO_EXTENSION);
         
-        $upload_dir = FCPATH . 'uploads/specs/';
+        // Получаем директорию загрузки из настроек
+        $this->load->model('Settings_model');
+        $upload_dir_setting = $this->Settings_model->get_setting('upload_dir', 'uploads/specs/');
+        if (substr($upload_dir_setting, 0, 1) === '/' || substr($upload_dir_setting, 1, 1) === ':') {
+            $upload_dir = rtrim($upload_dir_setting, '/') . '/';
+        } else {
+            $upload_dir = FCPATH . rtrim($upload_dir_setting, '/') . '/';
+        }
+
         if (!is_dir($upload_dir)) {
             mkdir($upload_dir, 0755, true);
         }
@@ -558,10 +649,109 @@ class Customers extends MY_Controller {
         $next_customers = $this->Customer_model->get_all($user_id, 1, $offset + $limit);
         $has_more = !empty($next_customers);
         
+        if (ob_get_level() > 0) {
+            ob_clean();
+        }
+        header('Content-Type: application/json');
+
         echo json_encode([
             'status' => 'success',
             'html' => $html,
             'has_more' => $has_more
         ]);
+    }
+
+    /**
+     * AJAX-метод получения дерева задач заказчика с пагинацией
+     */
+    public function load_tasks_ajax() {
+        if (ob_get_level() > 0) {
+            ob_clean();
+        }
+        header('Content-Type: application/json');
+
+        $user_id = $this->session->userdata('user_id');
+        $customer_id = (int)$this->input->post('customer_id');
+        $offset = (int)$this->input->post('offset');
+        $show_closed = (int)$this->input->post('show_closed');
+
+        $this->load->model('Settings_model');
+        $limit = (int)$this->Settings_model->get_setting('per_page', 25);
+
+        // Получаем все задачи пользователя
+        $this->load->model('Task_model');
+        $raw_tasks = $this->Task_model->get_user_tasks($user_id);
+
+        // Отбираем только корневые задачи заказчика
+        $root_tasks = array_filter($raw_tasks, function($task) use ($customer_id) {
+            return $task['parent_id'] === NULL && $task['customer_id'] == $customer_id;
+        });
+
+        // Фильтруем по статусу, если не требуется показывать закрытые
+        if (!$show_closed) {
+            $root_tasks = array_filter($root_tasks, function($task) {
+                return $task['status'] === 'active';
+            });
+        }
+
+        // Сортируем: сначала активные, потом завершенные, внутри по дате DESC
+        usort($root_tasks, function($a, $b) {
+            if ($a['status'] !== $b['status']) {
+                return $a['status'] === 'active' ? -1 : 1;
+            }
+            return strcmp($b['created_at'], $a['created_at']);
+        });
+
+        // Берем срез пагинации
+        $sliced_root_tasks = array_slice($root_tasks, $offset, $limit);
+        
+        if (empty($sliced_root_tasks)) {
+            echo json_encode(['status' => 'success', 'html' => '', 'has_more' => false]);
+            return;
+        }
+
+        // Строим дерево для среза
+        $customer_tasks_tree = [];
+        foreach ($sliced_root_tasks as $root_task) {
+            $children = $this->_build_customer_tasks_tree($raw_tasks, $customer_id, $root_task['id']);
+            $root_task['children'] = $children ? $children : [];
+
+            // Считаем время
+            $total_seconds = $this->Task_model->get_task_time_recursive($root_task['id'], $user_id);
+            $hours = floor($total_seconds / 3600);
+            $minutes = floor(($total_seconds % 3600) / 60);
+            $root_task['formatted_time'] = sprintf(lang('time_format_hours_mins'), $hours, $minutes);
+
+            $customer_tasks_tree[] = $root_task;
+        }
+
+        // Рендерим HTML
+        $html = $this->load->view('templates/customer_task_tree_loop', ['tasks' => $customer_tasks_tree, 'level' => 1], TRUE);
+        $has_more = (count($root_tasks) > ($offset + $limit));
+
+        echo json_encode([
+            'status' => 'success',
+            'html' => $html,
+            'has_more' => $has_more
+        ]);
+    }
+
+    /**
+     * Скачивание внешних рабочих материалов ТЗ
+     */
+    public function download_external_file() {
+        $spec_id = (int)$this->input->get('spec_id');
+        $filename = basename($this->input->get('file')); // Защита от Path Traversal
+
+        $spec = $this->Customer_model->get_spec($spec_id);
+        if ($spec && !empty($spec['files_dir']) && !empty($filename)) {
+            $filepath = rtrim($spec['files_dir'], '/') . '/' . $filename;
+            if (file_exists($filepath) && is_file($filepath) && is_readable($filepath)) {
+                $this->load->helper('download');
+                force_download($filename, file_get_contents($filepath));
+                return;
+            }
+        }
+        show_404();
     }
 }

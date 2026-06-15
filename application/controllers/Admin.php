@@ -69,6 +69,7 @@ class Admin extends MY_Controller {
         $this->load->model('Settings_model');
         $data['pause_limit_minutes'] = $this->Settings_model->get_setting('pause_limit_minutes', 10);
         $data['per_page'] = $this->Settings_model->get_setting('per_page', 25);
+        $data['upload_dir_setting'] = $this->Settings_model->get_setting('upload_dir', 'uploads/specs/');
 
         $this->render_page('admin/users', $data);
     }
@@ -77,13 +78,21 @@ class Admin extends MY_Controller {
      * AJAX-обработчик сохранения системных настроек
      */
     public function save_settings_ajax() {
+        // Очищаем буфер вывода, чтобы возможные PHP Warnings/Notices не ломали JSON
+        if (ob_get_level() > 0) {
+            ob_clean();
+        }
+        header('Content-Type: application/json');
+
         $this->form_validation->set_rules('pause_limit_minutes', 'Лимит паузы', 'required|numeric|greater_than_equal_to[0]');
         $this->form_validation->set_rules('per_page', 'Строк на странице', 'required|in_list[10,25,50,100]');
+        $this->form_validation->set_rules('upload_dir', 'Директория загрузки', 'required|trim');
         
         if ($this->form_validation->run() !== FALSE) {
             $this->load->model('Settings_model');
             $this->Settings_model->set_setting('pause_limit_minutes', $this->input->post('pause_limit_minutes'));
             $this->Settings_model->set_setting('per_page', $this->input->post('per_page'));
+            $this->Settings_model->set_setting('upload_dir', trim($this->input->post('upload_dir')));
             
             echo json_encode(['status' => 'success', 'message' => 'Настройки успешно сохранены']);
             return;

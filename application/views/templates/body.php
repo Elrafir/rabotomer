@@ -137,9 +137,11 @@ if ($current_theme === 'theme-custom') {
                 add_calculation_task: '<?php echo site_url("calculations/add_task_ajax"); ?>',
                 remove_calculation_task: '<?php echo site_url("calculations/remove_task_ajax"); ?>',
                 delete_spec_file: '<?php echo site_url("customers/delete_file/"); ?>',
+                upload_file: '<?php echo site_url("customers/upload_file"); ?>',
                 add_link: '<?php echo site_url("customers/add_link_ajax"); ?>',
                 download_url: '<?php echo site_url("customers/download_from_url_ajax"); ?>',
                 load_more_customers: '<?php echo site_url("customers/load_more_ajax"); ?>',
+                load_customer_tasks: '<?php echo site_url("customers/load_tasks_ajax"); ?>',
                 load_more_tasks: '<?php echo site_url("tasks/load_more_tasks_ajax"); ?>',
                 load_more_history: '<?php echo site_url("history/load_more_history_ajax"); ?>'
             };

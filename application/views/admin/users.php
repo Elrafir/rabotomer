@@ -195,6 +195,12 @@
             </div>
 
             <div>
+                <label class="block text-gray-700 text-xl font-bold mb-4">Директория загрузки файлов ТЗ</label>
+                <p class="text-gray-500 mb-6">Абсолютный путь к папке на сервере, куда будут сохраняться загруженные файлы. По умолчанию: <code>uploads/specs/</code> (путь относительно корня сайта).</p>
+                <input type="text" id="settingUploadDir" value="<?= htmlspecialchars($upload_dir_setting ?? 'uploads/specs/'); ?>" class="w-full bg-gray-50 border border-gray-300 rounded-xl px-5 py-4 text-xl focus:ring-2 focus:ring-blue-500 focus:outline-none">
+            </div>
+
+            <div>
                 <button onclick="saveSettings()" class="bg-green-600 hover:bg-green-700 text-white font-bold py-4 px-8 rounded-xl text-xl shadow-md transition-colors">
                     Сохранить настройки
                 </button>
@@ -530,7 +536,8 @@
     function saveSettings() {
         const limit = $('#settingPauseLimit').val();
         const perPage = $('#settingPerPage').val();
-        $.post('<?= base_url("admin/save_settings_ajax"); ?>', { pause_limit_minutes: limit, per_page: perPage }, function(response) {
+        const uploadDir = $('#settingUploadDir').val();
+        $.post('<?= base_url("admin/save_settings_ajax"); ?>', { pause_limit_minutes: limit, per_page: perPage, upload_dir: uploadDir }, function(response) {
             let res = JSON.parse(response);
             if (res.status === 'success') {
                 alert(res.message);

@@ -70,43 +70,23 @@
 
                     <!-- Блок Дерева Задач этого заказчика -->
                     <div class="bg-white p-6 rounded-3xl shadow-sm border border-gray-100">
-                        <h4 class="text-lg font-black text-gray-800 mb-4 flex items-center gap-2">
-                            🗂️ <?= lang('cust_linked_tasks'); ?>
-                        </h4>
+                        <div class="flex justify-between items-center mb-4 flex-wrap gap-2">
+                            <h4 class="text-lg font-black text-gray-800 flex items-center gap-2">
+                                🗂️ <?= lang('cust_linked_tasks'); ?>
+                            </h4>
+                            <label class="inline-flex items-center gap-2 text-xs font-semibold text-gray-500 cursor-pointer select-none">
+                                <input type="checkbox" id="showClosedTasksToggle" class="rounded text-blue-600 focus:ring-blue-500">
+                                <span>Показывать закрытые заказы</span>
+                            </label>
+                        </div>
                         
-                        <?php if (empty($customer_tasks_tree)): ?>
-                            <p class="text-sm text-gray-400 italic"><?= lang('cust_no_tasks'); ?></p>
-                        <?php else: ?>
-                            <div class="max-h-72 overflow-y-auto pr-2 space-y-2">
-                                <?php 
-                                    // Рекурсивный вывод дерева задач
-                                    if (!function_exists('render_customer_task_tree')) {
-                                        function render_customer_task_tree($tasks, $level = 1) {
-                                            if (empty($tasks) || $level > 3) return;
-                                            echo '<ul class="space-y-2 ' . ($level > 1 ? 'ml-4 pl-4 border-l-2 border-gray-200 mt-2' : '') . '">';
-                                            foreach ($tasks as $task) {
-                                                $has_children = !empty($task['children']);
-                                                $color_dot = !empty($task['color']) ? "background-color: {$task['color']};" : "background-color: #e5e7eb;";
-                                                echo '<li class="p-3 bg-gray-50 border border-gray-100 rounded-xl flex flex-col gap-1">';
-                                                echo '<div class="flex justify-between items-center">';
-                                                echo '<div class="flex items-center gap-2">';
-                                                echo '<div class="w-3 h-3 rounded-full border border-gray-200 shadow-sm" style="' . $color_dot . '"></div>';
-                                                echo '<span class="font-semibold text-gray-800 text-sm">' . htmlspecialchars($task['title']) . '</span>';
-                                                echo '</div>';
-                                                echo '<span class="text-xs font-bold text-gray-500 font-mono bg-white px-2 py-0.5 rounded-full border">' . $task['formatted_time'] . '</span>';
-                                                echo '</div>';
-                                                if ($has_children) {
-                                                    render_customer_task_tree($task['children'], $level + 1);
-                                                }
-                                                echo '</li>';
-                                            }
-                                            echo '</ul>';
-                                        }
-                                    }
-                                    render_customer_task_tree($customer_tasks_tree);
-                                ?>
-                            </div>
-                        <?php endif; ?>
+                        <div id="customerTasksContainer" class="max-h-96 overflow-y-auto pr-2 space-y-2" data-has-more="<?= !empty($customer_tasks_has_more) ? '1' : '0' ?>">
+                            <?php if (empty($customer_tasks_tree)): ?>
+                                <p class="text-sm text-gray-400 italic empty-tasks-label"><?= lang('cust_no_tasks'); ?></p>
+                            <?php else: ?>
+                                <?php $this->load->view('templates/customer_task_tree_loop', ['tasks' => $customer_tasks_tree, 'level' => 1]); ?>
+                            <?php endif; ?>
+                        </div>
                     </div>
 
                     <!-- Раздел ТЗ (Технических заданий) -->
@@ -137,7 +117,7 @@
                                                 </div>
                                             </div>
                                             <div class="flex gap-2">
-                                                <button onclick="openEditSpecModal(<?= $spec['id'] ?>, '<?= htmlspecialchars(addslashes($spec['title']), ENT_QUOTES) ?>', '<?= htmlspecialchars(addslashes($spec['content']), ENT_QUOTES) ?>', '<?= $spec['price'] ?>', '<?= $spec['prepayment'] ?>', '<?= $spec['payment_type'] ?>', <?= json_encode($spec['linked_task_ids'] ?? []) ?>)" class="text-gray-400 hover:text-blue-600 transition-colors p-1" title="<?= htmlspecialchars(lang('btn_edit'), ENT_QUOTES); ?>">
+                                                <button onclick="openEditSpecModal(<?= $spec['id'] ?>, '<?= htmlspecialchars(addslashes($spec['title']), ENT_QUOTES) ?>', '<?= htmlspecialchars(addslashes($spec['content'] ?? ''), ENT_QUOTES) ?>', '<?= $spec['price'] ?>', '<?= $spec['prepayment'] ?>', '<?= $spec['payment_type'] ?>', <?= json_encode($spec['linked_task_ids'] ?? []) ?>, '<?= htmlspecialchars(addslashes($spec['files_dir'] ?? ''), ENT_QUOTES) ?>')" class="text-gray-400 hover:text-blue-600 transition-colors p-1" title="<?= htmlspecialchars(lang('btn_edit'), ENT_QUOTES); ?>">
                                                     ✏️
                                                 </button>
                                                 <a href="<?= site_url('customers/delete_spec/'.$spec['id']) ?>" onclick="return confirm('<?= htmlspecialchars(lang('cust_delete_spec_confirm'), ENT_QUOTES); ?>');" class="text-gray-400 hover:text-red-600 transition-colors p-1" title="<?= htmlspecialchars(lang('btn_delete'), ENT_QUOTES); ?>">
@@ -209,6 +189,51 @@
                                                      </div>
                                                  </div>
                                             </div>
+
+                                            <!-- Внешние рабочие материалы из папки (плитками) -->
+                                            <?php if (!empty($spec['files_dir'])): ?>
+                                                <div class="mt-4 pt-4 border-t border-gray-100">
+                                                    <h6 class="text-xs uppercase font-bold text-gray-400 mb-3">Рабочие материалы из директории: <span class="text-gray-500 font-mono select-all"><?= htmlspecialchars($spec['files_dir']) ?></span></h6>
+                                                    <?php 
+                                                    // Сканируем папку
+                                                    $ext_files = [];
+                                                    $dir = $spec['files_dir'];
+                                                    if (is_dir($dir) && is_readable($dir)) {
+                                                        $dh = opendir($dir);
+                                                        if ($dh) {
+                                                            while (($file = readdir($dh)) !== false) {
+                                                                if ($file !== '.' && $file !== '..' && is_file($dir . '/' . $file)) {
+                                                                    $ext_files[] = [
+                                                                        'name' => $file,
+                                                                        'size' => filesize($dir . '/' . $file),
+                                                                        'date' => filemtime($dir . '/' . $file)
+                                                                    ];
+                                                                 }
+                                                             }
+                                                             closedir($dh);
+                                                         }
+                                                         // Сортировка по дате (новые сверху)
+                                                         usort($ext_files, function($a, $b) {
+                                                             return $b['date'] - $a['date'];
+                                                         });
+                                                     }
+                                                     ?>
+                                                     <?php if (empty($ext_files)): ?>
+                                                         <div class="text-xs text-gray-400 italic bg-white p-4 rounded-xl border border-dashed text-center">Директория пуста или недоступна для чтения.</div>
+                                                     <?php else: ?>
+                                                         <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+                                                             <?php foreach ($ext_files as $ef): ?>
+                                                                 <div class="bg-white border border-gray-200 rounded-xl p-3 flex flex-col items-center text-center shadow-sm relative group hover:border-blue-400 transition-colors">
+                                                                     <span class="text-3xl mb-1.5"><?= get_file_icon_emoji($ef['name'], 0) ?></span>
+                                                                     <span class="text-xs font-semibold text-gray-700 line-clamp-2 w-full break-all mb-1" title="<?= htmlspecialchars($ef['name']) ?>"><?= htmlspecialchars($ef['name']) ?></span>
+                                                                     <span class="text-[9px] font-mono text-gray-400"><?= round($ef['size']/1024, 1) ?> KB</span>
+                                                                     <a href="<?= site_url('customers/download_external_file?spec_id=' . $spec['id'] . '&file=' . urlencode($ef['name'])) ?>" class="absolute inset-0 rounded-xl cursor-pointer" title="Скачать файл"></a>
+                                                                 </div>
+                                                             <?php endforeach; ?>
+                                                         </div>
+                                                     <?php endif; ?>
+                                                 </div>
+                                             <?php endif; ?>
 
                                             <!-- Добавление внешних ссылок и загрузка по URL -->
                                             <div class="mt-4 pt-4 border-t border-gray-100 flex flex-col sm:flex-row gap-2">
@@ -367,6 +392,10 @@
                 <label class="block text-gray-700 text-sm font-bold mb-2"><?= lang('cust_spec_title_label'); ?></label>
                 <input type="text" name="title" class="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none" required placeholder="<?= htmlspecialchars(lang('cust_spec_title_placeholder'), ENT_QUOTES); ?>">
             </div>
+            <div>
+                <label class="block text-gray-700 text-sm font-bold mb-2">Путь к директории с рабочими файлами</label>
+                <input type="text" name="files_dir" class="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none" placeholder="/mnt/share/project_materials (абсолютный путь)">
+            </div>
             <div class="grid grid-cols-2 gap-4">
                 <div>
                     <label class="block text-gray-700 text-sm font-bold mb-2"><?= lang('cust_price_label'); ?></label>
@@ -430,6 +459,10 @@
             <div>
                 <label class="block text-gray-700 text-sm font-bold mb-2"><?= lang('cust_spec_title_label'); ?></label>
                 <input type="text" name="title" id="editSpecTitle" class="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none" required>
+            </div>
+            <div>
+                <label class="block text-gray-700 text-sm font-bold mb-2">Путь к директории с рабочими файлами</label>
+                <input type="text" name="files_dir" id="editSpecFilesDir" class="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none" placeholder="/mnt/share/project_materials (абсолютный путь)">
             </div>
             <div class="grid grid-cols-2 gap-4">
                 <div>

@@ -202,9 +202,10 @@ class Customer_model extends CI_Model {
      * @param float $price Ценник ТЗ
      * @param float $prepayment Предоплата ТЗ
      * @param string $payment_type Тип оплаты ТЗ (fixed/hourly)
+     * @param string|null $files_dir Путь к внешней директории с файлами
      * @return int ID добавленной записи
      */
-    public function add_spec($customer_id, $title, $content, $price = 0.00, $prepayment = 0.00, $payment_type = 'hourly') {
+    public function add_spec($customer_id, $title, $content, $price = 0.00, $prepayment = 0.00, $payment_type = 'hourly', $files_dir = NULL) {
         $data = [
             'customer_id' => $customer_id,
             'title' => $title,
@@ -212,6 +213,7 @@ class Customer_model extends CI_Model {
             'price' => (float)$price,
             'prepayment' => (float)$prepayment,
             'payment_type' => $payment_type,
+            'files_dir' => empty($files_dir) ? NULL : trim($files_dir),
             'created_at' => date('Y-m-d H:i:s')
         ];
         $this->db->insert('customer_specs', $data);

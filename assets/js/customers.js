@@ -117,12 +117,13 @@ if (window.loadedCustomersModule) {
     /**
      * Открывает модальное окно редактирования ТЗ клиента с предзаполнением
      */
-    window.openEditSpecModal = function(id, title, content, price, prepayment, paymentType, linkedTaskIds) {
+    window.openEditSpecModal = function(id, title, content, price, prepayment, paymentType, linkedTaskIds, filesDir) {
         $('#editSpecId').val(id);
         $('#editSpecTitle').val(title);
         $('#editSpecPrice').val(price || '0.00');
         $('#editSpecPrepayment').val(prepayment || '0.00');
         $('#editSpecPaymentType').val(paymentType || 'hourly');
+        $('#editSpecFilesDir').val(filesDir || '');
 
         // Снимаем отметки со всех чекбоксов привязки задач
         $('.edit-spec-task-checkbox').prop('checked', false);
@@ -216,7 +217,7 @@ if (window.loadedCustomersModule) {
         progressBar.css('width', '0%');
 
         $.ajax({
-            url: window.location.origin + '/index.php/customers/upload_file',
+            url: window.globalApi.upload_file,
             type: 'POST',
             data: formData,
             contentType: false,
@@ -395,6 +396,8 @@ if (window.loadedCustomersModule) {
     // Запускаем инициализацию Quill и скролла
     initQuillEditors();
     initInfiniteScrollCustomers();
+    initInfiniteScrollTasks();
+    initClosedTasksToggle();
 }
 
 /**
@@ -431,6 +434,119 @@ function initInfiniteScrollCustomers() {
             }).fail(function() {
                 custIsLoading = false;
             });
+        }
+    });
+}
+
+/**
+ * Настраивает бесконечный скролл списка задач (проектов) заказчика
+ */
+function initInfiniteScrollTasks() {
+    let taskOffset = window.globalPerPage || 25;
+    let taskLimit = window.globalPerPage || 25;
+    let taskHasMore = $('#customerTasksContainer').data('has-more') == '1';
+    let taskIsLoading = false;
+
+    // Сбрасываем offset и статус загрузки при каждом вызове
+    window.resetTasksScroll = function(hasMore) {
+        taskOffset = window.globalPerPage || 25;
+        taskHasMore = hasMore;
+        taskIsLoading = false;
+    };
+
+    $('#customerTasksContainer').off('scroll').on('scroll', function() {
+        if ($('#customerTasksContainer').length === 0) return;
+        if (!taskHasMore || taskIsLoading) return;
+
+        let scrollTop = $(this).scrollTop();
+        let scrollHeight = $(this)[0].scrollHeight;
+        let innerHeight = $(this).innerHeight();
+
+        if (scrollTop + innerHeight >= scrollHeight - 30) {
+            taskIsLoading = true;
+            let activeCustomerId = window.activeCustomerId || null;
+            let showClosed = $('#showClosedTasksToggle').is(':checked') ? 1 : 0;
+
+            $.post(window.globalApi.load_customer_tasks, { 
+                customer_id: activeCustomerId, 
+                offset: taskOffset,
+                show_closed: showClosed
+            }, function(response) {
+                let res = JSON.parse(response);
+                if (res.status === 'success') {
+                    if (res.html && res.html.trim() !== '') {
+                        // Если в контейнере была заглушка "Нет задач", удалим её
+                        $('#customerTasksContainer').find('.empty-tasks-label').remove();
+
+                        // Подгружаем HTML внутрь списка
+                        let ul = $('#customerTasksContainer').find('> ul.task-tree-root');
+                        if (ul.length > 0) {
+                            let newItems = $(res.html).find('> li');
+                            ul.append(newItems);
+                        } else {
+                            $('#customerTasksContainer').html(res.html);
+                        }
+                        taskOffset += taskLimit;
+                    }
+                    taskHasMore = res.has_more;
+                }
+                taskIsLoading = false;
+            }).fail(function() {
+                taskIsLoading = false;
+            });
+        }
+    });
+}
+
+/**
+ * Инициализирует переключатель отображения закрытых/актуальных задач и сворачивание
+ */
+function initClosedTasksToggle() {
+    $('#showClosedTasksToggle').off('change').on('change', function() {
+        let activeCustomerId = window.activeCustomerId || null;
+        if (!activeCustomerId) return;
+
+        let showClosed = $(this).is(':checked') ? 1 : 0;
+        let container = $('#customerTasksContainer');
+
+        container.html('<div class="py-4 text-center text-gray-400 italic">Загрузка...</div>');
+
+        $.post(window.globalApi.load_customer_tasks, {
+            customer_id: activeCustomerId,
+            offset: 0,
+            show_closed: showClosed
+        }, function(response) {
+            let res = JSON.parse(response);
+            if (res.status === 'success') {
+                if (res.html && res.html.trim() !== '') {
+                    container.html(res.html);
+                } else {
+                    container.html('<p class="text-sm text-gray-400 italic empty-tasks-label">Нет задач</p>');
+                }
+                // Сбрасываем пагинацию бесконечного скролла
+                if (typeof window.resetTasksScroll === 'function') {
+                    window.resetTasksScroll(res.has_more);
+                }
+            } else {
+                container.html('<p class="text-sm text-red-500 italic">Ошибка загрузки задач</p>');
+            }
+        }).fail(function() {
+            container.html('<p class="text-sm text-red-500 italic">Ошибка отправки запроса</p>');
+        });
+    });
+
+    // Обработчик сворачивания/разворачивания подзадач в дереве
+    $(document).off('click', '.toggle-children').on('click', '.toggle-children', function() {
+        var li = $(this).closest('li');
+        var icon = $(this).find('.icon-expand');
+        var childrenList = li.find('> ul.task-children');
+        
+        childrenList.slideToggle(150);
+        
+        if (icon.hasClass('rotate-90')) {
+            icon.removeClass('rotate-90');
+        } else {
+            icon.addClass('rotate-90');
         }
     });
 }
