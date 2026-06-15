@@ -141,10 +141,23 @@ class Stats_model extends CI_Model {
                 continue;
             }
 
-            // Если фильтр архива отключен, а сама задача завершена, исключаем её время
-            if (!$show_archived && $task_map[$tid]['status'] === 'completed') {
-                // Пропускаем эту запись времени
-                continue;
+            // Вычисляем флаг завершенности (архивности) текущей задачи
+            $is_task_completed = ($task_map[$tid]['status'] === 'completed');
+            // Если включен режим фильтра "Без архивных" (active) или передан старый булевый флаг отключения
+            if ($show_archived === 'active' || $show_archived === '0' || $show_archived === 0 || $show_archived === false) {
+                // Если сама задача завершена, то исключаем её из выборки времени
+                if ($is_task_completed) {
+                    // Переходим к следующей записи времени
+                    continue;
+                }
+            } 
+            // Если же включен режим фильтра "Только архивные" (archived)
+            elseif ($show_archived === 'archived') {
+                // Если задача не завершена, то исключаем её из выборки
+                if (!$is_task_completed) {
+                    // Переходим к следующей записи времени
+                    continue;
+                }
             }
 
             // Проверяем фильтрацию по заказчикам (множественный выбор)
@@ -423,9 +436,23 @@ class Stats_model extends CI_Model {
 
         // Цикл проверки каждой задачи на пригодность к показу
         foreach ($all_tasks_map as $id => $task) {
-            // 1. Проверяем цепочку активности (если архивные скрыты)
-            if (!$show_archived && !$this->_is_active_chain($id, $all_tasks_map)) {
-                continue;
+            // Вычисляем, активна ли вся цепочка задачи (нет ли completed элементов среди родителей)
+            $is_active_chain = $this->_is_active_chain($id, $all_tasks_map);
+            // Если включен режим фильтра "Без архивных" (active) или передан старый булевый флаг отключения
+            if ($show_archived === 'active' || $show_archived === '0' || $show_archived === 0 || $show_archived === false) {
+                // Если цепочка неактивна (есть завершенные задачи в цепочке), исключаем её
+                if (!$is_active_chain) {
+                    // Переходим к следующей задаче
+                    continue;
+                }
+            } 
+            // Если же включен режим фильтра "Только архивные" (archived)
+            elseif ($show_archived === 'archived') {
+                // Если вся цепочка активна (нет ни одной завершенной задачи), исключаем её
+                if ($is_active_chain) {
+                    // Переходим к следующей задаче
+                    continue;
+                }
             }
 
             // 2. Проверяем фильтрацию по заказчикам (множественный выбор)

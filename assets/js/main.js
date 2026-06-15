@@ -1170,8 +1170,16 @@ function formatJsDateForStats(date) {
  * Строит URL с GET параметрами и загружает его через существующий SPA метод loadAjaxPage.
  */
 function refreshStatistics() {
-    // Получаем состояние чекбокса: 1 если выбран (показывать архив), 0 если снят (скрыть архив)
-    const showArchived = $('#filter-show-archived').is(':checked') ? 1 : 0;
+    // Определяем значение фильтра архивации: по умолчанию 'all' (выводить все проекты)
+    let showArchived = 'all';
+    // Если активен чекбокс "Без архивных", выставляем фильтрацию 'active'
+    if ($('#filter-archive-active').is(':checked')) {
+        showArchived = 'active';
+    } 
+    // Если же активен чекбокс "Только архивные", выставляем фильтрацию 'archived'
+    else if ($('#filter-archive-archived').is(':checked')) {
+        showArchived = 'archived';
+    }
     
     // Инициализируем массив для хранения GET параметров запроса
     const params = [];
@@ -1225,9 +1233,23 @@ function refreshStatistics() {
     loadAjaxPage(targetUrl, true);
 }
 
-// Обработчик переключения чекбокса "Показывать архивные"
-$(document).on('change', '#filter-show-archived', function() {
-    // Вызываем AJAX-обновление статистики при изменении состояния чекбокса
+// Обработчик переключения чекбокса "Без архивных"
+$(document).on('change', '#filter-archive-active', function() {
+    // Если пользователь включил этот фильтр, то автоматически выключаем чекбокс "Только архивные"
+    if ($(this).is(':checked')) {
+        $('#filter-archive-archived').prop('checked', false);
+    }
+    // Вызываем AJAX-обновление всей статистики
+    refreshStatistics();
+});
+
+// Обработчик переключения чекбокса "Только архивные"
+$(document).on('change', '#filter-archive-archived', function() {
+    // Если пользователь включил этот фильтр, то автоматически выключаем чекбокс "Без архивных"
+    if ($(this).is(':checked')) {
+        $('#filter-archive-active').prop('checked', false);
+    }
+    // Вызываем AJAX-обновление всей статистики
     refreshStatistics();
 });
 
@@ -1249,11 +1271,19 @@ $(document).on('change', '#stat-date-start, #stat-date-end', function() {
     refreshStatistics();
 });
 
-// Обработчик клика по крестику на цветной плашке (чипсе) показа архивных
-$(document).on('click', '#chip-show-archived', function() {
-    // Принудительно сбрасываем чекбокс в дефолтное выключенное состояние (checked = false)
-    $('#filter-show-archived').prop('checked', false);
-    // Мгновенно перезагружаем статистику для сброса активного фильтра
+// Обработчик клика по крестику на цветной плашке (чипсе) фильтра "Без архивных"
+$(document).on('click', '#chip-archive-active', function() {
+    // Снимаем отметку с чекбокса "Без архивных", возвращая в состояние по умолчанию
+    $('#filter-archive-active').prop('checked', false);
+    // Мгновенно перезагружаем статистику по AJAX
+    refreshStatistics();
+});
+
+// Обработчик клика по крестику на цветной плашке (чипсе) фильтра "Только архивные"
+$(document).on('click', '#chip-archive-archived', function() {
+    // Снимаем отметку с чекбокса "Только архивные", возвращая в состояние по умолчанию
+    $('#filter-archive-archived').prop('checked', false);
+    // Мгновенно перезагружаем статистику по AJAX
     refreshStatistics();
 });
 

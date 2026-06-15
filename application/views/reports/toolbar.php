@@ -94,18 +94,26 @@
         </div>
     </div>
 
-    <!-- Контейнер для отображения активных фильтров (чипсов). Контейнер виден, если включен показ архивных или выбраны другие фильтры -->
+    <!-- Контейнер для отображения активных фильтров (чипсов). Контейнер виден, если применены фильтры архивации или выбраны другие фильтры -->
     <div id="chips-container" class="flex flex-wrap gap-2 mt-4 pt-3 border-t border-gray-100 <?= (
-        ((isset($show_archived) && (int)$show_archived === 1)) ||
+        ((isset($show_archived) && in_array($show_archived, ['active', 'archived']))) ||
         (!empty($customer_filters)) ||
         (!empty($calculation_filters)) ||
         (!empty($spec_filters))
     ) ? '' : 'hidden' ?>">
         
-        <!-- Чипс "Показаны архивные" (показывается, когда галочка активна) -->
-        <?php if (isset($show_archived) && (int)$show_archived === 1): ?>
-            <span id="chip-show-archived" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold bg-amber-50 text-amber-700 border border-amber-200 cursor-pointer transition-colors hover:bg-amber-100 select-none">
-                <span>Показаны архивные</span>
+        <!-- Чипс "Без архивных" (показывается, когда включена фильтрация без архивных) -->
+        <?php if (isset($show_archived) && $show_archived === 'active'): ?>
+            <span id="chip-archive-active" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold bg-amber-50 text-amber-700 border border-amber-200 cursor-pointer transition-colors hover:bg-amber-100 select-none" title="Сбросить фильтр">
+                <span>Без архивных</span>
+                <span class="text-amber-500 font-black hover:text-amber-900 ml-1">✕</span>
+            </span>
+        <?php endif; ?>
+
+        <!-- Чипс "Только архивные" (показывается, когда включена фильтрация только архивных) -->
+        <?php if (isset($show_archived) && $show_archived === 'archived'): ?>
+            <span id="chip-archive-archived" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold bg-amber-50 text-amber-700 border border-amber-200 cursor-pointer transition-colors hover:bg-amber-100 select-none" title="Сбросить фильтр">
+                <span>Только архивные</span>
                 <span class="text-amber-500 font-black hover:text-amber-900 ml-1">✕</span>
             </span>
         <?php endif; ?>

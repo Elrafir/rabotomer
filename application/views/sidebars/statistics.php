@@ -85,12 +85,21 @@ if (isset($active_sub_page) && in_array($active_sub_page, ['time_slice', 'projec
             <div class="flex flex-col gap-2">
                 <!-- Подзаголовок секции опций -->
                 <span class="text-xs font-bold text-gray-400 uppercase tracking-wider">Опции</span>
-                <!-- Метка с чекбоксом для скрытия/показа архивных задач -->
+                
+                <!-- Метка с чекбоксом для скрытия архивных проектов -->
                 <label class="flex items-center gap-2 cursor-pointer mt-1 group">
-                    <!-- Чекбокс переключения показа архивных задач -->
-                    <input type="checkbox" id="filter-show-archived" class="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500 cursor-pointer" <?= (isset($show_archived) && (int)$show_archived === 1) ? 'checked' : ''; ?>>
+                    <!-- Чекбокс фильтрации "Без архивных" (показывает только активные проекты) -->
+                    <input type="checkbox" id="filter-archive-active" class="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500 cursor-pointer" <?= (isset($show_archived) && $show_archived === 'active') ? 'checked' : ''; ?>>
                     <!-- Текстовое описание опции -->
-                    <span class="text-sm text-gray-700 group-hover:text-gray-900 transition-colors">Показывать архивные</span>
+                    <span class="text-sm text-gray-700 group-hover:text-gray-900 transition-colors">Без архивных</span>
+                </label>
+                
+                <!-- Метка с чекбоксом для показа только архивных проектов -->
+                <label class="flex items-center gap-2 cursor-pointer group">
+                    <!-- Чекбокс фильтрации "Только архивные" (скрывает все активные проекты) -->
+                    <input type="checkbox" id="filter-archive-archived" class="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500 cursor-pointer" <?= (isset($show_archived) && $show_archived === 'archived') ? 'checked' : ''; ?>>
+                    <!-- Текстовое описание опции -->
+                    <span class="text-sm text-gray-700 group-hover:text-gray-900 transition-colors">Только архивные</span>
                 </label>
             </div>
             
