@@ -202,3 +202,7 @@ if (!function_exists('render_stats_project_tree')) {
     ?>
 
 </div>
+
+<!-- Подключаем JS-модуль отчетов и статистики -->
+<script src="<?= base_url('assets/js/reports.js?v=' . time()) ?>"></script>
+
