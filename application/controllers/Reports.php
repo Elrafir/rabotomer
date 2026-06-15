@@ -76,8 +76,25 @@ class Reports extends MY_Controller {
         // Получаем дату окончания диапазона из POST/GET запроса или ставим вычисленный по умолчанию день
         $end_date = $this->input->post('end') ?: ($this->input->get('end') ?: $default_end);
         
+        // Получаем выбранный диапазон дат (today/yesterday/week/month/custom)
+        $range = $this->input->post('range') ?: ($this->input->get('range') ?: null);
+        if ($range === null) {
+            if ($start_date === $default_start && $end_date === $default_end) {
+                $range = 'today';
+            } elseif ($start_date === $yesterday_start && $end_date === $yesterday_end) {
+                $range = 'yesterday';
+            } elseif ($start_date === $week_start && $end_date === $week_end) {
+                $range = 'week';
+            } elseif ($start_date === $month_start && $end_date === $month_end) {
+                $range = 'month';
+            } else {
+                $range = 'custom';
+            }
+        }
+
         // Получаем фильтр архивных задач (all — все, active — только активные, archived — только архивные), по умолчанию 'all'
         $show_archived = $this->input->post('show_archived') !== null ? $this->input->post('show_archived') : ($this->input->get('show_archived') !== null ? $this->input->get('show_archived') : 'all');
+
         
         // Загружаем модель калькуляций
         $this->load->model('Calculation_model');
@@ -132,10 +149,13 @@ class Reports extends MY_Controller {
         
         // Подготавливаем массив данных для рендеринга шаблона
         $data = [
+            // Передаем диапазон дат
+            'range' => $range,
             // Передаем дату старта для полей ввода во вьюшке
             'start_date' => $start_date,
             // Передаем дату завершения для полей ввода во вьюшке
             'end_date' => $end_date,
+
             // Передаем вычисленный текущий рабочий день
             'today_start' => $default_start,
             'today_end' => $default_end,

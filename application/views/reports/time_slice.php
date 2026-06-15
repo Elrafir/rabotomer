@@ -23,9 +23,11 @@
     // Передаем параметры: отображать селекторы дат и текущие значения фильтров
     $this->load->view('reports/toolbar', [
         'show_dates' => true, 
+        'range' => isset($range) ? $range : null,
         'start_date' => $start_date, 
         'end_date' => $end_date, 
         'show_archived' => $show_archived,
+
         // Передаем массивы выбранных множественных фильтров
         'customer_filters' => $customer_filters,
         'calculation_filters' => $calculation_filters,

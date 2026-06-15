@@ -37,6 +37,9 @@ if (!window.loadedReportsModule) {
         if ($('#stat-date-end').length) {
             params.push('end=' + $('#stat-date-end').val());
         }
+        if ($('#filter-range').length) {
+            params.push('range=' + $('#filter-range').val());
+        }
 
         // Фильтры по заказчикам
         $('input[name="customer_filters[]"]:checked').each(function() {
@@ -138,6 +141,9 @@ if (!window.loadedReportsModule) {
 
     // Смена дат в календариках боковой панели
     $(document).on('change', '#stat-date-start, #stat-date-end', function() {
+        if ($('#filter-range').length) {
+            $('#filter-range').val('custom');
+        }
         window.refreshStatistics();
     });
 
@@ -220,6 +226,9 @@ if (!window.loadedReportsModule) {
 
         $('#stat-date-start').val(formatJsDateForStats(start));
         $('#stat-date-end').val(formatJsDateForStats(end));
+        if ($('#filter-range').length) {
+            $('#filter-range').val(range);
+        }
         window.refreshStatistics();
     });
 

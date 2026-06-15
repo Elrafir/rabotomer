@@ -11,24 +11,26 @@
             ?>
                 <!-- Кнопки быстрого переключения временных интервалов -->
                 <div class="flex gap-2">
+                    <!-- Скрытый инпут для передачи выбранного диапазона дат -->
+                    <input type="hidden" id="filter-range" value="<?= htmlspecialchars($range ?? 'today'); ?>">
                     <?php
                     // Вычисляем CSS-класс для кнопки «Сегодня» (выделяем синим цветом, если период совпадает)
-                    $today_btn_class = (isset($today_start) && $start_date === $today_start && $end_date === $today_end)
+                    $today_btn_class = (isset($range) && $range === 'today')
                         ? 'bg-blue-600 text-white font-black'
                         : 'bg-gray-100 hover:bg-gray-200 text-gray-700';
                     
                     // Вычисляем CSS-класс для кнопки «Вчера»
-                    $yesterday_btn_class = (isset($yesterday_start) && $start_date === $yesterday_start && $end_date === $yesterday_end)
+                    $yesterday_btn_class = (isset($range) && $range === 'yesterday')
                         ? 'bg-blue-600 text-white font-black'
                         : 'bg-gray-100 hover:bg-gray-200 text-gray-700';
 
                     // Вычисляем CSS-класс для кнопки «Неделя»
-                    $week_btn_class = (isset($week_start) && $start_date === $week_start && $end_date === $week_end)
+                    $week_btn_class = (isset($range) && $range === 'week')
                         ? 'bg-blue-600 text-white font-black'
                         : 'bg-gray-100 hover:bg-gray-200 text-gray-700';
 
                     // Вычисляем CSS-класс для кнопки «Месяц»
-                    $month_btn_class = (isset($month_start) && $start_date === $month_start && $end_date === $month_end)
+                    $month_btn_class = (isset($range) && $range === 'month')
                         ? 'bg-blue-600 text-white font-black'
                         : 'bg-gray-100 hover:bg-gray-200 text-gray-700';
                     ?>
