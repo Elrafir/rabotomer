@@ -111,4 +111,5 @@ if (!function_exists('render_trash_tree')) {
         <?php endif; ?>
     </div>
 </div>
+<script src="<?= base_url('assets/js/trash.js?v=' . time()) ?>"></script>
 

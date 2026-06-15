@@ -111,7 +111,10 @@ if ($current_theme === 'theme-custom') {
         </div>
     </nav>
 
-    <?php if ($user_id): ?>
+    <?php if ($user_id): 
+        $ci->load->model('Settings_model');
+        $per_page_global = (int)$ci->Settings_model->get_setting('per_page', 25);
+    ?>
         <!-- Глобальные настройки JS -->
         <script>
             window.globalApi = {
@@ -129,7 +132,16 @@ if ($current_theme === 'theme-custom') {
                 set_color: '<?php echo site_url("tasks/set_color_ajax"); ?>',
                 restore: '<?php echo site_url("tasks/restore_task_ajax"); ?>',
                 restore_trash: '<?php echo site_url("tasks/restore_from_trash_ajax"); ?>',
-                hard_delete: '<?php echo site_url("tasks/hard_delete_ajax"); ?>'
+                hard_delete: '<?php echo site_url("tasks/hard_delete_ajax"); ?>',
+                search_tasks: '<?php echo site_url("calculations/search_tasks_ajax"); ?>',
+                add_calculation_task: '<?php echo site_url("calculations/add_task_ajax"); ?>',
+                remove_calculation_task: '<?php echo site_url("calculations/remove_task_ajax"); ?>',
+                delete_spec_file: '<?php echo site_url("customers/delete_file/"); ?>',
+                add_link: '<?php echo site_url("customers/add_link_ajax"); ?>',
+                download_url: '<?php echo site_url("customers/download_from_url_ajax"); ?>',
+                load_more_customers: '<?php echo site_url("customers/load_more_ajax"); ?>',
+                load_more_tasks: '<?php echo site_url("tasks/load_more_tasks_ajax"); ?>',
+                load_more_history: '<?php echo site_url("history/load_more_history_ajax"); ?>'
             };
             window.globalLang = {
                 btn_pause: '<?= lang("btn_pause") ?>',
@@ -143,6 +155,7 @@ if ($current_theme === 'theme-custom') {
             };
             window.globalActiveSession = <?= $active_session ? json_encode($active_session) : 'null' ?>;
             window.isDashboardPage = <?= $is_dashboard ? 'true' : 'false' ?>;
+            window.globalPerPage = <?= $per_page_global ?>;
         </script>
     <?php endif; ?>
 
