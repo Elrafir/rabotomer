@@ -76,8 +76,8 @@ class Reports extends MY_Controller {
         // Получаем дату окончания диапазона из POST/GET запроса или ставим вычисленный по умолчанию день
         $end_date = $this->input->post('end') ?: ($this->input->get('end') ?: $default_end);
         
-        // Получаем флаг "Показывать архивные" (1 — показать все, 0 — только активные), по умолчанию 1
-        $show_archived = $this->input->post('show_archived') !== null ? (int)$this->input->post('show_archived') : ($this->input->get('show_archived') !== null ? (int)$this->input->get('show_archived') : 1);
+        // Получаем флаг "Показывать архивные" (1 — показать все, 0 — только активные), теперь по умолчанию 0 (скрыты)
+        $show_archived = $this->input->post('show_archived') !== null ? (int)$this->input->post('show_archived') : ($this->input->get('show_archived') !== null ? (int)$this->input->get('show_archived') : 0);
         
         // Загружаем модель калькуляций
         $this->load->model('Calculation_model');
@@ -182,8 +182,8 @@ class Reports extends MY_Controller {
      * Строит дерево проектов с каскадными суммами времени.
      */
     public function project_slice() {
-        // Получаем флаг отображения архивных (1 — показывать, 0 — скрыть), по умолчанию 1
-        $show_archived = $this->input->post('show_archived') !== null ? (int)$this->input->post('show_archived') : ($this->input->get('show_archived') !== null ? (int)$this->input->get('show_archived') : 1);
+        // Получаем флаг отображения архивных (1 — показывать, 0 — скрыть), теперь по умолчанию 0 (скрыты)
+        $show_archived = $this->input->post('show_archived') !== null ? (int)$this->input->post('show_archived') : ($this->input->get('show_archived') !== null ? (int)$this->input->get('show_archived') : 0);
         
         // Загружаем модель калькуляций
         $this->load->model('Calculation_model');

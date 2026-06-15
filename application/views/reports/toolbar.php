@@ -80,35 +80,36 @@
             </button>
             <!-- Скрытый инпут для передачи направления сортировки -->
             <input type="hidden" id="filter-sort-dir" value="<?= htmlspecialchars($sort_dir ?? 'desc'); ?>">
-            <!-- Селектор типа сортировки -->
-            <select id="filter-sort" class="px-3 py-1.5 bg-gray-50 border border-gray-200 rounded-lg text-xs font-bold text-gray-700 focus:ring-2 focus:ring-blue-500 focus:outline-none">
-                <!-- Опция сортировки по дате добавления -->
-                <option value="created" <?= (isset($sort_by) && $sort_by === 'created') ? 'selected' : ''; ?>>По дате добавления</option>
+            <!-- Селектор типа сортировки (сужен до w-36 для предотвращения сползания строки) -->
+            <select id="filter-sort" class="w-36 px-3 py-1.5 bg-gray-50 border border-gray-200 rounded-lg text-xs font-bold text-gray-700 focus:ring-2 focus:ring-blue-500 focus:outline-none">
+                <!-- Опция сортировки по дате создания -->
+                <option value="created" <?= (isset($sort_by) && $sort_by === 'created') ? 'selected' : ''; ?>>По дате</option>
                 <!-- Опция сортировки по последней активности -->
-                <option value="activity" <?= (isset($sort_by) && $sort_by === 'activity') ? 'selected' : ''; ?>>По последней активности</option>
+                <option value="activity" <?= (isset($sort_by) && $sort_by === 'activity') ? 'selected' : ''; ?>>По активности</option>
                 <!-- Опция сортировки по алфавиту -->
-                <option value="title" <?= (isset($sort_by) && $sort_by === 'title') ? 'selected' : ''; ?>>По алфавиту</option>
+                <option value="title" <?= (isset($sort_by) && $sort_by === 'title') ? 'selected' : ''; ?>>По имени</option>
                 <!-- Опция сортировки по имени заказчика -->
                 <option value="customer" <?= (isset($sort_by) && $sort_by === 'customer') ? 'selected' : ''; ?>>По заказчику</option>
             </select>
         </div>
     </div>
 
-    <!-- Контейнер для отображения активных фильтров (чипсов) -->
+    <!-- Контейнер для отображения активных фильтров (чипсов). Контейнер виден, если включен показ архивных или выбраны другие фильтры -->
     <div id="chips-container" class="flex flex-wrap gap-2 mt-4 pt-3 border-t border-gray-100 <?= (
-        ((isset($show_archived) && (int)$show_archived === 0)) ||
+        ((isset($show_archived) && (int)$show_archived === 1)) ||
         (!empty($customer_filters)) ||
         (!empty($calculation_filters)) ||
         (!empty($spec_filters))
     ) ? '' : 'hidden' ?>">
         
-        <!-- Чипс "Скрыты архивные" -->
-        <?php if (isset($show_archived) && (int)$show_archived === 0): ?>
-            <span id="chip-hide-archived" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold bg-amber-50 text-amber-700 border border-amber-200 cursor-pointer transition-colors hover:bg-amber-100 select-none">
-                <span>Скрыты архивные</span>
+        <!-- Чипс "Показаны архивные" (показывается, когда галочка активна) -->
+        <?php if (isset($show_archived) && (int)$show_archived === 1): ?>
+            <span id="chip-show-archived" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold bg-amber-50 text-amber-700 border border-amber-200 cursor-pointer transition-colors hover:bg-amber-100 select-none">
+                <span>Показаны архивные</span>
                 <span class="text-amber-500 font-black hover:text-amber-900 ml-1">✕</span>
             </span>
         <?php endif; ?>
+
 
         <!-- Чипсы Заказчиков -->
         <?php if (!empty($customer_filters)): foreach($customer_filters as $cf): ?>

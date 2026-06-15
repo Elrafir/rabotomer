@@ -43,7 +43,7 @@
                             <?php endif; ?>
                         </tr>
                     </thead>
-                    <tbody class="divide-y divide-gray-100">
+                    <tbody id="historyTableBody" class="divide-y divide-gray-100">
                         <?php foreach ($sessions as $s): ?>
                             <tr class="hover:bg-gray-50 transition-colors group">
                                 <td class="px-6 py-5">
@@ -95,11 +95,8 @@
                 </table>
             </div>
         </div>
-        <?php if (!empty($pagination_links)): ?>
-            <div class="flex justify-center mt-6">
-                <?= $pagination_links; ?>
-            </div>
-        <?php endif; ?>
+        <!-- Кнопочная пагинация удалена в пользу бесконечного AJAX-скролла -->
+
     <?php endif; ?>
 </div>
 
@@ -308,3 +305,50 @@
         }
     </script>
 <?php endif; ?>
+
+<!-- Скрипт бесконечного AJAX-скролла для журнала активности (История) -->
+<script>
+    // Инициализируем начальное смещение для подгрузки записей (на основе размера страницы из PHP)
+    let historyOffset = <?= isset($per_page) ? $per_page : 25; ?>;
+    // Указываем размер страницы по умолчанию (лимит загружаемых строк за один раз)
+    let historyLimit = <?= isset($per_page) ? $per_page : 25; ?>;
+    // Флаг, определяющий, есть ли еще доступные записи для подгрузки из базы
+    let historyHasMore = true;
+    // Флаг защиты от повторных параллельных AJAX-запросов во время прокрутки
+    let historyIsLoading = false;
+
+    // Вешаем обработчик события скролла на объект окна браузера
+    $(window).on('scroll', function() {
+        // Если записей больше нет или уже выполняется активный запрос, ничего не делаем
+        if (!historyHasMore || historyIsLoading) return;
+
+        // Вычисляем, докрутил ли пользователь страницу почти до самого конца (200px до низа)
+        if ($(window).scrollTop() + $(window).height() >= $(document).height() - 200) {
+            // Блокируем новые запросы установкой флага загрузки в true
+            historyIsLoading = true;
+            
+            // Отправляем асинхронный POST-запрос на загрузку следующей порции истории
+            $.post('<?= site_url("history/load_more_history_ajax"); ?>', { offset: historyOffset }, function(response) {
+                // Преобразуем строковый JSON ответ от сервера в JS объект
+                let res = JSON.parse(response);
+                // Если сервер сообщил об успешном выполнении запроса
+                if (res.status === 'success') {
+                    // Если сервер вернул непустую HTML-разметку с новыми строками
+                    if (res.html && res.html.trim() !== '') {
+                        // Вставляем полученные новые строки таблицы в конец контейнера tbody
+                        $('#historyTableBody').append(res.html);
+                        // Увеличиваем текущее смещение на размер лимита для следующего шага
+                        historyOffset += historyLimit;
+                    }
+                    // Обновляем флаг наличия дальнейших страниц из ответа сервера
+                    historyHasMore = res.has_more;
+                }
+                // Снимаем блокировку, возвращая флаг загрузки в false
+                historyIsLoading = false;
+            }).fail(function() {
+                // В случае сетевой ошибки также обязательно разблокируем отправку
+                historyIsLoading = false;
+            });
+        }
+    });
+</script>

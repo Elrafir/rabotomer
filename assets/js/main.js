@@ -1249,11 +1249,11 @@ $(document).on('change', '#stat-date-start, #stat-date-end', function() {
     refreshStatistics();
 });
 
-// Обработчик клика по крестику на цветной плашке (чипсе) скрытия архивных
-$(document).on('click', '#chip-hide-archived', function() {
-    // Принудительно устанавливаем чекбокс в дефолтное состояние (checked = true)
-    $('#filter-show-archived').prop('checked', true);
-    // Мгновенно перезагружаем статистику для сброса фильтра
+// Обработчик клика по крестику на цветной плашке (чипсе) показа архивных
+$(document).on('click', '#chip-show-archived', function() {
+    // Принудительно сбрасываем чекбокс в дефолтное выключенное состояние (checked = false)
+    $('#filter-show-archived').prop('checked', false);
+    // Мгновенно перезагружаем статистику для сброса активного фильтра
     refreshStatistics();
 });
 

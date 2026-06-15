@@ -16,88 +16,180 @@ class History extends MY_Controller {
      * Отображение журнала активности.
      * Для администраторов загружает список задач текущего пользователя для CRUD форм.
      */
+    /**
+     * Отображение журнала активности.
+     * Загружает только первую порцию сессий для бесконечной прокрутки.
+     */
     public function index() {
+        // Получаем ID авторизованного пользователя из сессии
         $user_id = $this->session->userdata('user_id');
 
-        // Проверяем, является ли пользователь администратором (group_id = 1 или root)
+        // Проверяем, является ли пользователь администратором (группа 1 или логин root)
         $is_admin = ($this->session->userdata('group_id') == 1 || $this->session->userdata('username') === 'root');
 
-        // Загружаем библиотеку пагинации и настройки
-        $this->load->library('pagination');
+        // Загружаем модель системных настроек для получения лимитов
         $this->load->model('Settings_model');
+        // Получаем лимит записей на страницу из настроек пользователя, по умолчанию 25
         $per_page = (int)$this->Settings_model->get_setting('per_page', 25);
 
-        // Получаем текущую страницу (offset)
-        $offset = $this->uri->segment(3) ? (int)$this->uri->segment(3) : 0;
-
-        $total_rows = $this->Task_model->get_global_history_count($user_id);
-
-        $config['base_url'] = site_url('history/index');
-        $config['total_rows'] = $total_rows;
-        $config['per_page'] = $per_page;
-        $config['uri_segment'] = 3;
-
-        // Красивое оформление пагинации в стиле Tailwind CSS
-        $config['full_tag_open'] = '<div class="flex items-center justify-center gap-2 mt-8">';
-        $config['full_tag_close'] = '</div>';
-        
-        $config['first_link'] = '«';
-        $config['first_tag_open'] = '<div class="px-3 py-1.5 border border-gray-200 rounded-lg text-sm hover:bg-gray-50">';
-        $config['first_tag_close'] = '</div>';
-        
-        $config['last_link'] = '»';
-        $config['last_tag_open'] = '<div class="px-3 py-1.5 border border-gray-200 rounded-lg text-sm hover:bg-gray-50">';
-        $config['last_tag_close'] = '</div>';
-        
-        $config['next_link'] = '›';
-        $config['next_tag_open'] = '<div class="px-3 py-1.5 border border-gray-200 rounded-lg text-sm hover:bg-gray-50">';
-        $config['next_tag_close'] = '</div>';
-        
-        $config['prev_link'] = '‹';
-        $config['prev_tag_open'] = '<div class="px-3 py-1.5 border border-gray-200 rounded-lg text-sm hover:bg-gray-50">';
-        $config['prev_tag_close'] = '</div>';
-        
-        $config['cur_tag_open'] = '<span class="px-3 py-1.5 bg-blue-600 text-white rounded-lg text-sm font-bold shadow-sm">';
-        $config['cur_tag_close'] = '</span>';
-        
-        $config['num_tag_open'] = '<div class="px-3 py-1.5 border border-gray-200 rounded-lg text-sm hover:bg-gray-50">';
-        $config['num_tag_close'] = '</div>';
-
-        $config['attributes'] = array('class' => 'text-gray-600');
-
-        $this->pagination->initialize($config);
-
-        // Получаем завершенные сессии текущего пользователя для текущей страницы
-        $sessions = $this->Task_model->get_global_history_paginated($user_id, $per_page, $offset);
+        // Получаем завершенные сессии текущего пользователя для первой страницы (offset = 0)
+        $sessions = $this->Task_model->get_global_history_paginated($user_id, $per_page, 0);
         
         // Форматируем данные для вывода
         foreach ($sessions as &$s) {
+            // Преобразуем дату и время начала сессии в красивый читаемый формат
             $s['start_formatted'] = date('d.m.Y H:i', strtotime($s['start_time']));
-            $s['end_formatted'] = date('H:i', strtotime($s['end_time'])); // Только время для компактности, если тот же день
+            // Преобразуем время окончания сессии для вывода на экран
+            $s['end_formatted'] = date('H:i', strtotime($s['end_time']));
             
+            // Вычисляем продолжительность сессии в секундах
             $diff = $s['duration_seconds'];
+            // Преобразуем секунды в часы и минуты по заданному формату локализации
             $s['duration_formatted'] = sprintf(lang('time_format_hours_mins'), floor($diff / 3600), floor(($diff % 3600) / 60));
             
-            // Защита от XSS
+            // Защищаем текст заметки к задаче от XSS-уязвимостей
             $s['note_safe'] = !empty($s['note']) ? htmlspecialchars($s['note']) : '';
         }
 
-        // Подготавливаем результирующий массив данных для рендеринга страницы.
+        // Подготавливаем результирующий массив данных для рендеринга страницы
         $data = [
+            // Передаем отформатированный массив сессий
             'sessions' => $sessions,
-            'left_sidebar_view' => 'sidebars/statistics', // Подключение левой панели со статистикой и ссылками
+            // Подключаем левую панель со статистикой и ссылками
+            'left_sidebar_view' => 'sidebars/statistics',
+            // Передаем флаг администратора для проверки прав в представлении
             'is_admin' => $is_admin,
-            'pagination_links' => $this->pagination->create_links()
+            // Передаем размер страницы по умолчанию для JS скрипта
+            'per_page' => $per_page
         ];
 
         // Если администратор, подгружаем его задачи для выбора в формах CRUD
         if ($is_admin) {
+            // Получаем список задач администратора
             $data['tasks'] = $this->Task_model->get_user_tasks($user_id);
         }
 
         // Вызываем рендеринг страницы с передачей отформатированных сессий и настроек меню
         $this->render_page('history', $data);
     }
+
+    /**
+     * AJAX-метод подгрузки дополнительных записей в журнал активности.
+     * Возвращает HTML новых строк таблицы и статус наличия следующих страниц.
+     */
+    public function load_more_history_ajax() {
+        // Получаем ID авторизованного пользователя из сессии
+        $user_id = $this->session->userdata('user_id');
+        // Считываем смещение (offset) из входящего POST-запроса
+        $offset = (int)$this->input->post('offset');
+        // Проверяем, является ли пользователь администратором (группа 1 или логин root)
+        $is_admin = ($this->session->userdata('group_id') == 1 || $this->session->userdata('username') === 'root');
+
+        // Загружаем модель системных настроек для получения лимитов
+        $this->load->model('Settings_model');
+        // Получаем лимит записей на страницу из настроек пользователя, по умолчанию 25
+        $per_page = (int)$this->Settings_model->get_setting('per_page', 25);
+
+        // Получаем завершенные сессии текущего пользователя для текущего смещения
+        $sessions = $this->Task_model->get_global_history_paginated($user_id, $per_page, $offset);
+        
+        // Форматируем данные для вывода
+        foreach ($sessions as &$s) {
+            // Преобразуем дату и время начала сессии в красивый читаемый формат
+            $s['start_formatted'] = date('d.m.Y H:i', strtotime($s['start_time']));
+            // Преобразуем время окончания сессии для вывода на экран
+            $s['end_formatted'] = date('H:i', strtotime($s['end_time']));
+            
+            // Вычисляем продолжительность сессии в секундах
+            $diff = $s['duration_seconds'];
+            // Преобразуем секунды в часы и минуты по заданному формату локализации
+            $s['duration_formatted'] = sprintf(lang('time_format_hours_mins'), floor($diff / 3600), floor(($diff % 3600) / 60));
+            
+            // Защищаем текст заметки к задаче от XSS-уязвимостей
+            $s['note_safe'] = !empty($s['note']) ? htmlspecialchars($s['note']) : '';
+        }
+
+        // Инициализируем переменную для накопления HTML строк таблицы
+        $html = '';
+        // Обходим полученные сессии циклом для генерации HTML-кода
+        foreach ($sessions as $s) {
+            // Задаем цвет кружка задачи (если цвета нет, ставим дефолтный серый)
+            $color_bg = !empty($s['color']) ? "background-color: {$s['color']};" : "background-color: #e5e7eb;";
+            // Рендерим HTML для заметки: если она есть, выводим блок, иначе прочерк
+            $note_html = !empty($s['note_safe']) 
+                ? '<div class="text-gray-600 italic bg-gray-50 border-l-4 border-gray-200 px-4 py-2 rounded-r-lg group-hover:bg-white transition-colors">' . $s['note_safe'] . '</div>' 
+                : '<span class="text-gray-300">—</span>';
+                
+            // Инициализируем HTML действий администратора
+            $actions_html = '';
+            // Если пользователь администратор, рендерим кнопки редактирования и удаления
+            if ($is_admin) {
+                // Подготавливаем строковые параметры для JS функции редактирования сессии
+                $edit_params = sprintf(
+                    "%d, %d, '%s', '%s', '%s'",
+                    $s['id'],
+                    $s['task_id'],
+                    date('Y-m-d\TH:i', strtotime($s['start_time'])),
+                    date('Y-m-d\TH:i', strtotime($s['end_time'])),
+                    addslashes($s['note_safe'])
+                );
+                // Формируем HTML колонки действий с кнопками
+                $actions_html = '
+                    <td class="px-6 py-5 text-right whitespace-nowrap">
+                        <div class="flex justify-end gap-2">
+                            <button onclick="openEditSessionModal(' . $edit_params . ')" class="bg-gray-100 hover:bg-gray-200 text-gray-600 p-2 rounded-lg transition-colors" title="' . htmlspecialchars(lang('btn_edit'), ENT_QUOTES) . '">
+                                ✏️
+                            </button>
+                            <button onclick="deleteSession(' . $s['id'] . ')" class="bg-red-50 hover:bg-red-100 text-red-600 p-2 rounded-lg transition-colors" title="' . htmlspecialchars(lang('btn_delete'), ENT_QUOTES) . '">
+                                🗑️
+                             </button>
+                        </div>
+                    </td>';
+            }
+            
+            // Накапливаем HTML строки таблицы с подставленными значениями
+            $html .= '
+                <tr class="hover:bg-gray-50 transition-colors group">
+                    <td class="px-6 py-5">
+                        <div class="flex flex-col">
+                            <span class="text-gray-900 font-bold text-lg">' . $s['start_formatted'] . '</span>
+                            <span class="text-gray-400 text-sm flex items-center gap-1">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"></path></svg>
+                                ' . $s['end_formatted'] . '
+                            </span>
+                        </div>
+                    </td>
+                    <td class="px-6 py-5">
+                        <div class="flex items-center gap-3">
+                            <div class="w-4 h-4 rounded-full flex-shrink-0 shadow-sm" style="' . $color_bg . '"></div>
+                            <span class="text-gray-800 font-semibold text-lg">' . htmlspecialchars($s['task_title'] ?? '') . '</span>
+                        </div>
+                    </td>
+                    <td class="px-6 py-5">
+                        <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-bold font-mono bg-blue-50 text-blue-600 border border-blue-100">
+                            ' . $s['duration_formatted'] . '
+                        </span>
+                    </td>
+                    <td class="px-6 py-5">
+                        ' . $note_html . '
+                    </td>
+                    ' . $actions_html . '
+                </tr>';
+        }
+        
+        // Получаем общее количество сессий пользователя из БД
+        $total_rows = $this->Task_model->get_global_history_count($user_id);
+        // Вычисляем, есть ли еще страницы для подгрузки (флаг has_more)
+        $has_more = ($offset + count($sessions)) < $total_rows;
+        
+        // Отдаем JSON ответ с HTML-строками и флагом продолжения
+        echo json_encode([
+            'status' => 'success',
+            'html' => $html,
+            'has_more' => $has_more
+        ]);
+    }
+
 
     /**
      * AJAX-обработчик ручного добавления сессии для администраторов.

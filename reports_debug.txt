@@ -1,0 +1,216 @@
+2026-06-14 12:48:03 | time_slice | GET: [] | customer_filter: all | sort_by: time
+  [tasks query] row keys: id, parent_id, title, status, color, customer_id, customer_name | first row data: {"id":"5","parent_id":null,"title":"\u0414\u0438\u043f\u043b\u043e\u043c\u044b","status":"active","color":"#10b981","customer_id":null,"customer_name":null}
+2026-06-14 12:48:07 | time_slice | GET: {"show_archived":"1","start":"2026-06-01","end":"2026-06-14","customer_filter":"all","sort_by":"time"} | customer_filter: all | sort_by: time
+  [tasks query] row keys: id, parent_id, title, status, color, customer_id, customer_name | first row data: {"id":"5","parent_id":null,"title":"\u0414\u0438\u043f\u043b\u043e\u043c\u044b","status":"active","color":"#10b981","customer_id":null,"customer_name":null}
+  -> task_id: 5 | title: Дипломы | effective_cust_id: NULL | filter: 'all'
+  -> task_id: 7 | title: Бани | effective_cust_id: NULL | filter: 'all'
+  -> task_id: 8 | title: Тестовая задача 3 | effective_cust_id: NULL | filter: 'all'
+  -> task_id: 18 | title: Дипломы | effective_cust_id: NULL | filter: 'all'
+2026-06-14 12:48:18 | time_slice | GET: {"show_archived":"1","start":"2026-06-01","end":"2026-06-14","customer_filter":"all","sort_by":"time"} | customer_filter: all | sort_by: time
+  [tasks query] row keys: id, parent_id, title, status, color, customer_id, customer_name | first row data: {"id":"5","parent_id":null,"title":"\u0414\u0438\u043f\u043b\u043e\u043c\u044b","status":"active","color":"#10b981","customer_id":null,"customer_name":null}
+  -> task_id: 5 | title: Дипломы | effective_cust_id: NULL | filter: 'all'
+  -> task_id: 7 | title: Бани | effective_cust_id: NULL | filter: 'all'
+  -> task_id: 8 | title: Тестовая задача 3 | effective_cust_id: NULL | filter: 'all'
+  -> task_id: 18 | title: Дипломы | effective_cust_id: NULL | filter: 'all'
+2026-06-14 12:48:22 | time_slice | GET: {"show_archived":"1","start":"2026-06-01","end":"2026-06-14","customer_filter":"1","sort_by":"time"} | customer_filter: 1 | sort_by: time
+  [tasks query] row keys: id, parent_id, title, status, color, customer_id, customer_name | first row data: {"id":"5","parent_id":null,"title":"\u0414\u0438\u043f\u043b\u043e\u043c\u044b","status":"active","color":"#10b981","customer_id":null,"customer_name":null}
+  -> task_id: 5 | title: Дипломы | effective_cust_id: NULL | filter: '1'
+  -> task_id: 7 | title: Бани | effective_cust_id: NULL | filter: '1'
+  -> task_id: 8 | title: Тестовая задача 3 | effective_cust_id: NULL | filter: '1'
+  -> task_id: 18 | title: Дипломы | effective_cust_id: NULL | filter: '1'
+2026-06-14 12:48:30 | time_slice | GET: {"show_archived":"1","start":"2026-06-01","end":"2026-06-14","customer_filter":"6","sort_by":"time"} | customer_filter: 6 | sort_by: time
+  [tasks query] row keys: id, parent_id, title, status, color, customer_id, customer_name | first row data: {"id":"5","parent_id":null,"title":"\u0414\u0438\u043f\u043b\u043e\u043c\u044b","status":"active","color":"#10b981","customer_id":null,"customer_name":null}
+  -> task_id: 5 | title: Дипломы | effective_cust_id: NULL | filter: '6'
+  -> task_id: 7 | title: Бани | effective_cust_id: NULL | filter: '6'
+  -> task_id: 8 | title: Тестовая задача 3 | effective_cust_id: NULL | filter: '6'
+  -> task_id: 18 | title: Дипломы | effective_cust_id: NULL | filter: '6'
+2026-06-14 12:48:34 | time_slice | GET: {"show_archived":"1","start":"2026-06-01","end":"2026-06-14","customer_filter":"none","sort_by":"time"} | customer_filter: none | sort_by: time
+  [tasks query] row keys: id, parent_id, title, status, color, customer_id, customer_name | first row data: {"id":"5","parent_id":null,"title":"\u0414\u0438\u043f\u043b\u043e\u043c\u044b","status":"active","color":"#10b981","customer_id":null,"customer_name":null}
+  -> task_id: 5 | title: Дипломы | effective_cust_id: NULL | filter: 'none'
+  -> task_id: 7 | title: Бани | effective_cust_id: NULL | filter: 'none'
+  -> task_id: 8 | title: Тестовая задача 3 | effective_cust_id: NULL | filter: 'none'
+  -> task_id: 18 | title: Дипломы | effective_cust_id: NULL | filter: 'none'
+2026-06-14 12:48:54 | time_slice | GET: {"show_archived":"1","start":"2026-06-01","end":"2026-06-14","customer_filter":"none","sort_by":"title"} | customer_filter: none | sort_by: title
+  [tasks query] row keys: id, parent_id, title, status, color, customer_id, customer_name | first row data: {"id":"5","parent_id":null,"title":"\u0414\u0438\u043f\u043b\u043e\u043c\u044b","status":"active","color":"#10b981","customer_id":null,"customer_name":null}
+  -> task_id: 5 | title: Дипломы | effective_cust_id: NULL | filter: 'none'
+  -> task_id: 7 | title: Бани | effective_cust_id: NULL | filter: 'none'
+  -> task_id: 8 | title: Тестовая задача 3 | effective_cust_id: NULL | filter: 'none'
+  -> task_id: 18 | title: Дипломы | effective_cust_id: NULL | filter: 'none'
+2026-06-14 12:48:58 | time_slice | GET: {"show_archived":"1","start":"2026-06-01","end":"2026-06-14","customer_filter":"none","sort_by":"customer"} | customer_filter: none | sort_by: customer
+  [tasks query] row keys: id, parent_id, title, status, color, customer_id, customer_name | first row data: {"id":"5","parent_id":null,"title":"\u0414\u0438\u043f\u043b\u043e\u043c\u044b","status":"active","color":"#10b981","customer_id":null,"customer_name":null}
+  -> task_id: 5 | title: Дипломы | effective_cust_id: NULL | filter: 'none'
+  -> task_id: 7 | title: Бани | effective_cust_id: NULL | filter: 'none'
+  -> task_id: 8 | title: Тестовая задача 3 | effective_cust_id: NULL | filter: 'none'
+  -> task_id: 18 | title: Дипломы | effective_cust_id: NULL | filter: 'none'
+2026-06-14 13:21:26 | time_slice | GET: {"show_archived":"1","start":"2026-06-01","end":"2026-06-14","customer_filter":"none","sort_by":"customer"} | customer_filter: none | sort_by: customer
+  [tasks query] row keys: id, parent_id, title, status, color, customer_id, customer_name | first row data: {"id":"5","parent_id":null,"title":"\u0414\u0438\u043f\u043b\u043e\u043c\u044b","status":"active","color":"#10b981","customer_id":null,"customer_name":null}
+  -> task_id: 5 | title: Дипломы | effective_cust_id: NULL | filter: 'none'
+  -> task_id: 7 | title: Бани | effective_cust_id: NULL | filter: 'none'
+  -> task_id: 8 | title: Тестовая задача 3 | effective_cust_id: NULL | filter: 'none'
+  -> task_id: 18 | title: Дипломы | effective_cust_id: NULL | filter: 'none'
+2026-06-14 13:29:57 | time_slice | GET: [] | customer_filter: all | sort_by: time
+  [tasks query] row keys: id, parent_id, title, status, color, customer_id, customer_name | first row data: {"id":"5","parent_id":null,"title":"\u0414\u0438\u043f\u043b\u043e\u043c\u044b","status":"active","color":"#10b981","customer_id":null,"customer_name":null}
+2026-06-14 13:30:00 | time_slice | GET: {"show_archived":"1","start":"2026-06-01","end":"2026-06-14","customer_filter":"all","sort_by":"time"} | customer_filter: all | sort_by: time
+  [tasks query] row keys: id, parent_id, title, status, color, customer_id, customer_name | first row data: {"id":"5","parent_id":null,"title":"\u0414\u0438\u043f\u043b\u043e\u043c\u044b","status":"active","color":"#10b981","customer_id":null,"customer_name":null}
+  -> task_id: 5 | title: Дипломы | effective_cust_id: NULL | filter: 'all'
+  -> task_id: 7 | title: Бани | effective_cust_id: NULL | filter: 'all'
+  -> task_id: 8 | title: Тестовая задача 3 | effective_cust_id: NULL | filter: 'all'
+  -> task_id: 18 | title: Дипломы | effective_cust_id: NULL | filter: 'all'
+2026-06-14 13:30:09 | project_slice | GET: [] | customer_filter: all | sort_by: time
+2026-06-14 13:30:15 | time_slice | GET: [] | customer_filter: all | sort_by: time
+  [tasks query] row keys: id, parent_id, title, status, color, customer_id, customer_name | first row data: {"id":"5","parent_id":null,"title":"\u0414\u0438\u043f\u043b\u043e\u043c\u044b","status":"active","color":"#10b981","customer_id":null,"customer_name":null}
+2026-06-14 13:30:19 | time_slice | GET: [] | customer_filter: all | sort_by: time
+  [tasks query] row keys: id, parent_id, title, status, color, customer_id, customer_name | first row data: {"id":"5","parent_id":null,"title":"\u0414\u0438\u043f\u043b\u043e\u043c\u044b","status":"active","color":"#10b981","customer_id":null,"customer_name":null}
+2026-06-14 13:30:22 | time_slice | GET: {"show_archived":"1","start":"2026-06-01","end":"2026-06-14","customer_filter":"all","sort_by":"time"} | customer_filter: all | sort_by: time
+  [tasks query] row keys: id, parent_id, title, status, color, customer_id, customer_name | first row data: {"id":"5","parent_id":null,"title":"\u0414\u0438\u043f\u043b\u043e\u043c\u044b","status":"active","color":"#10b981","customer_id":null,"customer_name":null}
+  -> task_id: 5 | title: Дипломы | effective_cust_id: NULL | filter: 'all'
+  -> task_id: 7 | title: Бани | effective_cust_id: NULL | filter: 'all'
+  -> task_id: 8 | title: Тестовая задача 3 | effective_cust_id: NULL | filter: 'all'
+  -> task_id: 18 | title: Дипломы | effective_cust_id: NULL | filter: 'all'
+2026-06-14 13:46:31 | time_slice | GET: {"show_archived":"1","start":"2026-06-01","end":"2026-06-14","customer_filter":"all","sort_by":"time"} | customer_filters: [] | sort_by: time
+2026-06-14 13:46:36 | time_slice | GET: {"show_archived":"1","start":"2026-06-01","end":"2026-06-14","customer_filter":"all","sort_by":"time"} | customer_filters: [] | sort_by: time
+2026-06-14 13:48:00 | time_slice | GET: {"show_archived":"1","start":"2026-06-14","end":"2026-06-14","sort_by":"time"} | customer_filters: [] | sort_by: time
+2026-06-14 13:48:01 | time_slice | GET: {"show_archived":"1","start":"2026-06-01","end":"2026-06-14","sort_by":"time"} | customer_filters: [] | sort_by: time
+2026-06-14 13:51:17 | time_slice | GET: {"show_archived":"1","start":"2026-06-01","end":"2026-06-14","customer_filters":["1"],"sort_by":"time"} | customer_filters: ["1"] | sort_by: time
+2026-06-14 13:51:23 | time_slice | GET: {"show_archived":"1","start":"2026-06-01","end":"2026-06-14","sort_by":"time"} | customer_filters: [] | sort_by: time
+2026-06-14 13:51:30 | time_slice | GET: {"show_archived":"1","start":"2026-06-01","end":"2026-06-14","customer_filters":["none"],"sort_by":"time"} | customer_filters: ["none"] | sort_by: time
+2026-06-14 13:51:34 | time_slice | GET: {"show_archived":"1","start":"2026-06-01","end":"2026-06-14","customer_filters":["none"],"calculation_filters":["3"],"sort_by":"time"} | customer_filters: ["none"] | sort_by: time
+2026-06-14 13:51:37 | time_slice | GET: {"show_archived":"1","start":"2026-06-01","end":"2026-06-14","customer_filters":["none"],"calculation_filters":["none","3"],"sort_by":"time"} | customer_filters: ["none"] | sort_by: time
+2026-06-14 13:51:39 | time_slice | GET: {"show_archived":"1","start":"2026-06-01","end":"2026-06-14","customer_filters":["none"],"calculation_filters":["none"],"sort_by":"time"} | customer_filters: ["none"] | sort_by: time
+2026-06-14 13:51:41 | time_slice | GET: {"show_archived":"1","start":"2026-06-01","end":"2026-06-14","customer_filters":["none"],"calculation_filters":["none"],"spec_filters":["none"],"sort_by":"time"} | customer_filters: ["none"] | sort_by: time
+2026-06-14 13:51:44 | time_slice | GET: {"show_archived":"1","start":"2026-06-01","end":"2026-06-14","customer_filters":["none"],"calculation_filters":["none"],"spec_filters":["none","1"],"sort_by":"time"} | customer_filters: ["none"] | sort_by: time
+2026-06-14 13:51:47 | time_slice | GET: {"show_archived":"1","start":"2026-06-01","end":"2026-06-14","customer_filters":["none"],"calculation_filters":["none"],"spec_filters":["1"],"sort_by":"time"} | customer_filters: ["none"] | sort_by: time
+2026-06-14 13:52:15 | time_slice | GET: {"show_archived":"1","start":"2026-06-01","end":"2026-06-14","customer_filters":["none"],"calculation_filters":["none"],"sort_by":"time"} | customer_filters: ["none"] | sort_by: time
+2026-06-14 13:52:16 | time_slice | GET: {"show_archived":"1","start":"2026-06-01","end":"2026-06-14","customer_filters":["none"],"sort_by":"time"} | customer_filters: ["none"] | sort_by: time
+2026-06-14 13:52:17 | time_slice | GET: {"show_archived":"1","start":"2026-06-01","end":"2026-06-14","sort_by":"time"} | customer_filters: [] | sort_by: time
+2026-06-14 13:54:05 | time_slice | GET: {"show_archived":"1","start":"2026-06-01","end":"2026-06-14","sort_by":"time"} | customer_filters: [] | sort_by: time
+2026-06-14 13:54:15 | time_slice | GET: {"show_archived":"1","start":"2026-06-01","end":"2026-06-14","sort_by":"customer"} | customer_filters: [] | sort_by: customer
+2026-06-14 13:54:17 | time_slice | GET: {"show_archived":"1","start":"2026-06-01","end":"2026-06-14","sort_by":"time"} | customer_filters: [] | sort_by: time
+2026-06-14 13:54:23 | time_slice | GET: {"show_archived":"1","start":"2026-06-01","end":"2026-06-14","customer_filters":["1"],"sort_by":"time"} | customer_filters: ["1"] | sort_by: time
+2026-06-14 13:54:25 | time_slice | GET: {"show_archived":"1","start":"2026-06-01","end":"2026-06-14","sort_by":"time"} | customer_filters: [] | sort_by: time
+2026-06-14 13:54:26 | time_slice | GET: {"show_archived":"1","start":"2026-06-01","end":"2026-06-14","customer_filters":["none"],"sort_by":"time"} | customer_filters: ["none"] | sort_by: time
+2026-06-14 13:54:27 | time_slice | GET: {"show_archived":"1","start":"2026-06-01","end":"2026-06-14","sort_by":"time"} | customer_filters: [] | sort_by: time
+2026-06-14 13:54:27 | time_slice | GET: {"show_archived":"1","start":"2026-06-01","end":"2026-06-14","customer_filters":["none"],"sort_by":"time"} | customer_filters: ["none"] | sort_by: time
+2026-06-14 13:54:29 | time_slice | GET: {"show_archived":"1","start":"2026-06-01","end":"2026-06-14","sort_by":"time"} | customer_filters: [] | sort_by: time
+2026-06-14 13:54:35 | time_slice | GET: {"show_archived":"1","start":"2026-06-01","end":"2026-06-14","customer_filters":["1"],"sort_by":"time"} | customer_filters: ["1"] | sort_by: time
+2026-06-14 13:55:00 | time_slice | GET: {"show_archived":"1","start":"2026-06-01","end":"2026-06-14","customer_filters":["1"],"calculation_filters":["3"],"sort_by":"time"} | customer_filters: ["1"] | sort_by: time
+2026-06-14 13:55:01 | time_slice | GET: {"show_archived":"1","start":"2026-06-01","end":"2026-06-14","customer_filters":["1"],"calculation_filters":["none","3"],"sort_by":"time"} | customer_filters: ["1"] | sort_by: time
+2026-06-14 13:55:04 | time_slice | GET: {"show_archived":"1","start":"2026-06-01","end":"2026-06-14","customer_filters":["1"],"calculation_filters":["none"],"sort_by":"time"} | customer_filters: ["1"] | sort_by: time
+2026-06-14 13:55:05 | time_slice | GET: {"show_archived":"1","start":"2026-06-01","end":"2026-06-14","customer_filters":["1"],"sort_by":"time"} | customer_filters: ["1"] | sort_by: time
+2026-06-14 13:55:06 | time_slice | GET: {"show_archived":"1","start":"2026-06-01","end":"2026-06-14","sort_by":"time"} | customer_filters: [] | sort_by: time
+2026-06-14 13:56:14 | time_slice | GET: {"show_archived":"1","start":"2026-06-01","end":"2026-06-14","sort_by":"time"} | customer_filters: [] | sort_by: time
+2026-06-14 13:58:06 | time_slice | GET: {"show_archived":"1","start":"2026-06-14","end":"2026-06-14","sort_by":"time"} | customer_filters: [] | sort_by: time
+2026-06-14 13:58:08 | time_slice | GET: {"show_archived":"1","start":"2026-06-13","end":"2026-06-13","sort_by":"time"} | customer_filters: [] | sort_by: time
+2026-06-14 13:58:08 | time_slice | GET: {"show_archived":"1","start":"2026-06-08","end":"2026-06-14","sort_by":"time"} | customer_filters: [] | sort_by: time
+2026-06-14 13:58:08 | time_slice | GET: {"show_archived":"1","start":"2026-06-01","end":"2026-06-14","sort_by":"time"} | customer_filters: [] | sort_by: time
+2026-06-14 13:58:36 | time_slice | GET: {"show_archived":"1","start":"2026-06-01","end":"2026-06-14","sort_by":"customer"} | customer_filters: [] | sort_by: customer
+2026-06-14 13:59:29 | time_slice | GET: {"show_archived":"1","start":"2026-06-01","end":"2026-06-14","sort_by":"time"} | customer_filters: [] | sort_by: time
+2026-06-14 13:59:30 | time_slice | GET: {"show_archived":"1","start":"2026-06-01","end":"2026-06-14","sort_by":"title"} | customer_filters: [] | sort_by: title
+2026-06-14 13:59:31 | time_slice | GET: {"show_archived":"1","start":"2026-06-01","end":"2026-06-14","sort_by":"customer"} | customer_filters: [] | sort_by: customer
+2026-06-14 14:02:45 | time_slice | GET: {"show_archived":"1","start":"2026-06-01","end":"2026-06-14","spec_filters":["none"],"sort_by":"customer"} | customer_filters: [] | sort_by: customer
+2026-06-14 14:02:47 | time_slice | GET: {"show_archived":"1","start":"2026-06-01","end":"2026-06-14","spec_filters":["none","1"],"sort_by":"customer"} | customer_filters: [] | sort_by: customer
+2026-06-14 14:02:49 | time_slice | GET: {"show_archived":"1","start":"2026-06-01","end":"2026-06-14","spec_filters":["none"],"sort_by":"customer"} | customer_filters: [] | sort_by: customer
+2026-06-14 14:02:50 | time_slice | GET: {"show_archived":"1","start":"2026-06-01","end":"2026-06-14","sort_by":"customer"} | customer_filters: [] | sort_by: customer
+2026-06-14 14:04:47 | time_slice | GET: {"show_archived":"1","start":"2026-06-01","end":"2026-06-14","sort_by":"customer"} | customer_filters: [] | sort_by: customer
+2026-06-14 14:04:50 | time_slice | GET: {"show_archived":"1","start":"2026-06-01","end":"2026-06-14","sort_by":"customer"} | customer_filters: [] | sort_by: customer
+2026-06-14 14:04:51 | time_slice | GET: {"show_archived":"1","start":"2026-06-01","end":"2026-06-14","sort_by":"customer"} | customer_filters: [] | sort_by: customer
+2026-06-14 14:04:52 | time_slice | GET: {"show_archived":"1","start":"2026-06-01","end":"2026-06-14","sort_by":"customer"} | customer_filters: [] | sort_by: customer
+2026-06-14 14:05:22 | project_slice | GET: [] | customer_filters: [] | sort_by: time
+2026-06-14 14:05:26 | project_slice | GET: {"show_archived":"1","sort_by":"title"} | customer_filters: [] | sort_by: title
+2026-06-14 14:05:28 | project_slice | GET: {"show_archived":"1","sort_by":"customer"} | customer_filters: [] | sort_by: customer
+2026-06-14 14:05:29 | project_slice | GET: {"show_archived":"1","sort_by":"time"} | customer_filters: [] | sort_by: time
+2026-06-14 14:05:34 | project_slice | GET: {"show_archived":"1","customer_filters":["1"],"sort_by":"time"} | customer_filters: ["1"] | sort_by: time
+2026-06-14 14:05:35 | project_slice | GET: {"show_archived":"1","sort_by":"time"} | customer_filters: [] | sort_by: time
+2026-06-14 14:05:53 | project_slice | GET: {"show_archived":"1","sort_by":"title"} | customer_filters: [] | sort_by: title
+2026-06-14 14:06:00 | project_slice | GET: {"show_archived":"1","sort_by":"customer"} | customer_filters: [] | sort_by: customer
+2026-06-14 14:06:16 | project_slice | GET: {"show_archived":"0","sort_by":"customer"} | customer_filters: [] | sort_by: customer
+2026-06-14 14:06:17 | project_slice | GET: {"show_archived":"1","sort_by":"customer"} | customer_filters: [] | sort_by: customer
+2026-06-14 14:06:18 | project_slice | GET: {"show_archived":"1","customer_filters":["none"],"sort_by":"customer"} | customer_filters: ["none"] | sort_by: customer
+2026-06-14 14:06:19 | project_slice | GET: {"show_archived":"1","customer_filters":["none","1"],"sort_by":"customer"} | customer_filters: ["none","1"] | sort_by: customer
+2026-06-14 14:06:21 | project_slice | GET: {"show_archived":"1","customer_filters":["1"],"sort_by":"customer"} | customer_filters: ["1"] | sort_by: customer
+2026-06-14 14:06:24 | project_slice | GET: {"show_archived":"1","sort_by":"customer"} | customer_filters: [] | sort_by: customer
+2026-06-14 14:06:26 | time_slice | GET: [] | customer_filters: [] | sort_by: time
+2026-06-14 14:06:29 | time_slice | GET: [] | customer_filters: [] | sort_by: time
+2026-06-14 14:06:36 | time_slice | GET: {"show_archived":"0","start":"2026-06-14","end":"2026-06-14","sort_by":"time"} | customer_filters: [] | sort_by: time
+2026-06-14 14:06:39 | time_slice | GET: {"show_archived":"0","start":"2026-06-01","end":"2026-06-14","sort_by":"time"} | customer_filters: [] | sort_by: time
+2026-06-14 14:20:38 | time_slice | GET: {"show_archived":"0","start":"2026-06-01","end":"2026-06-14","sort_by":"time"} | customer_filters: [] | sort_by: time | sort_dir: desc
+2026-06-14 14:20:46 | time_slice | GET: {"show_archived":"0","start":"2026-06-01","end":"2026-06-14","sort_by":"title"} | customer_filters: [] | sort_by: title | sort_dir: asc
+2026-06-14 14:20:48 | time_slice | GET: {"show_archived":"0","start":"2026-06-01","end":"2026-06-14","sort_by":"customer"} | customer_filters: [] | sort_by: customer | sort_dir: asc
+2026-06-14 14:21:04 | time_slice | GET: {"show_archived":"0","start":"2026-06-01","end":"2026-06-14","customer_filters":["1"],"sort_by":"customer"} | customer_filters: ["1"] | sort_by: customer | sort_dir: asc
+2026-06-14 14:23:02 | time_slice | GET: {"show_archived":"0","start":"2026-06-01","end":"2026-06-14","customer_filters":["1"],"sort_by":"customer"} | customer_filters: ["1"] | sort_by: customer | sort_dir: asc
+2026-06-14 14:23:34 | time_slice | GET: {"show_archived":"0","start":"2026-06-01","end":"2026-06-14","customer_filters":["1"],"sort_by":"customer"} | customer_filters: ["1"] | sort_by: customer | sort_dir: asc
+2026-06-14 14:24:41 | time_slice | GET: {"show_archived":"0","start":"2026-06-01","end":"2026-06-14","customer_filters":["1"],"sort_by":"customer"} | customer_filters: ["1"] | sort_by: customer | sort_dir: asc
+2026-06-14 14:24:46 | time_slice | GET: {"show_archived":"0","start":"2026-06-01","end":"2026-06-14","customer_filters":["1"],"sort_by":"time"} | customer_filters: ["1"] | sort_by: time | sort_dir: desc
+2026-06-14 14:26:06 | time_slice | GET: {"show_archived":"0","start":"2026-06-01","end":"2026-06-14","customer_filters":["1"],"sort_by":"time"} | customer_filters: ["1"] | sort_by: time | sort_dir: desc
+2026-06-14 14:26:21 | time_slice | GET: {"show_archived":"0","start":"2026-06-01","end":"2026-06-14","customer_filters":["1"],"sort_by":"time"} | customer_filters: ["1"] | sort_by: time | sort_dir: desc
+2026-06-14 14:26:51 | time_slice | GET: {"show_archived":"0","start":"2026-06-01","end":"2026-06-14","customer_filters":["1"],"sort_by":"time"} | customer_filters: ["1"] | sort_by: time | sort_dir: desc
+2026-06-14 14:27:43 | time_slice | GET: {"show_archived":"0","start":"2026-06-01","end":"2026-06-14","customer_filters":["1"],"sort_by":"time"} | customer_filters: ["1"] | sort_by: time | sort_dir: desc
+2026-06-14 14:27:46 | time_slice | GET: {"show_archived":"0","start":"2026-06-14","end":"2026-06-14","customer_filters":["1"],"sort_by":"time","sort_dir":"desc"} | customer_filters: ["1"] | sort_by: time | sort_dir: desc
+2026-06-14 14:27:47 | time_slice | GET: {"show_archived":"0","start":"2026-06-01","end":"2026-06-14","customer_filters":["1"],"sort_by":"time","sort_dir":"desc"} | customer_filters: ["1"] | sort_by: time | sort_dir: desc
+2026-06-14 14:27:48 | time_slice | GET: {"show_archived":"0","start":"2026-06-01","end":"2026-06-14","sort_by":"time","sort_dir":"desc"} | customer_filters: [] | sort_by: time | sort_dir: desc
+2026-06-14 14:27:55 | time_slice | GET: {"show_archived":"1","start":"2026-06-01","end":"2026-06-14","sort_by":"time","sort_dir":"desc"} | customer_filters: [] | sort_by: time | sort_dir: desc
+2026-06-14 14:27:57 | time_slice | GET: {"show_archived":"1","start":"2026-06-01","end":"2026-06-14","sort_by":"time","sort_dir":"desc"} | customer_filters: [] | sort_by: time | sort_dir: desc
+2026-06-14 14:29:28 | time_slice | GET: {"show_archived":"1","start":"2026-06-01","end":"2026-06-14","sort_by":"time","sort_dir":"desc"} | customer_filters: [] | sort_by: time | sort_dir: desc
+2026-06-14 15:51:26 | time_slice | GET: [] | customer_filters: [] | sort_by: time | sort_dir: desc
+2026-06-14 15:53:43 | time_slice | GET: [] | customer_filters: [] | sort_by: time | sort_dir: desc
+2026-06-14 15:53:55 | time_slice | GET: [] | customer_filters: [] | sort_by: time | sort_dir: desc
+2026-06-14 15:54:02 | time_slice | GET: {"show_archived":"1","start":"2026-06-14","end":"2026-06-14","sort_by":"time","sort_dir":"asc"} | customer_filters: [] | sort_by: time | sort_dir: asc
+2026-06-14 15:54:03 | time_slice | GET: {"show_archived":"1","start":"2026-06-14","end":"2026-06-14","sort_by":"time","sort_dir":"desc"} | customer_filters: [] | sort_by: time | sort_dir: desc
+2026-06-14 15:54:03 | time_slice | GET: {"show_archived":"1","start":"2026-06-14","end":"2026-06-14","sort_by":"time","sort_dir":"asc"} | customer_filters: [] | sort_by: time | sort_dir: asc
+2026-06-14 15:54:04 | time_slice | GET: {"show_archived":"1","start":"2026-06-14","end":"2026-06-14","sort_by":"time","sort_dir":"desc"} | customer_filters: [] | sort_by: time | sort_dir: desc
+2026-06-14 15:54:04 | time_slice | GET: {"show_archived":"1","start":"2026-06-14","end":"2026-06-14","sort_by":"time","sort_dir":"asc"} | customer_filters: [] | sort_by: time | sort_dir: asc
+2026-06-14 15:54:05 | time_slice | GET: {"show_archived":"1","start":"2026-06-14","end":"2026-06-14","sort_by":"time","sort_dir":"desc"} | customer_filters: [] | sort_by: time | sort_dir: desc
+2026-06-14 15:54:31 | time_slice | GET: {"show_archived":"1","start":"2026-06-13","end":"2026-06-13","sort_by":"time","sort_dir":"desc"} | customer_filters: [] | sort_by: time | sort_dir: desc
+2026-06-14 15:54:31 | time_slice | GET: {"show_archived":"1","start":"2026-06-08","end":"2026-06-14","sort_by":"time","sort_dir":"desc"} | customer_filters: [] | sort_by: time | sort_dir: desc
+2026-06-14 15:54:32 | time_slice | GET: {"show_archived":"1","start":"2026-06-01","end":"2026-06-14","sort_by":"time","sort_dir":"desc"} | customer_filters: [] | sort_by: time | sort_dir: desc
+2026-06-14 15:54:32 | time_slice | GET: {"show_archived":"1","start":"2026-06-14","end":"2026-06-14","sort_by":"time","sort_dir":"desc"} | customer_filters: [] | sort_by: time | sort_dir: desc
+2026-06-14 15:54:41 | project_slice | GET: [] | customer_filters: [] | sort_by: time | sort_dir: desc
+2026-06-14 15:54:59 | time_slice | GET: [] | customer_filters: [] | sort_by: time | sort_dir: desc
+2026-06-14 18:26:45 | time_slice | GET: [] | customer_filters: [] | sort_by: time | sort_dir: desc
+2026-06-14 18:28:13 | time_slice | GET: [] | customer_filters: [] | sort_by: time | sort_dir: desc
+2026-06-14 18:31:07 | time_slice | GET: [] | customer_filters: [] | sort_by: time | sort_dir: desc
+2026-06-14 18:31:09 | project_slice | GET: [] | customer_filters: [] | sort_by: time | sort_dir: desc
+2026-06-14 18:40:03 | time_slice | GET: [] | customer_filters: [] | sort_by: time | sort_dir: desc
+2026-06-14 18:56:11 | time_slice | GET: [] | customer_filters: [] | sort_by: time | sort_dir: desc
+2026-06-14 18:56:46 | time_slice | GET: [] | customer_filters: [] | sort_by: time | sort_dir: desc
+2026-06-14 18:57:37 | time_slice | GET: [] | customer_filters: [] | sort_by: time | sort_dir: desc
+2026-06-14 19:35:28 | time_slice | GET: [] | customer_filters: [] | sort_by: time | sort_dir: desc
+2026-06-14 19:35:45 | project_slice | GET: [] | customer_filters: [] | sort_by: time | sort_dir: desc
+2026-06-14 19:35:47 | time_slice | GET: [] | customer_filters: [] | sort_by: time | sort_dir: desc
+2026-06-14 19:35:48 | project_slice | GET: [] | customer_filters: [] | sort_by: time | sort_dir: desc
+2026-06-14 19:35:54 | project_slice | GET: {"show_archived":"1","customer_filters":["none"],"sort_by":"time","sort_dir":"desc"} | customer_filters: ["none"] | sort_by: time | sort_dir: desc
+2026-06-14 19:35:55 | project_slice | GET: {"show_archived":"1","customer_filters":["none","1"],"sort_by":"time","sort_dir":"desc"} | customer_filters: ["none","1"] | sort_by: time | sort_dir: desc
+2026-06-14 19:35:57 | project_slice | GET: {"show_archived":"1","customer_filters":["none","1","6"],"sort_by":"time","sort_dir":"desc"} | customer_filters: ["none","1","6"] | sort_by: time | sort_dir: desc
+2026-06-14 19:35:57 | project_slice | GET: {"show_archived":"1","customer_filters":["none","1"],"sort_by":"time","sort_dir":"desc"} | customer_filters: ["none","1"] | sort_by: time | sort_dir: desc
+2026-06-14 19:35:58 | project_slice | GET: {"show_archived":"1","customer_filters":["none"],"sort_by":"time","sort_dir":"desc"} | customer_filters: ["none"] | sort_by: time | sort_dir: desc
+2026-06-14 19:35:58 | project_slice | GET: {"show_archived":"1","sort_by":"time","sort_dir":"desc"} | customer_filters: [] | sort_by: time | sort_dir: desc
+2026-06-14 19:36:06 | time_slice | GET: [] | customer_filters: [] | sort_by: time | sort_dir: desc
+2026-06-14 19:36:13 | project_slice | GET: [] | customer_filters: [] | sort_by: time | sort_dir: desc
+2026-06-14 19:37:40 | time_slice | GET: [] | customer_filters: [] | sort_by: time | sort_dir: desc
+2026-06-14 20:05:37 | time_slice | GET: [] | customer_filters: [] | sort_by: time | sort_dir: desc
+2026-06-14 20:05:53 | time_slice | GET: {"show_archived":"1","start":"2026-06-13","end":"2026-06-13","sort_by":"time","sort_dir":"desc"} | customer_filters: [] | sort_by: time | sort_dir: desc
+2026-06-14 20:06:01 | time_slice | GET: {"show_archived":"1","start":"2026-06-08","end":"2026-06-14","sort_by":"time","sort_dir":"desc"} | customer_filters: [] | sort_by: time | sort_dir: desc
+2026-06-14 20:06:06 | time_slice | GET: {"show_archived":"1","start":"2026-06-01","end":"2026-06-14","sort_by":"time","sort_dir":"desc"} | customer_filters: [] | sort_by: time | sort_dir: desc
+2026-06-14 20:06:19 | time_slice | GET: {"show_archived":"1","start":"2026-06-14","end":"2026-06-14","sort_by":"time","sort_dir":"desc"} | customer_filters: [] | sort_by: time | sort_dir: desc
+2026-06-14 21:08:52 | time_slice | GET: [] | customer_filters: [] | sort_by: activity | sort_dir: desc
+2026-06-14 21:09:01 | time_slice | GET: [] | customer_filters: [] | sort_by: activity | sort_dir: desc
+2026-06-14 22:12:42 | time_slice | GET: [] | customer_filters: [] | sort_by: activity | sort_dir: desc
+2026-06-14 22:12:46 | time_slice | GET: {"show_archived":"1","start":"2026-06-14","end":"2026-06-14","sort_by":"title","sort_dir":"desc"} | customer_filters: [] | sort_by: title | sort_dir: desc
+2026-06-14 22:12:48 | time_slice | GET: {"show_archived":"1","start":"2026-06-14","end":"2026-06-14","sort_by":"title","sort_dir":"desc"} | customer_filters: [] | sort_by: title | sort_dir: desc
+2026-06-14 22:12:53 | time_slice | GET: [] | customer_filters: [] | sort_by: activity | sort_dir: desc
+2026-06-14 22:21:35 | time_slice | GET: [] | customer_filters: [] | sort_by: activity | sort_dir: desc
+2026-06-15 03:59:03 | time_slice | GET: [] | customer_filters: [] | sort_by: activity | sort_dir: desc
+2026-06-15 03:59:08 | project_slice | GET: [] | customer_filters: [] | sort_by: activity | sort_dir: desc
+2026-06-15 03:59:10 | time_slice | GET: [] | customer_filters: [] | sort_by: activity | sort_dir: desc
+2026-06-15 04:01:34 | time_slice | GET: [] | customer_filters: [] | sort_by: activity | sort_dir: desc
+2026-06-15 04:01:56 | time_slice | GET: {"show_archived":"1","start":"2026-06-14","end":"2026-06-14","sort_by":"activity","sort_dir":"asc"} | customer_filters: [] | sort_by: activity | sort_dir: asc
+2026-06-15 04:01:58 | time_slice | GET: {"show_archived":"1","start":"2026-06-14","end":"2026-06-14","sort_by":"activity","sort_dir":"desc"} | customer_filters: [] | sort_by: activity | sort_dir: desc
+2026-06-15 06:36:15 | time_slice | GET: {"show_archived":"1","start":"2026-06-14","end":"2026-06-14","sort_by":"activity","sort_dir":"desc"} | customer_filters: [] | sort_by: activity | sort_dir: desc
+2026-06-15 06:56:01 | time_slice | GET: {"show_archived":"1","start":"2026-06-14","end":"2026-06-14","sort_by":"activity","sort_dir":"desc"} | customer_filters: [] | sort_by: activity | sort_dir: desc
+2026-06-15 06:57:34 | time_slice | GET: [] | customer_filters: [] | sort_by: activity | sort_dir: desc
+2026-06-15 06:58:51 | time_slice | GET: {"show_archived":"1","start":"2026-06-15","end":"2026-06-15","customer_filters":["6"],"sort_by":"activity","sort_dir":"desc"} | customer_filters: ["6"] | sort_by: activity | sort_dir: desc
+2026-06-15 06:59:07 | time_slice | GET: {"show_archived":"1","start":"2026-06-14","end":"2026-06-14","customer_filters":["6"],"sort_by":"activity","sort_dir":"desc"} | customer_filters: ["6"] | sort_by: activity | sort_dir: desc
+2026-06-15 06:59:08 | time_slice | GET: {"show_archived":"1","start":"2026-06-15","end":"2026-06-15","customer_filters":["6"],"sort_by":"activity","sort_dir":"desc"} | customer_filters: ["6"] | sort_by: activity | sort_dir: desc
+2026-06-15 07:00:21 | time_slice | GET: {"show_archived":"1","start":"2026-06-15","end":"2026-06-15","customer_filters":["6"],"sort_by":"activity","sort_dir":"desc"} | customer_filters: ["6"] | sort_by: activity | sort_dir: desc
+2026-06-15 07:00:25 | time_slice | GET: {"show_archived":"1","start":"2026-06-15","end":"2026-06-15","sort_by":"activity","sort_dir":"desc"} | customer_filters: [] | sort_by: activity | sort_dir: desc
+2026-06-15 07:00:59 | time_slice | GET: {"show_archived":"1","start":"2026-06-15","end":"2026-06-15","sort_by":"activity","sort_dir":"desc"} | customer_filters: [] | sort_by: activity | sort_dir: desc
