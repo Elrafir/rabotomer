@@ -398,6 +398,7 @@ if (window.loadedCustomersModule) {
     initInfiniteScrollCustomers();
     initInfiniteScrollTasks();
     initClosedTasksToggle();
+    initSpecAccordions();
 }
 
 /**
@@ -547,6 +548,30 @@ function initClosedTasksToggle() {
             icon.removeClass('rotate-90');
         } else {
             icon.addClass('rotate-90');
+        }
+    });
+}
+
+/**
+ * Инициализирует аккордеоны для технических заданий (ТЗ)
+ */
+function initSpecAccordions() {
+    $(document).off('click', '.toggle-spec').on('click', '.toggle-spec', function(e) {
+        // Защита от кликов по элементам управления (кнопки, ссылки, инпуты, текстовые области)
+        if ($(e.target).closest('button, a, input, textarea').length) {
+            return;
+        }
+
+        var specCard = $(this).closest('.spec-card');
+        var body = specCard.find('.spec-body');
+        var icon = $(this).find('.icon-expand');
+
+        body.slideToggle(150);
+
+        if (icon.hasClass('rotate-180')) {
+            icon.removeClass('rotate-180');
+        } else {
+            icon.addClass('rotate-180');
         }
     });
 }

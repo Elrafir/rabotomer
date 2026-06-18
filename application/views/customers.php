@@ -105,10 +105,15 @@
                         <?php else: ?>
                             <div class="space-y-6">
                                 <?php foreach ($specs as $spec): ?>
-                                    <div class="border border-gray-100 rounded-2xl p-5 hover:shadow-md transition-shadow relative">
-                                        <div class="flex justify-between items-start mb-3 border-b border-gray-50 pb-3">
+                                    <div class="border border-gray-100 rounded-2xl p-5 hover:shadow-md transition-shadow relative spec-card">
+                                        <div class="flex justify-between items-start mb-3 border-b border-gray-50 pb-3 cursor-pointer select-none toggle-spec">
                                             <div>
-                                                <h5 class="text-base font-black text-gray-800"><?= htmlspecialchars($spec['title']) ?></h5>
+                                                <h5 class="text-base font-black text-gray-800 flex items-center gap-2">
+                                                    <span><?= htmlspecialchars($spec['title']) ?></span>
+                                                    <svg class="w-4 h-4 transition-transform duration-200 icon-expand text-gray-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M19 9l-7 7-7-7"></path>
+                                                    </svg>
+                                                </h5>
                                                 <div class="flex flex-wrap gap-x-4 gap-y-1 mt-1 text-xs text-gray-500">
                                                     <span><?= lang('cust_created_at'); ?> <?= date('d.m.Y H:i', strtotime($spec['created_at'])) ?></span>
                                                     <span>💰 <?= lang('cust_price_badge'); ?> <strong><?= number_format($spec['price'], 2, '.', ' ') ?> руб.</strong></span>
@@ -126,125 +131,128 @@
                                             </div>
                                         </div>
 
-                                        <!-- Текст ТЗ (Рендерим HTML) -->
-                                        <div class="text-gray-700 text-sm leading-relaxed mb-4 prose max-w-none">
-                                            <?= $spec['content'] ?>
-                                        </div>
-
-                                        <!-- Привязанные задачи -->
-                                        <div class="mb-4">
-                                            <span class="text-xs font-bold text-gray-400 uppercase"><?= lang('cust_spec_linked_tasks'); ?></span>
-                                            <div class="flex flex-wrap gap-2 mt-1">
-                                                <?php 
-                                                $linked_tasks_found = false;
-                                                foreach ($customer_tasks as $task) {
-                                                    if (in_array($task['id'], $spec['linked_task_ids'] ?? [])) {
-                                                        $linked_tasks_found = true;
-                                                        $color = !empty($task['color']) ? $task['color'] : '#e5e7eb';
-                                                        echo '<span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-800 border" style="border-left-color: ' . $color . '; border-left-width: 4px;">' . htmlspecialchars($task['title']) . '</span>';
-                                                    }
-                                                }
-                                                if (!$linked_tasks_found) {
-                                                    echo '<span class="text-xs text-gray-400 italic">' . lang('cust_spec_no_linked_tasks') . '</span>';
-                                                }
-                                                ?>
-                                            </div>
-                                        </div>
-
-                                        <!-- Вложения файлов -->
-                                        <div class="bg-gray-50 p-4 rounded-xl">
-                                            <h6 class="text-xs uppercase font-bold text-gray-400 mb-2"><?= lang('cust_attached_files_title'); ?></h6>
-                                            <div id="file-list-<?= $spec['id'] ?>" class="flex flex-wrap gap-2 mb-3">
-                                                <?php if (empty($spec['files'])): ?>
-                                                    <span class="text-xs text-gray-400 italic empty-files-label"><?= lang('cust_no_files'); ?></span>
-                                                <?php else: ?>
-                                                    <?php foreach ($spec['files'] as $f): ?>
-                                                        <div id="file-item-<?= $f['id'] ?>" class="flex items-center gap-2 bg-white px-3 py-1.5 rounded-lg border border-gray-200 text-xs shadow-sm">
-                                                            <span><?= get_file_icon_emoji($f['orig_name'], $f['is_link']) ?></span>
-                                                            <?php if ($f['is_link']): ?>
-                                                                <a href="<?= htmlspecialchars($f['filename']) ?>" target="_blank" class="text-blue-600 hover:underline font-medium"><?= htmlspecialchars($f['orig_name']) ?></a>
-                                                                <span class="text-gray-400 font-mono">(<?= lang('cust_file_link'); ?>)</span>
-                                                            <?php else: ?>
-                                                                <span class="text-gray-700 font-medium"><?= htmlspecialchars($f['orig_name']) ?></span>
-                                                                <span class="text-gray-400 font-mono">(<?= round($f['file_size']/1024, 1) ?> KB)</span>
-                                                                <a href="<?= site_url('customers/download_file/'.$f['id']) ?>" class="text-blue-500 hover:text-blue-700" title="<?= htmlspecialchars(lang('cust_download_title'), ENT_QUOTES); ?>">📥</a>
-                                                            <?php endif; ?>
-                                                            <button onclick="deleteSpecFile(<?= $f['id'] ?>)" class="text-red-400 hover:text-red-600" title="<?= htmlspecialchars(lang('btn_delete'), ENT_QUOTES); ?>">✖</button>
-                                                        </div>
-                                                    <?php endforeach; ?>
-                                                <?php endif; ?>
+                                        <!-- Сворачиваемая часть ТЗ (Содержимое) -->
+                                        <div class="spec-body" style="display: none;">
+                                            <!-- Текст ТЗ (Рендерим HTML) -->
+                                            <div class="text-gray-700 text-sm leading-relaxed mb-4 prose max-w-none">
+                                                <?= $spec['content'] ?>
                                             </div>
 
-                                            <!-- Драг-н-дроп зона загрузки -->
-                                            <input type="file" id="file-input-<?= $spec['id'] ?>" class="hidden" multiple onchange="handleFileSelect(event, <?= $spec['id'] ?>)">
-                                            <div class="border-2 border-dashed border-gray-300 hover:border-blue-400 transition-colors rounded-xl p-4 text-center cursor-pointer relative"
-                                                 ondragover="event.preventDefault(); $(this).addClass('border-blue-400')"
-                                                 ondragleave="$(this).removeClass('border-blue-400')"
-                                                 ondrop="handleFileDrop(event, <?= $spec['id'] ?>)"
-                                                 onclick="if(event.target.tagName.toLowerCase() !== 'input') { document.getElementById('file-input-<?= $spec['id'] ?>').click(); }">
-                                                 <span class="text-xs text-gray-500"><?= lang('cust_dropzone_text'); ?> <span class="text-blue-500 font-bold"><?= lang('cust_dropzone_select'); ?></span></span>
-                                                 <div id="upload-progress-container-<?= $spec['id'] ?>" class="hidden absolute inset-0 bg-white bg-opacity-90 flex items-center justify-center rounded-xl p-4">
-                                                     <div class="w-full bg-gray-200 rounded-full h-2">
-                                                         <div id="upload-progress-<?= $spec['id'] ?>" class="bg-blue-600 h-2 rounded-full" style="width: 0%"></div>
-                                                     </div>
-                                                 </div>
-                                            </div>
-
-                                            <!-- Внешние рабочие материалы из папки (плитками) -->
-                                            <?php if (!empty($spec['files_dir'])): ?>
-                                                <div class="mt-4 pt-4 border-t border-gray-100">
-                                                    <h6 class="text-xs uppercase font-bold text-gray-400 mb-3">Рабочие материалы из директории: <span class="text-gray-500 font-mono select-all"><?= htmlspecialchars($spec['files_dir']) ?></span></h6>
+                                            <!-- Привязанные задачи -->
+                                            <div class="mb-4">
+                                                <span class="text-xs font-bold text-gray-400 uppercase"><?= lang('cust_spec_linked_tasks'); ?></span>
+                                                <div class="flex flex-wrap gap-2 mt-1">
                                                     <?php 
-                                                    // Сканируем папку
-                                                    $ext_files = [];
-                                                    $dir = $spec['files_dir'];
-                                                    if (is_dir($dir) && is_readable($dir)) {
-                                                        $dh = opendir($dir);
-                                                        if ($dh) {
-                                                            while (($file = readdir($dh)) !== false) {
-                                                                if ($file !== '.' && $file !== '..' && is_file($dir . '/' . $file)) {
-                                                                    $ext_files[] = [
-                                                                        'name' => $file,
-                                                                        'size' => filesize($dir . '/' . $file),
-                                                                        'date' => filemtime($dir . '/' . $file)
-                                                                    ];
-                                                                 }
-                                                             }
-                                                             closedir($dh);
-                                                         }
-                                                         // Сортировка по дате (новые сверху)
-                                                         usort($ext_files, function($a, $b) {
-                                                             return $b['date'] - $a['date'];
-                                                         });
-                                                     }
-                                                     ?>
-                                                     <?php if (empty($ext_files)): ?>
-                                                         <div class="text-xs text-gray-400 italic bg-white p-4 rounded-xl border border-dashed text-center">Директория пуста или недоступна для чтения.</div>
-                                                     <?php else: ?>
-                                                         <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
-                                                             <?php foreach ($ext_files as $ef): ?>
-                                                                 <div class="bg-white border border-gray-200 rounded-xl p-3 flex flex-col items-center text-center shadow-sm relative group hover:border-blue-400 transition-colors">
-                                                                     <span class="text-3xl mb-1.5"><?= get_file_icon_emoji($ef['name'], 0) ?></span>
-                                                                     <span class="text-xs font-semibold text-gray-700 line-clamp-2 w-full break-all mb-1" title="<?= htmlspecialchars($ef['name']) ?>"><?= htmlspecialchars($ef['name']) ?></span>
-                                                                     <span class="text-[9px] font-mono text-gray-400"><?= round($ef['size']/1024, 1) ?> KB</span>
-                                                                     <a href="<?= site_url('customers/download_external_file?spec_id=' . $spec['id'] . '&file=' . urlencode($ef['name'])) ?>" class="absolute inset-0 rounded-xl cursor-pointer" title="Скачать файл"></a>
-                                                                 </div>
-                                                             <?php endforeach; ?>
-                                                         </div>
-                                                     <?php endif; ?>
-                                                 </div>
-                                             <?php endif; ?>
+                                                    $linked_tasks_found = false;
+                                                    foreach ($customer_tasks as $task) {
+                                                        if (in_array($task['id'], $spec['linked_task_ids'] ?? [])) {
+                                                            $linked_tasks_found = true;
+                                                            $color = !empty($task['color']) ? $task['color'] : '#e5e7eb';
+                                                            echo '<span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-800 border" style="border-left-color: ' . $color . '; border-left-width: 4px;">' . htmlspecialchars($task['title']) . '</span>';
+                                                        }
+                                                    }
+                                                    if (!$linked_tasks_found) {
+                                                        echo '<span class="text-xs text-gray-400 italic">' . lang('cust_spec_no_linked_tasks') . '</span>';
+                                                    }
+                                                    ?>
+                                                </div>
+                                            </div>
 
-                                            <!-- Добавление внешних ссылок и загрузка по URL -->
-                                            <div class="mt-4 pt-4 border-t border-gray-100 flex flex-col sm:flex-row gap-2">
-                                                <input type="text" id="url-input-<?= $spec['id'] ?>" class="flex-grow px-3 py-2 bg-white border border-gray-200 rounded-xl text-xs focus:ring-2 focus:ring-blue-500 focus:outline-none" placeholder="https://example.com/file.pdf...">
-                                                <input type="text" id="url-title-<?= $spec['id'] ?>" class="w-full sm:w-1/4 px-3 py-2 bg-white border border-gray-200 rounded-xl text-xs focus:ring-2 focus:ring-blue-500 focus:outline-none" placeholder="<?= htmlspecialchars(lang('cust_file_link'), ENT_QUOTES); ?>">
-                                                <button onclick="attachLink(<?= $spec['id'] ?>)" class="bg-blue-50 hover:bg-blue-100 text-blue-600 font-bold py-2 px-3 rounded-xl text-xs transition-colors flex items-center justify-center gap-1">
-                                                    🔗 <?= lang('cust_link_btn'); ?>
-                                                </button>
-                                                <button onclick="downloadFromUrl(<?= $spec['id'] ?>)" class="bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold py-2 px-3 rounded-xl text-xs transition-colors flex items-center justify-center gap-1">
-                                                    📥 <?= lang('cust_download_btn'); ?>
-                                                </button>
+                                            <!-- Вложения файлов -->
+                                            <div class="bg-gray-50 p-4 rounded-xl">
+                                                <h6 class="text-xs uppercase font-bold text-gray-400 mb-2"><?= lang('cust_attached_files_title'); ?></h6>
+                                                <div id="file-list-<?= $spec['id'] ?>" class="flex flex-wrap gap-2 mb-3">
+                                                    <?php if (empty($spec['files'])): ?>
+                                                        <span class="text-xs text-gray-400 italic empty-files-label"><?= lang('cust_no_files'); ?></span>
+                                                    <?php else: ?>
+                                                        <?php foreach ($spec['files'] as $f): ?>
+                                                            <div id="file-item-<?= $f['id'] ?>" class="flex items-center gap-2 bg-white px-3 py-1.5 rounded-lg border border-gray-200 text-xs shadow-sm">
+                                                                <span><?= get_file_icon_emoji($f['orig_name'], $f['is_link']) ?></span>
+                                                                <?php if ($f['is_link']): ?>
+                                                                    <a href="<?= htmlspecialchars($f['filename']) ?>" target="_blank" class="text-blue-600 hover:underline font-medium"><?= htmlspecialchars($f['orig_name']) ?></a>
+                                                                    <span class="text-gray-400 font-mono">(<?= lang('cust_file_link'); ?>)</span>
+                                                                <?php else: ?>
+                                                                    <span class="text-gray-700 font-medium"><?= htmlspecialchars($f['orig_name']) ?></span>
+                                                                    <span class="text-gray-400 font-mono">(<?= round($f['file_size']/1024, 1) ?> KB)</span>
+                                                                    <a href="<?= site_url('customers/download_file/'.$f['id']) ?>" class="text-blue-500 hover:text-blue-700" title="<?= htmlspecialchars(lang('cust_download_title'), ENT_QUOTES); ?>">📥</a>
+                                                                <?php endif; ?>
+                                                                <button onclick="deleteSpecFile(<?= $f['id'] ?>)" class="text-red-400 hover:text-red-600" title="<?= htmlspecialchars(lang('btn_delete'), ENT_QUOTES); ?>">✖</button>
+                                                            </div>
+                                                        <?php endforeach; ?>
+                                                    <?php endif; ?>
+                                                </div>
+
+                                                <!-- Драг-н-дроп зона загрузки -->
+                                                <input type="file" id="file-input-<?= $spec['id'] ?>" class="hidden" multiple onchange="handleFileSelect(event, <?= $spec['id'] ?>)">
+                                                <div class="border-2 border-dashed border-gray-300 hover:border-blue-400 transition-colors rounded-xl p-4 text-center cursor-pointer relative"
+                                                     ondragover="event.preventDefault(); $(this).addClass('border-blue-400')"
+                                                     ondragleave="$(this).removeClass('border-blue-400')"
+                                                     ondrop="handleFileDrop(event, <?= $spec['id'] ?>)"
+                                                     onclick="if(event.target.tagName.toLowerCase() !== 'input') { document.getElementById('file-input-<?= $spec['id'] ?>').click(); }">
+                                                     <span class="text-xs text-gray-500"><?= lang('cust_dropzone_text'); ?> <span class="text-blue-500 font-bold"><?= lang('cust_dropzone_select'); ?></span></span>
+                                                     <div id="upload-progress-container-<?= $spec['id'] ?>" class="hidden absolute inset-0 bg-white bg-opacity-90 flex items-center justify-center rounded-xl p-4">
+                                                         <div class="w-full bg-gray-200 rounded-full h-2">
+                                                             <div id="upload-progress-<?= $spec['id'] ?>" class="bg-blue-600 h-2 rounded-full" style="width: 0%"></div>
+                                                         </div>
+                                                     </div>
+                                                </div>
+
+                                                <!-- Внешние рабочие материалы из папки (плитками) -->
+                                                <?php if (!empty($spec['files_dir'])): ?>
+                                                    <div class="mt-4 pt-4 border-t border-gray-100">
+                                                        <h6 class="text-xs uppercase font-bold text-gray-400 mb-3">Рабочие материалы из директории: <span class="text-gray-500 font-mono select-all"><?= htmlspecialchars($spec['files_dir']) ?></span></h6>
+                                                        <?php 
+                                                        // Сканируем папку
+                                                        $ext_files = [];
+                                                        $dir = $spec['files_dir'];
+                                                        if (is_dir($dir) && is_readable($dir)) {
+                                                            $dh = opendir($dir);
+                                                            if ($dh) {
+                                                                while (($file = readdir($dh)) !== false) {
+                                                                    if ($file !== '.' && $file !== '..' && is_file($dir . '/' . $file)) {
+                                                                        $ext_files[] = [
+                                                                            'name' => $file,
+                                                                            'size' => filesize($dir . '/' . $file),
+                                                                            'date' => filemtime($dir . '/' . $file)
+                                                                        ];
+                                                                     }
+                                                                 }
+                                                                 closedir($dh);
+                                                             }
+                                                             // Сортировка по дате (новые сверху)
+                                                             usort($ext_files, function($a, $b) {
+                                                                 return $b['date'] - $a['date'];
+                                                             });
+                                                         }
+                                                         ?>
+                                                         <?php if (empty($ext_files)): ?>
+                                                             <div class="text-xs text-gray-400 italic bg-white p-4 rounded-xl border border-dashed text-center">Директория пуста или недоступна для чтения.</div>
+                                                         <?php else: ?>
+                                                             <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+                                                                 <?php foreach ($ext_files as $ef): ?>
+                                                                     <div class="bg-white border border-gray-200 rounded-xl p-3 flex flex-col items-center text-center shadow-sm relative group hover:border-blue-400 transition-colors">
+                                                                         <span class="text-3xl mb-1.5"><?= get_file_icon_emoji($ef['name'], 0) ?></span>
+                                                                         <span class="text-xs font-semibold text-gray-700 line-clamp-2 w-full break-all mb-1" title="<?= htmlspecialchars($ef['name']) ?>"><?= htmlspecialchars($ef['name']) ?></span>
+                                                                         <span class="text-[9px] font-mono text-gray-400"><?= round($ef['size']/1024, 1) ?> KB</span>
+                                                                         <a href="<?= site_url('customers/download_external_file?spec_id=' . $spec['id'] . '&file=' . urlencode($ef['name'])) ?>" class="absolute inset-0 rounded-xl cursor-pointer" title="Скачать файл"></a>
+                                                                     </div>
+                                                                 <?php endforeach; ?>
+                                                             </div>
+                                                         <?php endif; ?>
+                                                     </div>
+                                                 <?php endif; ?>
+
+                                                <!-- Добавление внешних ссылок и загрузка по URL -->
+                                                <div class="mt-4 pt-4 border-t border-gray-100 flex flex-col sm:flex-row gap-2">
+                                                    <input type="text" id="url-input-<?= $spec['id'] ?>" class="flex-grow px-3 py-2 bg-white border border-gray-200 rounded-xl text-xs focus:ring-2 focus:ring-blue-500 focus:outline-none" placeholder="https://example.com/file.pdf...">
+                                                    <input type="text" id="url-title-<?= $spec['id'] ?>" class="w-full sm:w-1/4 px-3 py-2 bg-white border border-gray-200 rounded-xl text-xs focus:ring-2 focus:ring-blue-500 focus:outline-none" placeholder="<?= htmlspecialchars(lang('cust_file_link'), ENT_QUOTES); ?>">
+                                                    <button onclick="attachLink(<?= $spec['id'] ?>)" class="bg-blue-50 hover:bg-blue-100 text-blue-600 font-bold py-2 px-3 rounded-xl text-xs transition-colors flex items-center justify-center gap-1">
+                                                        🔗 <?= lang('cust_link_btn'); ?>
+                                                    </button>
+                                                    <button onclick="downloadFromUrl(<?= $spec['id'] ?>)" class="bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold py-2 px-3 rounded-xl text-xs transition-colors flex items-center justify-center gap-1">
+                                                        📥 <?= lang('cust_download_btn'); ?>
+                                                    </button>
+                                                </div>
                                             </div>
                                         </div>
                                     </div>
