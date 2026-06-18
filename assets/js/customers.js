@@ -573,7 +573,7 @@ if (window.loadedCustomersModule) {
                 contentContainer.empty();
 
                 if (isImage) {
-                    contentContainer.html(`<img src="${trigger.data('url')}" class="max-w-full max-h-full object-contain rounded-2xl shadow-md" />`);
+                    contentContainer.html(`<div class="flex-grow flex items-center justify-center min-h-0"><img src="${trigger.data('url')}" class="max-w-full max-h-full object-contain rounded-2xl shadow-md" /></div>`);
                 } else if (isText) {
                     var spinner = $('#docViewerSpinner');
                     spinner.removeClass('hidden');
@@ -598,19 +598,19 @@ if (window.loadedCustomersModule) {
                             spinner.addClass('hidden');
                             if (res.status === 'success') {
                                 var safeContent = $('<div/>').text(res.content).html();
-                                contentContainer.html(`<pre class="w-full h-full p-6 bg-gray-50 border border-gray-100 rounded-2xl overflow-auto text-xs md:text-sm font-mono text-gray-800 whitespace-pre-wrap word-break-all">${safeContent}${res.truncated ? '\n[Содержимое обрезано...] Полная версия будет доступна после интеграции парсеров.' : ''}</pre>`);
+                                contentContainer.html(`<pre class="w-full flex-grow min-h-0 p-6 bg-gray-50 border border-gray-100 rounded-2xl overflow-auto text-xs md:text-sm font-mono text-gray-800 whitespace-pre-wrap word-break-all">${safeContent}${res.truncated ? '\n[Содержимое обрезано...] Полная версия будет доступна после интеграции парсеров.' : ''}</pre>`);
                             } else {
-                                contentContainer.html(`<div class="text-red-500 font-semibold">${res.message}</div>`);
+                                contentContainer.html(`<div class="flex-grow flex items-center justify-center text-red-500 font-semibold min-h-0">${res.message}</div>`);
                             }
                         },
                         error: function() {
                             spinner.addClass('hidden');
-                            contentContainer.html(`<div class="text-red-500 font-semibold">Ошибка загрузки файла</div>`);
+                            contentContainer.html(`<div class="flex-grow flex items-center justify-center text-red-500 font-semibold min-h-0">Ошибка загрузки файла</div>`);
                         }
                     });
                 } else {
                     contentContainer.html(`
-                        <div class="text-center p-8">
+                        <div class="flex-grow flex flex-col items-center justify-center p-8 text-center min-h-0">
                             <span class="text-5xl mb-4 block">📁</span>
                             <p class="text-gray-700 text-lg font-bold mb-2">Просмотрщик этого формата находится в разработке</p>
                             <p class="text-gray-400 text-sm mb-4">Вы можете скачать этот файл на свое устройство</p>

@@ -601,7 +601,7 @@
 
 <!-- Модальное окно просмотра документа (Шаг 4 заготовка) -->
 <div id="docViewerModal" onclick="closeDocViewerModal()" class="hidden fixed inset-0 z-[100000] bg-black bg-opacity-50 flex items-center justify-center p-4">
-    <div onclick="event.stopPropagation()" class="bg-white rounded-3xl shadow-2xl w-full max-w-7xl h-[90vh] flex flex-col overflow-hidden relative">
+    <div onclick="event.stopPropagation()" class="bg-white rounded-3xl shadow-2xl w-full max-w-5xl max-h-[85vh] flex flex-col overflow-hidden relative">
         <!-- Шапка -->
         <div class="p-6 border-b border-gray-100 flex justify-between items-center flex-shrink-0 bg-white">
             <h4 class="text-xl font-black text-gray-800 flex items-center gap-2">
@@ -613,9 +613,11 @@
         </div>
         
         <!-- Тело -->
-        <div class="flex-grow p-6 overflow-y-auto bg-gray-50 flex items-center justify-center relative">
-            <div id="docViewerContent" class="w-full h-full flex items-center justify-center text-gray-500 text-lg font-semibold italic">
-                Просмотрщик документа готовится к запуску...
+        <div class="flex-grow p-6 overflow-y-auto bg-gray-50 relative min-h-0">
+            <div id="docViewerContent" class="w-full h-full flex flex-col min-h-0">
+                <div class="flex-grow flex items-center justify-center text-gray-500 text-lg font-semibold italic">
+                    Просмотрщик документа готовится к запуску...
+                </div>
             </div>
             <!-- Спиннер загрузки -->
             <div id="docViewerSpinner" class="hidden absolute inset-0 bg-white/80 backdrop-blur-sm flex items-center justify-center">
