@@ -53,6 +53,46 @@
     z-index: 9999 !important;
 }
 
+/* Интерактивный тултип для описания задач */
+#task-description-tooltip {
+    background-color: #ffffff !important;
+    border: 1px solid #e5e7eb !important;
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25) !important;
+}
+
+#task-description-tooltip .tooltip-arrow {
+    background-color: #ffffff !important;
+    border-color: #e5e7eb !important;
+}
+
+#task-description-tooltip .tooltip-close {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    color: #9ca3af;
+    font-size: 20px;
+    line-height: 1;
+    font-weight: bold;
+    transition: color 0.15s ease-in-out;
+    padding: 4px;
+    display: none;
+}
+
+#task-description-tooltip .tooltip-close:hover {
+    color: #4b5563;
+}
+
+#task-description-tooltip.pinned .tooltip-close {
+    display: block !important;
+}
+
+#task-description-tooltip.pinned {
+    pointer-events: auto !important;
+}
+
 /* View Transitions для таймера */
 ::view-transition-old(timer-morph),
 ::view-transition-new(timer-morph) {
