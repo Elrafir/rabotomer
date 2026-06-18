@@ -162,48 +162,113 @@ $this->load->view('templates/task_list_loop');
     </div>
 </div>
 
-<!-- Модальное окно для редактирования задачи с z-index фиксом и скроллом для вертикальных/малых экранов -->
-<div id="editTaskModal" class="hidden fixed inset-0 z-[99999] bg-black bg-opacity-50 flex items-center justify-center p-4">
-    <div class="bg-white rounded-3xl shadow-2xl w-full max-w-2xl p-8 transform transition-all max-h-[90vh] overflow-y-auto">
-        <h3 class="text-2xl font-bold mb-6 text-gray-800"><?= lang('btn_edit'); ?></h3>
+<!-- Модальное окно для редактирования задачи (двухколоночный макет с липкими шапкой/подвалом и Quill-редактором) -->
+<div id="editTaskModal" onclick="closeEditTaskModal()" class="hidden fixed inset-0 z-[99999] bg-black bg-opacity-50 flex items-center justify-center p-4">
+    <div onclick="event.stopPropagation()" class="bg-white rounded-3xl shadow-2xl w-full max-w-5xl transform transition-all relative max-h-[85vh] flex flex-col overflow-hidden">
+        
+        <!-- Шапка модального окна (Фиксированная сверху) -->
+        <div class="p-6 border-b border-gray-100 flex justify-between items-center flex-shrink-0">
+            <h3 class="text-2xl font-bold text-gray-800"><?= lang('btn_edit'); ?></h3>
+            <button onclick="closeEditTaskModal()" class="text-gray-400 hover:text-gray-600 transition-colors">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+            </button>
+        </div>
+
         <input type="hidden" id="editTaskId">
-        <div class="mb-4">
-            <label class="block text-gray-700 text-sm font-bold mb-2"><?= lang('modal_title_label'); ?></label>
-            <input type="text" id="editTaskTitleInput" class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:outline-none">
+        
+        <!-- Основная рабочая область формы с вертикальным скроллом -->
+        <div class="p-6 overflow-y-auto flex-grow">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                
+                <!-- Левая колонка: свойства задачи -->
+                <div class="space-y-4">
+                    <!-- Название задачи -->
+                    <div>
+                        <label class="block text-gray-700 text-sm font-bold mb-2"><?= lang('modal_title_label'); ?></label>
+                        <input type="text" id="editTaskTitleInput" class="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none">
+                    </div>
+                    
+                    <!-- Заказчик и ТЗ -->
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-gray-700 text-sm font-bold mb-2"><?= lang('nav_customers'); ?></label>
+                            <select id="editTaskCustomer" class="customer-select w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none" onchange="updateRate(this)">
+                                <option value=""><?= lang('finance_no_customer'); ?></option>
+                                <?php if(!empty($customers)): foreach($customers as $c): ?>
+                                    <option value="<?= $c['id']; ?>" data-rate="<?= htmlspecialchars($c['default_price'] ?? '0.00'); ?>"><?= htmlspecialchars($c['name'] ?? ''); ?></option>
+                                <?php endforeach; endif; ?>
+                            </select>
+                        </div>
+                        <!-- Связанное ТЗ (заполняется динамически через js) -->
+                        <div id="editTaskSpecContainer" class="hidden">
+                            <label class="block text-gray-700 text-sm font-bold mb-2">Техническое задание (ТЗ)</label>
+                            <select id="editTaskSpec" class="spec-select w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none">
+                                <option value="">Связать с ТЗ...</option>
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <!-- Тип оплаты и цена -->
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-gray-700 text-sm font-bold mb-2"><?= lang('finance_type'); ?></label>
+                            <select id="editTaskIsFixed" class="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none">
+                                <option value="0"><?= lang('finance_hourly'); ?></option>
+                                <option value="1"><?= lang('finance_fixed'); ?></option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-gray-700 text-sm font-bold mb-2"><?= lang('finance_price'); ?></label>
+                            <input type="number" step="0.01" id="editTaskPrice" class="rate-input w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none">
+                        </div>
+                    </div>
+
+                    <!-- Палитра цветов для задачи -->
+                    <div>
+                        <label class="block text-gray-700 text-sm font-bold mb-2">Цвет оформления задачи</label>
+                        <div class="flex flex-wrap gap-2.5 items-center bg-gray-50 border border-gray-200 rounded-xl p-3">
+                            <button type="button" onclick="selectPresetColorInModal('#ef4444')" style="background-color: #ef4444;" class="modal-color-preset-btn w-6 h-6 rounded-full hover:scale-125 transition-transform shadow-sm focus:outline-none ring-blue-500 ring-offset-2" data-color="#ef4444"></button>
+                            <button type="button" onclick="selectPresetColorInModal('#f97316')" style="background-color: #f97316;" class="modal-color-preset-btn w-6 h-6 rounded-full hover:scale-125 transition-transform shadow-sm focus:outline-none ring-blue-500 ring-offset-2" data-color="#f97316"></button>
+                            <button type="button" onclick="selectPresetColorInModal('#f59e0b')" style="background-color: #f59e0b;" class="modal-color-preset-btn w-6 h-6 rounded-full hover:scale-125 transition-transform shadow-sm focus:outline-none ring-blue-500 ring-offset-2" data-color="#f59e0b"></button>
+                            <button type="button" onclick="selectPresetColorInModal('#10b981')" style="background-color: #10b981;" class="modal-color-preset-btn w-6 h-6 rounded-full hover:scale-125 transition-transform shadow-sm focus:outline-none ring-blue-500 ring-offset-2" data-color="#10b981"></button>
+                            <button type="button" onclick="selectPresetColorInModal('#06b6d4')" style="background-color: #06b6d4;" class="modal-color-preset-btn w-6 h-6 rounded-full hover:scale-125 transition-transform shadow-sm focus:outline-none ring-blue-500 ring-offset-2" data-color="#06b6d4"></button>
+                            <button type="button" onclick="selectPresetColorInModal('#3b82f6')" style="background-color: #3b82f6;" class="modal-color-preset-btn w-6 h-6 rounded-full hover:scale-125 transition-transform shadow-sm focus:outline-none ring-blue-500 ring-offset-2" data-color="#3b82f6"></button>
+                            <button type="button" onclick="selectPresetColorInModal('#6366f1')" style="background-color: #6366f1;" class="modal-color-preset-btn w-6 h-6 rounded-full hover:scale-125 transition-transform shadow-sm focus:outline-none ring-blue-500 ring-offset-2" data-color="#6366f1"></button>
+                            <button type="button" onclick="selectPresetColorInModal('#a855f7')" style="background-color: #a855f7;" class="modal-color-preset-btn w-6 h-6 rounded-full hover:scale-125 transition-transform shadow-sm focus:outline-none ring-blue-500 ring-offset-2" data-color="#a855f7"></button>
+                            <button type="button" onclick="selectPresetColorInModal('#ec4899')" style="background-color: #ec4899;" class="modal-color-preset-btn w-6 h-6 rounded-full hover:scale-125 transition-transform shadow-sm focus:outline-none ring-blue-500 ring-offset-2" data-color="#ec4899"></button>
+                            <button type="button" onclick="selectPresetColorInModal('')" style="background-color: #e5e7eb;" class="modal-color-preset-btn w-6 h-6 rounded-full border border-gray-400 hover:scale-125 transition-transform shadow-sm flex items-center justify-center focus:outline-none ring-blue-500 ring-offset-2" data-color="" title="<?= lang('reports_no_color'); ?>">
+                                <svg class="w-3 h-3 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                            </button>
+                            <input type="hidden" id="editTaskColor" value="">
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Правая колонка: WYSIWYG редактор Quill для описания -->
+                <div class="flex flex-col h-full min-h-[320px] md:min-h-0">
+                    <label class="block text-gray-700 text-sm font-bold mb-2">Детальное описание задачи / требований</label>
+                    <div id="editTaskDescriptionContainer" class="flex-grow min-h-[260px] md:h-auto bg-gray-50 border border-gray-200 rounded-xl overflow-hidden flex flex-col">
+                        <div id="editTaskDescriptionEditor" class="flex-grow bg-white"></div>
+                    </div>
+                </div>
+                
+            </div>
         </div>
-        <div class="mb-4 flex gap-4">
-            <div class="w-1/2">
-                <label class="block text-gray-700 text-sm font-bold mb-2"><?= lang('nav_customers'); ?></label>
-                <select id="editTaskCustomer" class="customer-select w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:outline-none" onchange="updateRate(this)">
-                    <option value=""><?= lang('finance_no_customer'); ?></option>
-                    <?php // Проверяем, что список клиентов не пуст, и обходим его в цикле ?>
-                    <?php if(!empty($customers)): foreach($customers as $c): ?>
-                        <?php // Выводим опцию выбора клиента с подстановкой ID, дефолтной цены (вместо hourly_rate) и имени ?>
-                        <option value="<?= $c['id']; ?>" data-rate="<?= htmlspecialchars($c['default_price'] ?? '0.00'); ?>"><?= htmlspecialchars($c['name'] ?? ''); ?></option>
-                    <?php endforeach; endif; ?>
-                </select>
-            </div>
-            <div class="w-1/4">
-                <label class="block text-gray-700 text-sm font-bold mb-2"><?= lang('finance_type'); ?></label>
-                <select id="editTaskIsFixed" class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:outline-none">
-                    <option value="0"><?= lang('finance_hourly'); ?></option>
-                    <option value="1"><?= lang('finance_fixed'); ?></option>
-                </select>
-            </div>
-            <div class="w-1/4">
-                <label class="block text-gray-700 text-sm font-bold mb-2"><?= lang('finance_price'); ?></label>
-                <input type="number" step="0.01" id="editTaskPrice" class="rate-input w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:outline-none">
-            </div>
-        </div>
-        <div class="flex justify-end gap-3 mt-6">
-            <button onclick="closeEditTaskModal()" class="bg-gray-200 hover:bg-gray-300 text-gray-700 font-bold py-3 px-6 rounded-xl transition-colors">
+        
+        <!-- Подвал модального окна (Фиксированный снизу) -->
+        <div class="p-6 border-t border-gray-100 flex justify-end gap-3 flex-shrink-0 bg-gray-50 rounded-b-3xl">
+            <button onclick="closeEditTaskModal()" class="px-6 py-3 bg-white border border-gray-200 hover:bg-gray-50 text-gray-700 font-bold rounded-xl transition-colors text-sm">
                 <?= lang('btn_cancel'); ?>
             </button>
-            <button onclick="saveTaskTitle()" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-8 rounded-xl shadow-lg transition-colors">
+            <button onclick="saveTaskTitle()" class="px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl shadow-lg transition-colors text-sm">
                 <?= lang('btn_save'); ?>
             </button>
         </div>
     </div>
 </div>
+
+<!-- Подключаем Quill WYSIWYG редактор для красивого оформления задач -->
+<link href="https://cdn.quilljs.com/1.3.6/quill.snow.css" rel="stylesheet">
+<script src="https://cdn.quilljs.com/1.3.6/quill.js"></script>
 
 <script src="<?= base_url('assets/js/tasks.js?v=' . time()) ?>"></script>

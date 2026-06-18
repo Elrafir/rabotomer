@@ -10,6 +10,11 @@ class Task_model extends CI_Model {
     public function __construct() {
         parent::__construct();
         // Загрузка базы данных происходит автоматически (autoload)
+
+        // Автоматическая миграция: поле подробного описания задачи
+        if (!$this->db->field_exists('description', 'tasks')) {
+            $this->db->query("ALTER TABLE tasks ADD COLUMN description TEXT NULL DEFAULT NULL AFTER spec_id");
+        }
     }
 
     /**
@@ -33,7 +38,16 @@ class Task_model extends CI_Model {
         return $query->result_array();
     }
 
-    public function add_task($user_id, $parent_id, $title, $customer_id = NULL, $is_fixed_price = 0, $price = 0, $spec_id = NULL) {
+    /**
+     * Получить одну задачу по её ID и ID пользователя.
+     */
+    public function get_task($task_id, $user_id) {
+        $this->db->where('id', $task_id);
+        $this->db->where('user_id', $user_id);
+        return $this->db->get('tasks')->row_array();
+    }
+
+    public function add_task($user_id, $parent_id, $title, $customer_id = NULL, $is_fixed_price = 0, $price = 0, $spec_id = NULL, $description = NULL) {
         // Если при создании подзадачи заказчик не передан, наследуем его от родительской задачи
         if (empty($customer_id) && !empty($parent_id)) {
             $parent = $this->db->select('customer_id')->where('id', $parent_id)->get('tasks')->row_array();
@@ -52,7 +66,8 @@ class Task_model extends CI_Model {
             'customer_id' => empty($customer_id) ? NULL : $customer_id,
             'is_fixed_price' => $is_fixed_price ? 1 : 0,
             'price' => (float)$price,
-            'spec_id' => empty($spec_id) ? NULL : $spec_id
+            'spec_id' => empty($spec_id) ? NULL : $spec_id,
+            'description' => empty($description) ? NULL : $description
         ];
 
         // Выполняем вставку через Query Builder
@@ -467,7 +482,7 @@ class Task_model extends CI_Model {
     /**
      * Обновление деталей задачи (Название, Клиент, Финансы)
      */
-    public function update_task_details($task_id, $user_id, $new_title, $customer_id, $is_fixed_price, $price, $spec_id = NULL) {
+    public function update_task_details($task_id, $user_id, $new_title, $customer_id, $is_fixed_price, $price, $spec_id = NULL, $description = NULL, $color = NULL) {
         // Получаем текущего заказчика у задачи для проверки изменений
         $current_task = $this->db->select('customer_id')->where('id', $task_id)->where('user_id', $user_id)->get('tasks')->row_array();
         $old_customer_id = $current_task ? $current_task['customer_id'] : null;
@@ -482,6 +497,10 @@ class Task_model extends CI_Model {
         $this->db->set('is_fixed_price', $is_fixed_price ? 1 : 0);
         $this->db->set('price', (float)$price);
         $this->db->set('spec_id', empty($spec_id) ? NULL : $spec_id);
+        $this->db->set('description', empty($description) ? NULL : $description);
+        if ($color !== NULL) {
+            $this->db->set('color', empty($color) ? NULL : $color);
+        }
         
         $this->db->where('id', $task_id);
         $this->db->where('user_id', $user_id);

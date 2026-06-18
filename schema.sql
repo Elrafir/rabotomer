@@ -25,6 +25,7 @@ CREATE TABLE IF NOT EXISTS `tasks` (
     `user_id` INT UNSIGNED NOT NULL COMMENT 'Привязка к пользователю (Изоляция данных)',
     `parent_id` INT UNSIGNED NULL DEFAULT NULL COMMENT 'ID родительской задачи (NULL если это корень)',
     `title` VARCHAR(255) NOT NULL COMMENT 'Название задачи',
+    `description` TEXT DEFAULT NULL COMMENT 'Подробное описание задачи',
     `status` ENUM('active', 'completed') NOT NULL DEFAULT 'active' COMMENT 'Статус задачи',
     `created_at` DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT 'Дата и время создания задачи',
     

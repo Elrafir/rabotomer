@@ -242,6 +242,10 @@ if ($current_theme === 'theme-custom') {
                         <input type="text" name="title" placeholder="<?= lang('dash_new_project_placeholder'); ?>" class="w-full px-5 py-4 bg-gray-50 border border-gray-200 rounded-xl text-xl focus:ring-2 focus:ring-blue-500 focus:outline-none" required>
                     </div>
                     
+                    <div>
+                        <textarea name="description" placeholder="Детальное описание задачи / проекта..." class="w-full h-32 px-5 py-4 bg-gray-50 border border-gray-200 rounded-xl text-lg focus:ring-2 focus:ring-blue-500 focus:outline-none resize-none"></textarea>
+                    </div>
+                    
                     <div class="flex flex-col sm:flex-row gap-4">
                         <select name="customer_id" class="customer-select flex-1 px-4 py-4 bg-gray-50 border border-gray-200 rounded-xl text-lg focus:ring-2 focus:ring-blue-500 focus:outline-none" onchange="updateRateGlobal(this)">
                             <option value=""><?= lang('finance_no_customer'); ?></option>

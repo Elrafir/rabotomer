@@ -5,12 +5,58 @@ if (window.loadedTasksModule) {
     // Если модуль уже загружен, просто выходим
     // Но при этом инициализируем состояние раскрытых веток для свежезагруженного HTML
     initExpandedTasksTree();
+    initTaskQuillEditor();
 } else {
     // Устанавливаем флаг загрузки модуля
     window.loadedTasksModule = true;
 
     // Ссылка на глобальный API
     window.api = window.globalApi;
+
+    window.editTaskEditor = null;
+
+    /**
+     * Инициализирует Quill редактор для подробного описания задачи
+     */
+    window.initTaskQuillEditor = function() {
+        if (typeof Quill !== 'undefined') {
+            var options = {
+                theme: 'snow',
+                modules: {
+                    toolbar: [
+                        ['bold', 'italic', 'underline', 'strike'],
+                        [{ 'list': 'ordered'}, { 'list': 'bullet' }],
+                        ['clean']
+                    ]
+                }
+            };
+            if ($('#editTaskDescriptionEditor').length > 0) {
+                // Если редактор уже был инициализирован ранее, очистим контейнер во избежание дублирования тулбаров
+                if (window.editTaskEditor) {
+                    $('#editTaskDescriptionContainer').html('<div id="editTaskDescriptionEditor" class="flex-grow bg-white"></div>');
+                }
+                window.editTaskEditor = new Quill('#editTaskDescriptionEditor', options);
+            }
+        } else {
+            // Фолбэк на обычную текстовую область
+            if ($('#editTaskDescriptionContainer').length > 0) {
+                $('#editTaskDescriptionContainer').html('<textarea id="editTaskDescriptionFallback" class="w-full h-full p-4 border border-gray-200 bg-gray-50 rounded-xl text-sm focus:outline-none resize-none" placeholder="Детальное описание задачи / требований..."></textarea>');
+            }
+        }
+    };
+
+    /**
+     * Выбирает пресет цвета в модальном окне редактирования задачи
+     */
+    window.selectPresetColorInModal = function(color) {
+        $('#editTaskColor').val(color);
+        $('.modal-color-preset-btn').removeClass('ring-4 ring-blue-500 ring-offset-2');
+        if (color) {
+            $('.modal-color-preset-btn[data-color="' + color + '"]').addClass('ring-4 ring-blue-500 ring-offset-2');
+        } else {
+            $('.modal-color-preset-btn[data-color=""]').addClass('ring-4 ring-blue-500 ring-offset-2');
+        }
+    };
 
     /**
      * Обновляет тариф/ставку при выборе клиента в модальном окне редактирования задачи
@@ -240,15 +286,56 @@ if (window.loadedTasksModule) {
     };
 
     /**
-     * Открывает модальное окно редактирования настроек и стоимости задачи
+     * Открывает модальное окно редактирования настроек задачи с подгрузкой данных по AJAX
      */
-    window.openEditTaskModal = function(taskId, title, customerId, isFixedPrice, price) {
+    window.openEditTaskModal = function(taskId) {
+        // Сбрасываем поля формы перед загрузкой новых данных
         $('#editTaskId').val(taskId);
-        $('#editTaskTitleInput').val(title);
-        $('#editTaskCustomer').val(customerId);
-        $('#editTaskIsFixed').val(isFixedPrice);
-        $('#editTaskPrice').val(price);
+        $('#editTaskTitleInput').val('Загрузка...');
+        $('#editTaskCustomer').val('');
+        $('#editTaskIsFixed').val('0');
+        $('#editTaskPrice').val('');
+        $('#editTaskSpec').val('');
+        $('#editTaskSpecContainer').addClass('hidden');
+        window.selectPresetColorInModal('');
+
+        if (window.editTaskEditor) {
+            window.editTaskEditor.root.innerHTML = '';
+        } else if ($('#editTaskDescriptionFallback').length > 0) {
+            $('#editTaskDescriptionFallback').val('');
+        }
+
         $('#editTaskModal').removeClass('hidden');
+
+        // Отправляем AJAX запрос за деталями задачи
+        $.post(window.location.origin + '/index.php/tasks/get_task_ajax', { task_id: taskId }, function(response) {
+            var res = JSON.parse(response);
+            if (res.status === 'success') {
+                var task = res.data;
+                $('#editTaskTitleInput').val(task.title);
+                $('#editTaskCustomer').val(task.customer_id || '');
+                $('#editTaskIsFixed').val(task.is_fixed_price || '0');
+                $('#editTaskPrice').val(task.price || '');
+                
+                // Подгружаем список ТЗ клиента и делаем автовыбор
+                if (task.customer_id) {
+                    $('#editTaskSpec').data('pending-select', task.spec_id);
+                    $('#editTaskCustomer').trigger('change');
+                }
+
+                // Задаем цвет в палитре
+                window.selectPresetColorInModal(task.color || '');
+
+                // Задаем описание
+                if (window.editTaskEditor) {
+                    window.editTaskEditor.root.innerHTML = task.description || '';
+                } else if ($('#editTaskDescriptionFallback').length > 0) {
+                    $('#editTaskDescriptionFallback').val(task.description || '');
+                }
+            } else {
+                alert(res.message);
+            }
+        });
     };
 
     /**
@@ -267,6 +354,18 @@ if (window.loadedTasksModule) {
         var customerId = $('#editTaskCustomer').val();
         var isFixedPrice = $('#editTaskIsFixed').val();
         var price = $('#editTaskPrice').val();
+        var specId = $('#editTaskSpec').val() || null;
+        var color = $('#editTaskColor').val() || '';
+
+        var description = '';
+        if (window.editTaskEditor) {
+            description = window.editTaskEditor.root.innerHTML;
+            if (window.editTaskEditor.getText().trim() === '') {
+                description = '';
+            }
+        } else if ($('#editTaskDescriptionFallback').length > 0) {
+            description = $('#editTaskDescriptionFallback').val();
+        }
 
         if (!title) {
             alert('Пожалуйста, введите название задачи.');
@@ -278,7 +377,10 @@ if (window.loadedTasksModule) {
             title: title, 
             customer_id: customerId, 
             is_fixed_price: isFixedPrice, 
-            price: price 
+            price: price,
+            spec_id: specId,
+            color: color,
+            description: description
         }, function(response) {
             var res = JSON.parse(response);
             if (res.status === 'success') {
@@ -484,6 +586,7 @@ if (window.loadedTasksModule) {
     // Инициализация бесконечного скролла задач на дашборде
     initInfiniteScrollTasks();
     initExpandedTasksTree();
+    initTaskQuillEditor();
 }
 
 /**

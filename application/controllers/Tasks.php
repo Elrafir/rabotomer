@@ -89,9 +89,10 @@ class Tasks extends MY_Controller {
             $is_fixed_price = $this->input->post('is_fixed_price') ? 1 : 0;
             $price = $this->input->post('price');
             $spec_id = $this->input->post('spec_id') ?: null;
+            $description = $this->input->post('description') ?: null;
             
             // Сохраняем задачу в базу
-            if ($this->Task_model->add_task($user_id, $parent_id, $title, $customer_id, $is_fixed_price, $price, $spec_id)) {
+            if ($this->Task_model->add_task($user_id, $parent_id, $title, $customer_id, $is_fixed_price, $price, $spec_id, $description)) {
                 $this->session->set_flashdata('success', 'Задача успешно добавлена!');
             } else {
                 $db_error = $this->db->error();
@@ -397,7 +398,24 @@ class Tasks extends MY_Controller {
     }
 
     /**
-     * AJAX-обработчик редактирования названия задачи
+     * AJAX-обработчик для получения деталей конкретной задачи
+     */
+    public function get_task_ajax() {
+        $user_id = $this->session->userdata('user_id');
+        $task_id = $this->input->post('task_id');
+
+        if (!empty($task_id)) {
+            $task = $this->Task_model->get_task($task_id, $user_id);
+            if ($task) {
+                echo json_encode(['status' => 'success', 'data' => $task]);
+                return;
+            }
+        }
+        echo json_encode(['status' => 'error', 'message' => 'Задача не найдена']);
+    }
+
+    /**
+     * AJAX-обработчик редактирования свойств задачи
      */
     public function edit_title_ajax() {
         $user_id = $this->session->userdata('user_id');
@@ -412,8 +430,15 @@ class Tasks extends MY_Controller {
             $is_fixed_price = $this->input->post('is_fixed_price') ? 1 : 0;
             $price = $this->input->post('price');
             $spec_id = $this->input->post('spec_id') ?: null;
+            $description = $this->input->post('description'); // Описание (Quill HTML)
+            $color = $this->input->post('color'); // Цвет HEX
 
-            if ($this->Task_model->update_task_details($task_id, $user_id, $title, $customer_id, $is_fixed_price, $price, $spec_id)) {
+            // Валидация формата цвета
+            if (!empty($color) && !preg_match('/^#[a-f0-9]{6}$/i', $color)) {
+                $color = null;
+            }
+
+            if ($this->Task_model->update_task_details($task_id, $user_id, $title, $customer_id, $is_fixed_price, $price, $spec_id, $description, $color)) {
                 echo json_encode(['status' => 'success']);
                 return;
             }
