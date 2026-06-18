@@ -260,8 +260,9 @@
 </div>
 
 <!-- Модальное окно добавления заказчика -->
+<!-- Модальное окно добавления заказчика с ограничением высоты и скроллом для вертикальных/малых экранов -->
 <div id="addCustomerModal" onclick="closeAddCustomerModal()" class="hidden fixed inset-0 z-[120] bg-black bg-opacity-50 flex items-center justify-center p-4">
-    <div onclick="event.stopPropagation()" class="bg-white rounded-3xl shadow-2xl w-full max-w-md p-8 transform transition-all relative">
+    <div onclick="event.stopPropagation()" class="bg-white rounded-3xl shadow-2xl w-full max-w-md p-8 transform transition-all relative max-h-[90vh] overflow-y-auto">
         <button type="button" onclick="closeAddCustomerModal()" class="absolute top-6 right-6 text-gray-400 hover:text-gray-600">
             <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
         </button>
@@ -300,9 +301,9 @@
     </div>
 </div>
 
-<!-- Модальное окно редактирования заказчика -->
+<!-- Модальное окно редактирования заказчика с ограничением высоты и скроллом для вертикальных/малых экранов -->
 <div id="editCustomerModal" onclick="closeEditCustomerModal()" class="hidden fixed inset-0 z-[120] bg-black bg-opacity-50 flex items-center justify-center p-4">
-    <div onclick="event.stopPropagation()" class="bg-white rounded-3xl shadow-2xl w-full max-w-md p-8 transform transition-all relative">
+    <div onclick="event.stopPropagation()" class="bg-white rounded-3xl shadow-2xl w-full max-w-md p-8 transform transition-all relative max-h-[90vh] overflow-y-auto">
         <button type="button" onclick="closeEditCustomerModal()" class="absolute top-6 right-6 text-gray-400 hover:text-gray-600">
             <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
         </button>
@@ -344,8 +345,9 @@
 
 <!-- Модальное окно просмотра информации (Инфо) -->
 <?php if (!empty($active_customer)): ?>
+<!-- Модальное окно просмотра информации с ограничением высоты и скроллом для вертикальных/малых экранов -->
 <div id="customerInfoModal" onclick="closeCustomerInfoModal()" class="hidden fixed inset-0 z-[120] bg-black bg-opacity-50 flex items-center justify-center p-4">
-    <div onclick="event.stopPropagation()" class="bg-white rounded-3xl shadow-2xl w-full max-w-md p-8 transform transition-all relative">
+    <div onclick="event.stopPropagation()" class="bg-white rounded-3xl shadow-2xl w-full max-w-md p-8 transform transition-all relative max-h-[90vh] overflow-y-auto">
         <button type="button" onclick="closeCustomerInfoModal()" class="absolute top-6 right-6 text-gray-400 hover:text-gray-600">
             <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
         </button>
