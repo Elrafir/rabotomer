@@ -583,6 +583,95 @@ if (window.loadedTasksModule) {
         }
     });
 
+    // --- Динамический тултип для отображения описания задач при наведении ---
+    let tooltipTimeout;
+    
+    // Создаем контейнер тултипа в body, если его нет
+    if ($('#task-description-tooltip').length === 0) {
+        $('body').append(`
+            <div id="task-description-tooltip" class="hidden fixed p-4 bg-white/95 backdrop-blur-md rounded-2xl shadow-2xl border border-gray-100 max-w-sm text-sm text-gray-700 z-[99999] pointer-events-none transition-all duration-300 transform scale-95 opacity-0" style="transition-property: opacity, transform;">
+                <div class="tooltip-arrow absolute w-3 h-3 bg-white border-r border-b border-gray-100 rotate-45"></div>
+                <div class="tooltip-content max-h-60 overflow-y-auto pr-1"></div>
+            </div>
+        `);
+    }
+
+    const tooltip = $('#task-description-tooltip');
+    const content = tooltip.find('.tooltip-content');
+    const arrow = tooltip.find('.tooltip-arrow');
+
+    $(document).on('mouseenter', '.task-title-text.has-description, .task-desc-indicator', function(e) {
+        clearTimeout(tooltipTimeout);
+        
+        var target = $(this);
+        var titleElement = target.hasClass('task-title-text') ? target : target.siblings('.task-title-text');
+        var descHtml = titleElement.data('description');
+        if (!descHtml) return;
+
+        tooltipTimeout = setTimeout(function() {
+            content.html(descHtml);
+            tooltip.removeClass('hidden');
+            
+            // Расчет геометрии
+            var targetOffset = target.offset();
+            var targetWidth = target.outerWidth();
+            var targetHeight = target.outerHeight();
+            
+            var tooltipWidth = tooltip.outerWidth();
+            var tooltipHeight = tooltip.outerHeight();
+            
+            // Позиция по умолчанию: сверху по центру
+            var top = targetOffset.top - tooltipHeight - 12;
+            var left = targetOffset.left + (targetWidth / 2) - (tooltipWidth / 2);
+            
+            var scrollTop = $(window).scrollTop();
+            if (top < scrollTop + 10) {
+                // Если не помещается сверху, выводим снизу
+                top = targetOffset.top + targetHeight + 12;
+                arrow.removeClass('bottom-[-6px] border-r border-b').addClass('top-[-6px] border-l border-t').css({
+                    left: 'calc(50% - 6px)',
+                    top: '-6px',
+                    bottom: 'auto'
+                });
+            } else {
+                // Выводим сверху
+                arrow.removeClass('top-[-6px] border-l border-t').addClass('bottom-[-6px] border-r border-b').css({
+                    left: 'calc(50% - 6px)',
+                    bottom: '-6px',
+                    top: 'auto'
+                });
+            }
+            
+            // Защита от вылета за границы экрана по горизонтали
+            var scrollLeft = $(window).scrollLeft();
+            var windowWidth = $(window).width();
+            if (left < scrollLeft + 10) {
+                left = scrollLeft + 10;
+                var arrowLeft = (targetOffset.left + targetWidth / 2) - left - 6;
+                arrow.css('left', arrowLeft + 'px');
+            } else if (left + tooltipWidth > scrollLeft + windowWidth - 10) {
+                left = scrollLeft + windowWidth - tooltipWidth - 10;
+                var arrowLeft = (targetOffset.left + targetWidth / 2) - left - 6;
+                arrow.css('left', arrowLeft + 'px');
+            } else {
+                arrow.css('left', 'calc(50% - 6px)');
+            }
+
+            tooltip.css({
+                top: top + 'px',
+                left: left + 'px'
+            }).removeClass('opacity-0 scale-95').addClass('opacity-100 scale-100');
+        }, 400); // 400мс задержка для предотвращения случайных срабатываний
+    });
+
+    $(document).on('mouseleave', '.task-title-text.has-description, .task-desc-indicator', function() {
+        clearTimeout(tooltipTimeout);
+        tooltip.removeClass('opacity-100 scale-100').addClass('opacity-0 scale-95');
+        tooltipTimeout = setTimeout(function() {
+            tooltip.addClass('hidden');
+        }, 300);
+    });
+
     // Инициализация бесконечного скролла задач на дашборде
     initInfiniteScrollTasks();
     initExpandedTasksTree();

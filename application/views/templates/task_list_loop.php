@@ -71,7 +71,12 @@ if (!function_exists('render_task_tree')) {
             }
 
             // 3. Название задачи
-            echo '<span class="task-title-text text-lg font-medium ' . ($is_completed ? 'text-gray-500 line-through' : 'text-gray-800') . '">' . htmlspecialchars($task['title'] ?? '') . '</span>';
+            $has_desc = !empty($task['description']) ? 'has-description' : '';
+            $desc_attr = !empty($task['description']) ? 'data-description="' . htmlspecialchars($task['description'], ENT_QUOTES) . '"' : '';
+            echo '<span class="task-title-text text-lg font-medium ' . ($is_completed ? 'text-gray-500 line-through' : 'text-gray-800') . ' ' . $has_desc . '" ' . $desc_attr . '>' . htmlspecialchars($task['title'] ?? '') . '</span>';
+            if (!empty($task['description'])) {
+                echo '<span class="task-desc-indicator ml-1.5 text-sm cursor-help opacity-70 hover:opacity-100 transition-opacity" title="Есть описание">📝</span>';
+            }
             
             // 4. Заказчик
             if (!empty($task['customer_name'])) {

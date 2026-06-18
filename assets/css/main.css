@@ -28,6 +28,14 @@
     z-index: 10;
 }
 
+/* Глобальная поддержка кастомных классов z-index в статическом Tailwind CSS */
+.z-\[99999\] {
+    z-index: 99999 !important;
+}
+.z-\[9999\] {
+    z-index: 9999 !important;
+}
+
 /* View Transitions для таймера */
 ::view-transition-old(timer-morph),
 ::view-transition-new(timer-morph) {
