@@ -101,9 +101,9 @@
 </div>
 
 <?php if (!empty($is_admin)): ?>
-    <!-- Модальное окно добавления сессии -->
-    <div id="addSessionModal" onclick="closeAddSessionModal()" class="hidden fixed inset-0 z-[120] bg-black bg-opacity-50 flex items-center justify-center p-4">
-        <div onclick="event.stopPropagation()" class="bg-white rounded-3xl shadow-2xl w-full max-w-md p-8 transform transition-all relative">
+    <!-- Модальное окно добавления сессии с z-index фиксом и скроллом для малых/вертикальных экранов -->
+    <div id="addSessionModal" onclick="closeAddSessionModal()" class="hidden fixed inset-0 z-[99999] bg-black bg-opacity-50 flex items-center justify-center p-4">
+        <div onclick="event.stopPropagation()" class="bg-white rounded-3xl shadow-2xl w-full max-w-md p-8 transform transition-all relative max-h-[90vh] overflow-y-auto">
             <button onclick="closeAddSessionModal()" class="absolute top-6 right-6 text-gray-400 hover:text-gray-600">
                 <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
             </button>
@@ -141,9 +141,9 @@
         </div>
     </div>
 
-    <!-- Модальное окно редактирования сессии -->
-    <div id="editSessionModal" onclick="closeEditSessionModal()" class="hidden fixed inset-0 z-[120] bg-black bg-opacity-50 flex items-center justify-center p-4">
-        <div onclick="event.stopPropagation()" class="bg-white rounded-3xl shadow-2xl w-full max-w-md p-8 transform transition-all relative">
+    <!-- Модальное окно редактирования сессии с z-index фиксом и скроллом для малых/вертикальных экранов -->
+    <div id="editSessionModal" onclick="closeEditSessionModal()" class="hidden fixed inset-0 z-[99999] bg-black bg-opacity-50 flex items-center justify-center p-4">
+        <div onclick="event.stopPropagation()" class="bg-white rounded-3xl shadow-2xl w-full max-w-md p-8 transform transition-all relative max-h-[90vh] overflow-y-auto">
             <button onclick="closeEditSessionModal()" class="absolute top-6 right-6 text-gray-400 hover:text-gray-600">
                 <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
             </button>

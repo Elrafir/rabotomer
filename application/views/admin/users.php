@@ -210,9 +210,9 @@
 
 </div>
 
-<!-- Модальное окно пользователя (Добавление/Редактирование) -->
-<div id="userModal" class="hidden fixed inset-0 z-[100] bg-black bg-opacity-50 flex items-center justify-center p-4">
-    <div class="bg-white rounded-3xl shadow-2xl w-full max-w-2xl p-10 transform transition-all overflow-y-auto max-h-screen">
+<!-- Модальное окно пользователя (Добавление/Редактирование) с z-index фиксом и скроллом для вертикальных экранов -->
+<div id="userModal" class="hidden fixed inset-0 z-[99999] bg-black bg-opacity-50 flex items-center justify-center p-4">
+    <div class="bg-white rounded-3xl shadow-2xl w-full max-w-2xl p-10 transform transition-all overflow-y-auto max-h-[90vh]">
         <h3 id="userModalTitle" class="text-3xl font-black mb-8 text-gray-800">Пользователь</h3>
         
         <input type="hidden" id="editUserId" value="">
@@ -263,9 +263,9 @@
     </div>
 </div>
 
-<!-- Модальное окно Группы -->
-<div id="groupModal" class="hidden fixed inset-0 z-[100] bg-black bg-opacity-50 flex items-center justify-center p-4">
-    <div class="bg-white rounded-3xl shadow-2xl w-full max-w-md p-10 transform transition-all">
+<!-- Модальное окно Группы с z-index фиксом и скроллом для вертикальных экранов -->
+<div id="groupModal" class="hidden fixed inset-0 z-[99999] bg-black bg-opacity-50 flex items-center justify-center p-4">
+    <div class="bg-white rounded-3xl shadow-2xl w-full max-w-md p-10 transform transition-all max-h-[90vh] overflow-y-auto">
         <h3 id="groupModalTitle" class="text-3xl font-black mb-8 text-gray-800">Группа</h3>
         
         <input type="hidden" id="editGroupIdVal" value="">
@@ -291,9 +291,9 @@
     </div>
 </div>
 
-<!-- Модальное окно смены пароля -->
-<div id="changePasswordModal" class="hidden fixed inset-0 z-[100] bg-black bg-opacity-50 flex items-center justify-center p-4">
-    <div class="bg-white rounded-3xl shadow-2xl w-full max-w-md p-10 transform transition-all">
+<!-- Модальное окно смены пароля с z-index фиксом и скроллом для вертикальных экранов -->
+<div id="changePasswordModal" class="hidden fixed inset-0 z-[99999] bg-black bg-opacity-50 flex items-center justify-center p-4">
+    <div class="bg-white rounded-3xl shadow-2xl w-full max-w-md p-10 transform transition-all max-h-[90vh] overflow-y-auto">
         <h3 class="text-3xl font-black mb-8 text-gray-800"><?= lang('admin_btn_change_password'); ?></h3>
         <input type="hidden" id="changePassUserId" value="">
         

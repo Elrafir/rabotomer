@@ -162,9 +162,9 @@ $this->load->view('templates/task_list_loop');
     </div>
 </div>
 
-<!-- Модальное окно для редактирования задачи -->
-<div id="editTaskModal" class="hidden fixed inset-0 z-[120] bg-black bg-opacity-50 flex items-center justify-center p-4">
-    <div class="bg-white rounded-3xl shadow-2xl w-full max-w-2xl p-8 transform transition-all">
+<!-- Модальное окно для редактирования задачи с z-index фиксом и скроллом для вертикальных/малых экранов -->
+<div id="editTaskModal" class="hidden fixed inset-0 z-[99999] bg-black bg-opacity-50 flex items-center justify-center p-4">
+    <div class="bg-white rounded-3xl shadow-2xl w-full max-w-2xl p-8 transform transition-all max-h-[90vh] overflow-y-auto">
         <h3 class="text-2xl font-bold mb-6 text-gray-800"><?= lang('btn_edit'); ?></h3>
         <input type="hidden" id="editTaskId">
         <div class="mb-4">
