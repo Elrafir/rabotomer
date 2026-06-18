@@ -327,3 +327,33 @@ input::placeholder, textarea::placeholder {
     background-color: var(--theme-card-bg) !important; /* fallback to transparent theme color when dragging */
     cursor: grabbing !important;
 }
+
+/* =========================================
+   СТИЛИ ДЛЯ РЕДАКТОРА QUILL WYSIWYG В ТЗ
+   ========================================= */
+
+/* Настраиваем контейнер Quill, чтобы он занимал всю доступную высоту flex-элемента */
+#add-editor-container .ql-container, 
+#edit-editor-container .ql-container {
+    flex-grow: 1;
+    display: flex;
+    flex-direction: column;
+    min-height: 0; /* Защита от выхода flex-элемента за границы */
+}
+
+/* Заставляем текстовое поле ввода Quill растягиваться и прокручиваться отдельно */
+#add-editor-container .ql-editor, 
+#edit-editor-container .ql-editor {
+    flex-grow: 1;
+    overflow-y: auto;
+    min-height: 200px; /* Удобный размер под ввод текста */
+}
+
+/* На смартфонах и компактных экранах закрепляем высоту для предотвращения сплющивания */
+@media (max-width: 767px) {
+    #add-editor-container .ql-editor, 
+    #edit-editor-container .ql-editor {
+        height: 250px;
+    }
+}
+

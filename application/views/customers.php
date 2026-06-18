@@ -378,137 +378,205 @@
 </div>
 <?php endif; ?>
 
-<!-- Модальное окно создания ТЗ -->
+<!-- Модальное окно создания ТЗ (модернизированное, двухколоночный Grid с липкой шапкой и подвалом) -->
 <div id="addSpecModal" onclick="closeAddSpecModal()" class="hidden fixed inset-0 z-[120] bg-black bg-opacity-50 flex items-center justify-center p-4">
-    <div onclick="event.stopPropagation()" class="bg-white rounded-3xl shadow-2xl w-full max-w-2xl p-8 transform transition-all relative max-h-[90vh] flex flex-col overflow-y-auto">
-        <button type="button" onclick="closeAddSpecModal()" class="absolute top-6 right-6 text-gray-400 hover:text-gray-600">
-            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
-        </button>
-        <h3 class="text-2xl font-bold mb-6 text-gray-800"><?= lang('cust_new_spec_title'); ?></h3>
+    <!-- Ограничиваем высоту модального окна в 85% высоты экрана и запрещаем выходить за пределы -->
+    <div onclick="event.stopPropagation()" class="bg-white rounded-3xl shadow-2xl w-full max-w-5xl transform transition-all relative max-h-[85vh] flex flex-col overflow-hidden">
         
-        <?php echo form_open('customers/add_spec', ['id' => 'addSpecForm', 'class' => 'space-y-4 flex flex-col flex-grow']); ?>
+        <!-- Шапка модального окна (Фиксированная сверху, не скроллится) -->
+        <div class="p-6 border-b border-gray-100 flex justify-between items-center flex-shrink-0">
+            <h3 class="text-2xl font-black text-gray-800"><?= lang('cust_new_spec_title'); ?></h3>
+            <button type="button" onclick="closeAddSpecModal()" class="text-gray-400 hover:text-gray-600 transition-colors">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+            </button>
+        </div>
+        
+        <!-- Форма добавления ТЗ. Контейнер формы занимает всю доступную высоту для гибкого распределения пространства -->
+        <?php echo form_open('customers/add_spec', ['id' => 'addSpecForm', 'class' => 'flex flex-col flex-grow overflow-hidden']); ?>
             <input type="hidden" name="customer_id" value="<?= $active_customer_id ?>">
-            <div>
-                <label class="block text-gray-700 text-sm font-bold mb-2"><?= lang('cust_spec_title_label'); ?></label>
-                <input type="text" name="title" class="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none" required placeholder="<?= htmlspecialchars(lang('cust_spec_title_placeholder'), ENT_QUOTES); ?>">
-            </div>
-            <div>
-                <label class="block text-gray-700 text-sm font-bold mb-2">Путь к директории с рабочими файлами</label>
-                <input type="text" name="files_dir" class="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none" placeholder="/mnt/share/project_materials (абсолютный путь)">
-            </div>
-            <div class="grid grid-cols-2 gap-4">
-                <div>
-                    <label class="block text-gray-700 text-sm font-bold mb-2"><?= lang('cust_price_label'); ?></label>
-                    <input type="number" name="price" step="0.01" min="0" value="<?= !empty($active_customer) ? htmlspecialchars($active_customer['default_price']) : '0.00' ?>" class="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none">
+            
+            <!-- Основная рабочая область формы скроллится по вертикали при переполнении -->
+            <div class="p-6 overflow-y-auto flex-grow">
+                <!-- Двухколоночный макет на больших экранах (md) для экономии высоты -->
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    
+                    <!-- Левая колонка: параметры и поля настроек ТЗ -->
+                    <div class="space-y-4">
+                        <!-- Название технического задания -->
+                        <div>
+                            <label class="block text-gray-700 text-sm font-bold mb-2"><?= lang('cust_spec_title_label'); ?></label>
+                            <input type="text" name="title" class="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none" required placeholder="<?= htmlspecialchars(lang('cust_spec_title_placeholder'), ENT_QUOTES); ?>">
+                        </div>
+                        
+                        <!-- Путь к директории с рабочими файлами -->
+                        <div>
+                            <label class="block text-gray-700 text-sm font-bold mb-2">Путь к директории с рабочими файлами</label>
+                            <input type="text" name="files_dir" class="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none" placeholder="/mnt/share/project_materials (абсолютный путь)">
+                        </div>
+                        
+                        <!-- Стоимость и предоплата ТЗ -->
+                        <div class="grid grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-gray-700 text-sm font-bold mb-2"><?= lang('cust_price_label'); ?></label>
+                                <input type="number" name="price" step="0.01" min="0" value="<?= !empty($active_customer) ? htmlspecialchars($active_customer['default_price']) : '0.00' ?>" class="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none">
+                            </div>
+                            <div>
+                                <label class="block text-gray-700 text-sm font-bold mb-2"><?= lang('cust_prepayment_label'); ?></label>
+                                <input type="number" name="prepayment" step="0.01" min="0" value="<?= !empty($active_customer) ? htmlspecialchars($active_customer['default_prepayment']) : '0.00' ?>" class="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none">
+                            </div>
+                        </div>
+                        
+                        <!-- Тип оплаты (почасовая/фикс) -->
+                        <div>
+                            <label class="block text-gray-700 text-sm font-bold mb-2"><?= lang('cust_payment_type_label'); ?></label>
+                            <select name="payment_type" class="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none">
+                                <option value="hourly" <?= (!empty($active_customer) && $active_customer['default_payment_type'] == 'hourly') ? 'selected' : '' ?>><?= lang('finance_hourly'); ?></option>
+                                <option value="fixed" <?= (!empty($active_customer) && $active_customer['default_payment_type'] == 'fixed') ? 'selected' : '' ?>><?= lang('finance_fixed'); ?></option>
+                            </select>
+                        </div>
+                        
+                        <!-- Привязка ТЗ к задачам (выбираются чекбоксами с локальным скроллом) -->
+                        <div>
+                            <label class="block text-gray-700 text-sm font-bold mb-2"><?= lang('cust_link_tasks_label'); ?></label>
+                            <div class="max-h-40 overflow-y-auto border border-gray-200 rounded-xl p-3 bg-gray-50 space-y-2">
+                                <?php if (empty($customer_tasks)): ?>
+                                    <p class="text-xs text-gray-400 italic"><?= lang('cust_no_tasks_available'); ?></p>
+                                <?php else: ?>
+                                    <?php foreach ($customer_tasks as $task): ?>
+                                        <label class="flex items-center gap-2 text-sm cursor-pointer p-1 hover:bg-gray-100 rounded">
+                                            <input type="checkbox" name="linked_tasks[]" value="<?= $task['id'] ?>" class="rounded text-blue-600 focus:ring-blue-500">
+                                            <span><?= htmlspecialchars($task['title']) ?></span>
+                                        </label>
+                                    <?php endforeach; ?>
+                                <?php endif; ?>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Правая колонка: WYSIWYG редактор Quill для содержимого ТЗ -->
+                    <div class="flex flex-col h-full min-h-[320px] md:min-h-0">
+                        <label class="block text-gray-700 text-sm font-bold mb-2"><?= lang('cust_spec_content_label'); ?></label>
+                        <!-- Контейнер для Quill редактора. Занимает всю доступную высоту правой колонки -->
+                        <div id="add-editor-container" class="flex-grow min-h-[260px] md:h-auto bg-gray-50 border border-gray-200 rounded-xl overflow-hidden flex flex-col">
+                            <div id="add-editor" class="flex-grow bg-white"></div>
+                        </div>
+                        <input type="hidden" name="content" id="addSpecContent">
+                    </div>
+                    
                 </div>
-                <div>
-                    <label class="block text-gray-700 text-sm font-bold mb-2"><?= lang('cust_prepayment_label'); ?></label>
-                    <input type="number" name="prepayment" step="0.01" min="0" value="<?= !empty($active_customer) ? htmlspecialchars($active_customer['default_prepayment']) : '0.00' ?>" class="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none">
-                </div>
-            </div>
-            <div>
-                <label class="block text-gray-700 text-sm font-bold mb-2"><?= lang('cust_payment_type_label'); ?></label>
-                <select name="payment_type" class="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none">
-                    <option value="hourly" <?= (!empty($active_customer) && $active_customer['default_payment_type'] == 'hourly') ? 'selected' : '' ?>><?= lang('finance_hourly'); ?></option>
-                    <option value="fixed" <?= (!empty($active_customer) && $active_customer['default_payment_type'] == 'fixed') ? 'selected' : '' ?>><?= lang('finance_fixed'); ?></option>
-                </select>
-            </div>
-            <div>
-                <label class="block text-gray-700 text-sm font-bold mb-2"><?= lang('cust_link_tasks_label'); ?></label>
-                <div class="max-h-40 overflow-y-auto border border-gray-200 rounded-xl p-3 bg-gray-50 space-y-2">
-                    <?php if (empty($customer_tasks)): ?>
-                        <p class="text-xs text-gray-400 italic"><?= lang('cust_no_tasks_available'); ?></p>
-                    <?php else: ?>
-                        <?php foreach ($customer_tasks as $task): ?>
-                            <label class="flex items-center gap-2 text-sm cursor-pointer p-1 hover:bg-gray-100 rounded">
-                                <input type="checkbox" name="linked_tasks[]" value="<?= $task['id'] ?>" class="rounded text-blue-600 focus:ring-blue-500">
-                                <span><?= htmlspecialchars($task['title']) ?></span>
-                            </label>
-                        <?php endforeach; ?>
-                    <?php endif; ?>
-                </div>
-            </div>
-            <div class="flex-grow flex flex-col">
-                <label class="block text-gray-700 text-sm font-bold mb-2"><?= lang('cust_spec_content_label'); ?></label>
-                
-                <!-- Контейнер для Quill WYSIWYG -->
-                <div id="add-editor-container" class="h-64 bg-gray-50 border border-gray-200 rounded-xl overflow-hidden flex flex-col">
-                    <div id="add-editor" class="flex-grow bg-white"></div>
-                </div>
-                <input type="hidden" name="content" id="addSpecContent">
             </div>
             
-            <button type="submit" onclick="submitAddSpecForm(event)" class="w-full mt-4 bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3 px-4 rounded-xl shadow-lg transition-colors">
-                <?= lang('btn_save'); ?> ТЗ
-            </button>
+            <!-- Подвал модального окна (Фиксированный снизу, не скроллится) -->
+            <div class="p-6 border-t border-gray-100 flex justify-end gap-3 flex-shrink-0 bg-gray-50 rounded-b-3xl">
+                <button type="button" onclick="closeAddSpecModal()" class="px-6 py-3 bg-white border border-gray-200 hover:bg-gray-50 text-gray-700 font-bold rounded-xl transition-colors text-sm">
+                    <?= lang('btn_cancel'); ?>
+                </button>
+                <button type="submit" onclick="submitAddSpecForm(event)" class="px-6 py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl shadow-lg transition-colors text-sm">
+                    <?= lang('btn_save'); ?> ТЗ
+                </button>
+            </div>
         <?php echo form_close(); ?>
     </div>
 </div>
 
-<!-- Модальное окно редактирования ТЗ -->
+<!-- Модальное окно редактирования ТЗ (модернизированное, двухколоночный Grid с липкой шапкой и подвалом) -->
 <div id="editSpecModal" onclick="closeEditSpecModal()" class="hidden fixed inset-0 z-[120] bg-black bg-opacity-50 flex items-center justify-center p-4">
-    <div onclick="event.stopPropagation()" class="bg-white rounded-3xl shadow-2xl w-full max-w-2xl p-8 transform transition-all relative max-h-[90vh] flex flex-col overflow-y-auto">
-        <button type="button" onclick="closeEditSpecModal()" class="absolute top-6 right-6 text-gray-400 hover:text-gray-600">
-            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
-        </button>
-        <h3 class="text-2xl font-bold mb-6 text-gray-800"><?= lang('cust_edit_spec_title'); ?></h3>
+    <!-- Ограничиваем высоту модального окна в 85% высоты экрана и запрещаем выходить за пределы -->
+    <div onclick="event.stopPropagation()" class="bg-white rounded-3xl shadow-2xl w-full max-w-5xl transform transition-all relative max-h-[85vh] flex flex-col overflow-hidden">
         
-        <?php echo form_open('customers/edit_spec', ['id' => 'editSpecForm', 'class' => 'space-y-4 flex flex-col flex-grow']); ?>
+        <!-- Шапка модального окна (Фиксированная сверху, не скроллится) -->
+        <div class="p-6 border-b border-gray-100 flex justify-between items-center flex-shrink-0">
+            <h3 class="text-2xl font-bold text-gray-800"><?= lang('cust_edit_spec_title'); ?></h3>
+            <button type="button" onclick="closeEditSpecModal()" class="text-gray-400 hover:text-gray-600 transition-colors">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+            </button>
+        </div>
+        
+        <!-- Форма редактирования ТЗ. Контейнер формы занимает всю доступную высоту для гибкого распределения пространства -->
+        <?php echo form_open('customers/edit_spec', ['id' => 'editSpecForm', 'class' => 'flex flex-col flex-grow overflow-hidden']); ?>
             <input type="hidden" name="customer_id" value="<?= $active_customer_id ?>">
             <input type="hidden" name="spec_id" id="editSpecId">
-            <div>
-                <label class="block text-gray-700 text-sm font-bold mb-2"><?= lang('cust_spec_title_label'); ?></label>
-                <input type="text" name="title" id="editSpecTitle" class="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none" required>
-            </div>
-            <div>
-                <label class="block text-gray-700 text-sm font-bold mb-2">Путь к директории с рабочими файлами</label>
-                <input type="text" name="files_dir" id="editSpecFilesDir" class="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none" placeholder="/mnt/share/project_materials (абсолютный путь)">
-            </div>
-            <div class="grid grid-cols-2 gap-4">
-                <div>
-                    <label class="block text-gray-700 text-sm font-bold mb-2"><?= lang('cust_price_label'); ?></label>
-                    <input type="number" name="price" id="editSpecPrice" step="0.01" min="0" class="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none">
+            
+            <!-- Основная рабочая область формы скроллится по вертикали при переполнении -->
+            <div class="p-6 overflow-y-auto flex-grow">
+                <!-- Двухколоночный макет на больших экранах (md) для экономии высоты -->
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    
+                    <!-- Левая колонка: параметры и поля настроек ТЗ -->
+                    <div class="space-y-4">
+                        <!-- Название технического задания -->
+                        <div>
+                            <label class="block text-gray-700 text-sm font-bold mb-2"><?= lang('cust_spec_title_label'); ?></label>
+                            <input type="text" name="title" id="editSpecTitle" class="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none" required>
+                        </div>
+                        
+                        <!-- Путь к директории с рабочими файлами -->
+                        <div>
+                            <label class="block text-gray-700 text-sm font-bold mb-2">Путь к директории с рабочими файлами</label>
+                            <input type="text" name="files_dir" id="editSpecFilesDir" class="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none" placeholder="/mnt/share/project_materials (абсолютный путь)">
+                        </div>
+                        
+                        <!-- Стоимость и предоплата ТЗ -->
+                        <div class="grid grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-gray-700 text-sm font-bold mb-2"><?= lang('cust_price_label'); ?></label>
+                                <input type="number" name="price" id="editSpecPrice" step="0.01" min="0" class="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none">
+                            </div>
+                            <div>
+                                <label class="block text-gray-700 text-sm font-bold mb-2"><?= lang('cust_prepayment_label'); ?></label>
+                                <input type="number" name="prepayment" id="editSpecPrepayment" step="0.01" min="0" class="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none">
+                            </div>
+                        </div>
+                        
+                        <!-- Тип оплаты (почасовая/фикс) -->
+                        <div>
+                            <label class="block text-gray-700 text-sm font-bold mb-2"><?= lang('cust_payment_type_label'); ?></label>
+                            <select name="payment_type" id="editSpecPaymentType" class="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none">
+                                <option value="hourly"><?= lang('finance_hourly'); ?></option>
+                                <option value="fixed"><?= lang('finance_fixed'); ?></option>
+                            </select>
+                        </div>
+                        
+                        <!-- Привязка ТЗ к задачам (выбираются чекбоксами с локальным скроллом) -->
+                        <div>
+                            <label class="block text-gray-700 text-sm font-bold mb-2"><?= lang('cust_link_tasks_label'); ?></label>
+                            <div class="max-h-40 overflow-y-auto border border-gray-200 rounded-xl p-3 bg-gray-50 space-y-2">
+                                <?php if (empty($customer_tasks)): ?>
+                                    <p class="text-xs text-gray-400 italic"><?= lang('cust_no_tasks_available'); ?></p>
+                                <?php else: ?>
+                                    <?php foreach ($customer_tasks as $task): ?>
+                                        <label class="flex items-center gap-2 text-sm cursor-pointer p-1 hover:bg-gray-100 rounded">
+                                            <input type="checkbox" name="linked_tasks[]" value="<?= $task['id'] ?>" class="edit-spec-task-checkbox rounded text-blue-600 focus:ring-blue-500">
+                                            <span><?= htmlspecialchars($task['title']) ?></span>
+                                        </label>
+                                    <?php endforeach; ?>
+                                <?php endif; ?>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Правая колонка: WYSIWYG редактор Quill для содержимого ТЗ -->
+                    <div class="flex flex-col h-full min-h-[320px] md:min-h-0">
+                        <label class="block text-gray-700 text-sm font-bold mb-2"><?= lang('cust_spec_content_label'); ?></label>
+                        <!-- Контейнер для Quill редактора. Занимает всю доступную высоту правой колонки -->
+                        <div id="edit-editor-container" class="flex-grow min-h-[260px] md:h-auto bg-gray-50 border border-gray-200 rounded-xl overflow-hidden flex flex-col">
+                            <div id="edit-editor" class="flex-grow bg-white"></div>
+                        </div>
+                        <input type="hidden" name="content" id="editSpecContent">
+                    </div>
+                    
                 </div>
-                <div>
-                    <label class="block text-gray-700 text-sm font-bold mb-2"><?= lang('cust_prepayment_label'); ?></label>
-                    <input type="number" name="prepayment" id="editSpecPrepayment" step="0.01" min="0" class="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none">
-                </div>
-            </div>
-            <div>
-                <label class="block text-gray-700 text-sm font-bold mb-2"><?= lang('cust_payment_type_label'); ?></label>
-                <select name="payment_type" id="editSpecPaymentType" class="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none">
-                    <option value="hourly"><?= lang('finance_hourly'); ?></option>
-                    <option value="fixed"><?= lang('finance_fixed'); ?></option>
-                </select>
-            </div>
-            <div>
-                <label class="block text-gray-700 text-sm font-bold mb-2"><?= lang('cust_link_tasks_label'); ?></label>
-                <div class="max-h-40 overflow-y-auto border border-gray-200 rounded-xl p-3 bg-gray-50 space-y-2">
-                    <?php if (empty($customer_tasks)): ?>
-                        <p class="text-xs text-gray-400 italic"><?= lang('cust_no_tasks_available'); ?></p>
-                    <?php else: ?>
-                        <?php foreach ($customer_tasks as $task): ?>
-                            <label class="flex items-center gap-2 text-sm cursor-pointer p-1 hover:bg-gray-100 rounded">
-                                <input type="checkbox" name="linked_tasks[]" value="<?= $task['id'] ?>" class="edit-spec-task-checkbox rounded text-blue-600 focus:ring-blue-500">
-                                <span><?= htmlspecialchars($task['title']) ?></span>
-                            </label>
-                        <?php endforeach; ?>
-                    <?php endif; ?>
-                </div>
-            </div>
-            <div class="flex-grow flex flex-col">
-                <label class="block text-gray-700 text-sm font-bold mb-2"><?= lang('cust_spec_content_label'); ?></label>
-                
-                <!-- Контейнер для Quill WYSIWYG -->
-                <div id="edit-editor-container" class="h-64 bg-gray-50 border border-gray-200 rounded-xl overflow-hidden flex flex-col">
-                    <div id="edit-editor" class="flex-grow bg-white"></div>
-                </div>
-                <input type="hidden" name="content" id="editSpecContent">
             </div>
             
-            <button type="submit" onclick="submitEditSpecForm(event)" class="w-full mt-4 bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3 px-4 rounded-xl shadow-lg transition-colors">
-                <?= lang('btn_save'); ?> изменения
-            </button>
+            <!-- Подвал модального окна (Фиксированный снизу, не скроллится) -->
+            <div class="p-6 border-t border-gray-100 flex justify-end gap-3 flex-shrink-0 bg-gray-50 rounded-b-3xl">
+                <button type="button" onclick="closeEditSpecModal()" class="px-6 py-3 bg-white border border-gray-200 hover:bg-gray-50 text-gray-700 font-bold rounded-xl transition-colors text-sm">
+                    <?= lang('btn_cancel'); ?>
+                </button>
+                <button type="submit" onclick="submitEditSpecForm(event)" class="px-6 py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl shadow-lg transition-colors text-sm">
+                    <?= lang('btn_save'); ?> изменения
+                </button>
+            </div>
         <?php echo form_close(); ?>
     </div>
 </div>
