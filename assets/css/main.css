@@ -29,10 +29,27 @@
 }
 
 /* Глобальная поддержка кастомных классов z-index в статическом Tailwind CSS */
-.z-\[99999\] {
+.z-\[99999\],
+#addSpecModal,
+#editSpecModal,
+#addCustomerModal,
+#editCustomerModal,
+#customerInfoModal,
+#editTaskModal,
+#editTimeModal,
+#cascadeHistoryModal,
+#addSessionModal,
+#editSessionModal,
+#editPackageModal,
+#userModal,
+#groupModal,
+#changePasswordModal,
+#addPackageModal,
+#globalAddModal {
     z-index: 99999 !important;
 }
-.z-\[9999\] {
+.z-\[9999\],
+#themeSettingsModal {
     z-index: 9999 !important;
 }
 

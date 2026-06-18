@@ -268,6 +268,7 @@ class Customer_model extends CI_Model {
     public function get_customer_tasks($customer_id, $user_id) {
         $this->db->where('customer_id', $customer_id);
         $this->db->where('user_id', $user_id);
+        $this->db->where('status', 'active');
         $this->db->where('deleted_at IS NULL', null, false);
         $this->db->order_by('created_at', 'ASC');
         return $this->db->get('tasks')->result_array();
