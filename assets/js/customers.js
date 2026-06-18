@@ -222,6 +222,7 @@ if (window.loadedCustomersModule) {
             data: formData,
             contentType: false,
             processData: false,
+            dataType: 'text', // Предотвращаем автоматический парсинг JSON с ошибками
             xhr: function() {
                 var xhr = new window.XMLHttpRequest();
                 xhr.upload.addEventListener("progress", function(evt) {
@@ -235,7 +236,15 @@ if (window.loadedCustomersModule) {
             success: function(response) {
                 progressContainer.addClass('hidden');
                 try {
-                    var res = JSON.parse(response);
+                    // Очищаем от возможных PHP-нотисов/предупреждений
+                    var jsonStart = response.indexOf('{');
+                    var jsonEnd = response.lastIndexOf('}');
+                    if (jsonStart === -1 || jsonEnd === -1) {
+                        throw new Error("Неверный формат ответа сервера");
+                    }
+                    var cleanJson = response.substring(jsonStart, jsonEnd + 1);
+                    var res = JSON.parse(cleanJson);
+                    
                     if (res.status === 'success') {
                         var fileList = $('#file-list-' + specId);
                         fileList.find('.empty-files-label').remove();
@@ -266,9 +275,9 @@ if (window.loadedCustomersModule) {
                     alert('Произошла системная ошибка при загрузке файла');
                 }
             },
-            error: function() {
+            error: function(xhr, status, error) {
                 progressContainer.addClass('hidden');
-                alert('Ошибка отправки файла на сервер');
+                alert('Ошибка отправки файла на сервер: ' + xhr.status + ' ' + error);
             }
         });
     };
@@ -283,7 +292,14 @@ if (window.loadedCustomersModule) {
 
         $.post(window.globalApi.delete_spec_file + fileId, {}, function(response) {
             try {
-                var res = JSON.parse(response);
+                var jsonStart = response.indexOf('{');
+                var jsonEnd = response.lastIndexOf('}');
+                if (jsonStart === -1 || jsonEnd === -1) {
+                    throw new Error("Неверный формат ответа");
+                }
+                var cleanJson = response.substring(jsonStart, jsonEnd + 1);
+                var res = JSON.parse(cleanJson);
+                
                 if (res.status === 'success') {
                     var item = $('#file-item-' + fileId);
                     var parent = item.parent();
@@ -299,7 +315,7 @@ if (window.loadedCustomersModule) {
                 console.error(e);
                 alert('Произошла ошибка при удалении файла');
             }
-        });
+        }, 'text');
     };
 
     /**
@@ -318,7 +334,14 @@ if (window.loadedCustomersModule) {
 
         $.post(window.globalApi.add_link, { spec_id: specId, url: url, title: title }, function(response) {
             try {
-                var res = JSON.parse(response);
+                var jsonStart = response.indexOf('{');
+                var jsonEnd = response.lastIndexOf('}');
+                if (jsonStart === -1 || jsonEnd === -1) {
+                    throw new Error("Неверный формат ответа");
+                }
+                var cleanJson = response.substring(jsonStart, jsonEnd + 1);
+                var res = JSON.parse(cleanJson);
+                
                 if (res.status === 'success') {
                     var fileList = $('#file-list-' + specId);
                     fileList.find('.empty-files-label').remove();
@@ -341,7 +364,7 @@ if (window.loadedCustomersModule) {
                 console.error(e);
                 alert('Не удалось добавить ссылку');
             }
-        });
+        }, 'text');
     };
 
     /**
@@ -365,7 +388,14 @@ if (window.loadedCustomersModule) {
         $.post(window.globalApi.download_url, { spec_id: specId, url: url }, function(response) {
             progressContainer.addClass('hidden');
             try {
-                var res = JSON.parse(response);
+                var jsonStart = response.indexOf('{');
+                var jsonEnd = response.lastIndexOf('}');
+                if (jsonStart === -1 || jsonEnd === -1) {
+                    throw new Error("Неверный формат ответа");
+                }
+                var cleanJson = response.substring(jsonStart, jsonEnd + 1);
+                var res = JSON.parse(cleanJson);
+                
                 if (res.status === 'success') {
                     var fileList = $('#file-list-' + specId);
                     fileList.find('.empty-files-label').remove();
@@ -390,7 +420,7 @@ if (window.loadedCustomersModule) {
                 console.error(e);
                 alert('Не удалось скачать файл по ссылке.');
             }
-        });
+        }, 'text');
     };
 
     // Запускаем инициализацию Quill и скролла
