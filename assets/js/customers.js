@@ -5,6 +5,9 @@ if (window.loadedCustomersModule) {
     // Переинициализируем Quill и бесконечный скролл для нового HTML
     initQuillEditors();
     initInfiniteScrollCustomers();
+    if (window.initFilePreviews) {
+        window.initFilePreviews();
+    }
 } else {
     // Устанавливаем флаг загрузки модуля
     window.loadedCustomersModule = true;
@@ -423,12 +426,262 @@ if (window.loadedCustomersModule) {
         }, 'text');
     };
 
+    /**
+     * Инициализирует интерактивный предпросмотр файлов при наведении и клике
+     */
+    window.initFilePreviews = function() {
+        // Перемещаем модальные окна в body, чтобы они не перекрывались кнопками сайдбара и навигации
+        $('#addSpecModal, #editSpecModal, #addCustomerModal, #editCustomerModal, #customerInfoModal, #docViewerModal').appendTo('body');
+
+        // Создаем контейнер поповера в body, если его еще нет
+        if ($('#file-preview-popover').length === 0) {
+            $('body').append(`
+                <div id="file-preview-popover">
+                    <div class="preview-title">
+                        <span id="preview-filename-title">Предпросмотр</span>
+                        <span id="preview-type-badge" class="bg-gray-100 text-gray-500 px-1.5 py-0.5 rounded text-[10px]"></span>
+                    </div>
+                    <div id="preview-body-container" class="flex-grow flex items-center justify-center min-h-[50px]">
+                        <!-- Контент предпросмотра -->
+                    </div>
+                </div>
+            `);
+        }
+
+        var popover = $('#file-preview-popover');
+        var hoverTimeout = null;
+        var activeRequest = null;
+        var ajaxUrl = window.globalApi.upload_file.replace('upload_file', 'get_text_preview_ajax');
+
+        // Делегированные обработчики событий для поддержки динамических элементов
+        $(document)
+            .off('mouseenter', '.file-preview-trigger')
+            .on('mouseenter', '.file-preview-trigger', function(e) {
+                var trigger = $(this);
+                var fileName = trigger.data('file-name') || '';
+                var fileUrl = trigger.data('url') || '';
+                var fileId = trigger.data('file-id') || '';
+                var specId = trigger.data('spec-id') || '';
+                var isLink = parseInt(trigger.data('is-link') || 0);
+                var isExternal = parseInt(trigger.data('is-external') || 0);
+
+                if (!fileName || isLink) return;
+
+                var ext = fileName.split('.').pop().toLowerCase();
+                var isImage = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg'].indexOf(ext) !== -1;
+                var isText = ['txt', 'log', 'sql', 'json', 'xml', 'csv', 'md', 'ini', 'cfg', 'yaml', 'yml', 'html', 'js', 'css'].indexOf(ext) !== -1;
+
+                if (!isImage && !isText) return;
+
+                if (hoverTimeout) clearTimeout(hoverTimeout);
+                if (activeRequest) activeRequest.abort();
+
+                hoverTimeout = setTimeout(function() {
+                    $('#preview-filename-title').text(fileName);
+                    $('#preview-type-badge').text(ext.toUpperCase());
+
+                    var bodyContainer = $('#preview-body-container');
+                    bodyContainer.empty();
+
+                    if (isImage) {
+                        bodyContainer.html(`<img src="${fileUrl}" alt="${fileName}" />`);
+                        showPopover(e);
+                    } else if (isText) {
+                        bodyContainer.html(`
+                            <div class="preview-spinner">
+                                <svg class="w-6 h-6 text-blue-500 animate-spin" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path></svg>
+                            </div>
+                        `);
+                        showPopover(e);
+
+                        var ajaxData = {};
+                        if (isExternal) {
+                            ajaxData = { spec_id: specId, file: fileName };
+                        } else {
+                            ajaxData = { file_id: fileId };
+                        }
+
+                        activeRequest = $.ajax({
+                            url: ajaxUrl,
+                            type: 'GET',
+                            data: ajaxData,
+                            dataType: 'json',
+                            success: function(res) {
+                                if (res.status === 'success') {
+                                    var safeContent = $('<div/>').text(res.content).html();
+                                    bodyContainer.html(`<pre>${safeContent}${res.truncated ? '\n...' : ''}</pre>`);
+                                } else {
+                                    bodyContainer.html(`<div class="text-red-500 text-xs p-2">${res.message}</div>`);
+                                }
+                            },
+                            error: function(xhr, status, error) {
+                                if (status !== 'abort') {
+                                    bodyContainer.html(`<div class="text-red-500 text-xs p-2">Ошибка загрузки</div>`);
+                                }
+                            }
+                        });
+                    }
+                }, 250); // Задержка 250мс перед показом
+            });
+
+        $(document)
+            .off('mouseleave', '.file-preview-trigger')
+            .on('mouseleave', '.file-preview-trigger', function() {
+                if (hoverTimeout) clearTimeout(hoverTimeout);
+                if (activeRequest) activeRequest.abort();
+                hidePopover();
+            });
+
+        $(document)
+            .off('mousemove', '.file-preview-trigger')
+            .on('mousemove', '.file-preview-trigger', function(e) {
+                positionPopover(e);
+            });
+
+        // Открытие модального окна просмотра файла по клику
+        $(document)
+            .off('click', '.file-preview-trigger')
+            .on('click', '.file-preview-trigger', function(e) {
+                // Предотвращаем срабатывание при клике на управляющие иконки (скачивание/удаление)
+                if ($(e.target).closest('.delete-file-btn, .download-icon-btn, .download-external-link').length) {
+                    return;
+                }
+
+                var trigger = $(this);
+                var fileName = trigger.data('file-name') || '';
+                var isLink = parseInt(trigger.data('is-link') || 0);
+
+                if (isLink) {
+                    var url = trigger.data('url');
+                    window.open(url, '_blank');
+                    return;
+                }
+
+                e.preventDefault();
+                e.stopPropagation();
+
+                hidePopover();
+
+                $('#docViewerTitle').text(fileName);
+                $('#docViewerModal').removeClass('hidden');
+
+                var ext = fileName.split('.').pop().toLowerCase();
+                var isImage = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg'].indexOf(ext) !== -1;
+                var isText = ['txt', 'log', 'sql', 'json', 'xml', 'csv', 'md', 'ini', 'cfg', 'yaml', 'yml', 'html', 'js', 'css'].indexOf(ext) !== -1;
+
+                var contentContainer = $('#docViewerContent');
+                contentContainer.empty();
+
+                if (isImage) {
+                    contentContainer.html(`<img src="${trigger.data('url')}" class="max-w-full max-h-full object-contain rounded-2xl shadow-md" />`);
+                } else if (isText) {
+                    var spinner = $('#docViewerSpinner');
+                    spinner.removeClass('hidden');
+
+                    var fileId = trigger.data('file-id') || '';
+                    var specId = trigger.data('spec-id') || '';
+                    var isExternal = parseInt(trigger.data('is-external') || 0);
+
+                    var ajaxData = {};
+                    if (isExternal) {
+                        ajaxData = { spec_id: specId, file: fileName };
+                    } else {
+                        ajaxData = { file_id: fileId };
+                    }
+
+                    $.ajax({
+                        url: ajaxUrl,
+                        type: 'GET',
+                        data: ajaxData,
+                        dataType: 'json',
+                        success: function(res) {
+                            spinner.addClass('hidden');
+                            if (res.status === 'success') {
+                                var safeContent = $('<div/>').text(res.content).html();
+                                contentContainer.html(`<pre class="w-full h-full p-6 bg-gray-50 border border-gray-100 rounded-2xl overflow-auto text-xs md:text-sm font-mono text-gray-800 whitespace-pre-wrap word-break-all">${safeContent}${res.truncated ? '\n[Содержимое обрезано...] Полная версия будет доступна после интеграции парсеров.' : ''}</pre>`);
+                            } else {
+                                contentContainer.html(`<div class="text-red-500 font-semibold">${res.message}</div>`);
+                            }
+                        },
+                        error: function() {
+                            spinner.addClass('hidden');
+                            contentContainer.html(`<div class="text-red-500 font-semibold">Ошибка загрузки файла</div>`);
+                        }
+                    });
+                } else {
+                    contentContainer.html(`
+                        <div class="text-center p-8">
+                            <span class="text-5xl mb-4 block">📁</span>
+                            <p class="text-gray-700 text-lg font-bold mb-2">Просмотрщик этого формата находится в разработке</p>
+                            <p class="text-gray-400 text-sm mb-4">Вы можете скачать этот файл на свое устройство</p>
+                            <a href="${trigger.data('url')}" class="inline-flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white font-bold py-2.5 px-6 rounded-xl transition-all shadow-md">
+                                📥 Скачать файл
+                            </a>
+                        </div>
+                    `);
+                }
+            });
+
+        function showPopover(e) {
+            popover.css('display', 'flex');
+            positionPopover(e);
+            setTimeout(function() {
+                popover.addClass('visible');
+            }, 10);
+        }
+
+        function hidePopover() {
+            popover.removeClass('visible');
+            popover.hide();
+        }
+
+        function positionPopover(e) {
+            var mouseX = e.clientX;
+            var mouseY = e.clientY;
+
+            var popoverWidth = popover.outerWidth() || 320;
+            var popoverHeight = popover.outerHeight() || 200;
+
+            var offsetX = 15;
+            var offsetY = 15;
+
+            var posX = mouseX + offsetX;
+            var posY = mouseY + offsetY;
+
+            if (posX + popoverWidth > window.innerWidth) {
+                posX = mouseX - popoverWidth - offsetX;
+            }
+
+            if (posY + popoverHeight > window.innerHeight) {
+                posY = mouseY - popoverHeight - offsetY;
+            }
+
+            if (posX < 0) posX = 10;
+            if (posY < 0) posY = 10;
+
+            popover.css({
+                left: posX + 'px',
+                top: posY + 'px'
+            });
+        }
+    };
+
+    /**
+     * Закрывает полноэкранное окно просмотра документов
+     */
+    window.closeDocViewerModal = function() {
+        $('#docViewerModal').addClass('hidden');
+        $('#docViewerContent').empty();
+        $('#docViewerSpinner').addClass('hidden');
+    };
+
     // Запускаем инициализацию Quill и скролла
     initQuillEditors();
     initInfiniteScrollCustomers();
     initInfiniteScrollTasks();
     initClosedTasksToggle();
     initSpecAccordions();
+    initFilePreviews();
 }
 
 /**

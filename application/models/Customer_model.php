@@ -268,10 +268,45 @@ class Customer_model extends CI_Model {
     public function get_customer_tasks($customer_id, $user_id) {
         $this->db->where('customer_id', $customer_id);
         $this->db->where('user_id', $user_id);
-        $this->db->where('status', 'active');
         $this->db->where('deleted_at IS NULL', null, false);
         $this->db->order_by('created_at', 'ASC');
-        return $this->db->get('tasks')->result_array();
+        $all_tasks = $this->db->get('tasks')->result_array();
+
+        // Индексируем задачи по ID
+        $tasks_by_id = [];
+        foreach ($all_tasks as $task) {
+            $tasks_by_id[$task['id']] = $task;
+        }
+
+        $active_tasks = [];
+        foreach ($all_tasks as $task) {
+            if ($task['status'] !== 'active') {
+                continue;
+            }
+
+            // Проверяем всю цепочку предков до корня. Если хотя бы один предок завершен (completed),
+            // то и текущая подзадача считается архивной/завершенной.
+            $current = $task;
+            $ancestor_completed = false;
+            while ($current['parent_id'] !== null) {
+                $parent_id = $current['parent_id'];
+                if (!isset($tasks_by_id[$parent_id])) {
+                    break; // Родитель не найден или удален
+                }
+                $parent = $tasks_by_id[$parent_id];
+                if ($parent['status'] !== 'active') {
+                    $ancestor_completed = true;
+                    break;
+                }
+                $current = $parent;
+            }
+
+            if (!$ancestor_completed) {
+                $active_tasks[] = $task;
+            }
+        }
+
+        return $active_tasks;
     }
 
     // =========================================================================

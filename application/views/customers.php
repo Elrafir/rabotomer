@@ -166,17 +166,21 @@
                                                         <span class="text-xs text-gray-400 italic empty-files-label"><?= lang('cust_no_files'); ?></span>
                                                     <?php else: ?>
                                                         <?php foreach ($spec['files'] as $f): ?>
-                                                            <div id="file-item-<?= $f['id'] ?>" class="flex items-center gap-2 bg-white px-3 py-1.5 rounded-lg border border-gray-200 text-xs shadow-sm">
+                                                            <div id="file-item-<?= $f['id'] ?>" class="flex items-center gap-2 bg-white px-3 py-1.5 rounded-lg border border-gray-200 text-xs shadow-sm file-preview-trigger cursor-pointer hover:border-blue-400 transition-colors"
+                                                                 data-file-id="<?= $f['id'] ?>"
+                                                                 data-file-name="<?= htmlspecialchars($f['orig_name']) ?>"
+                                                                 data-is-link="<?= $f['is_link'] ? 1 : 0 ?>"
+                                                                 data-url="<?= $f['is_link'] ? htmlspecialchars($f['filename']) : site_url('customers/download_file/'.$f['id']) ?>">
                                                                 <span><?= get_file_icon_emoji($f['orig_name'], $f['is_link']) ?></span>
                                                                 <?php if ($f['is_link']): ?>
-                                                                    <a href="<?= htmlspecialchars($f['filename']) ?>" target="_blank" class="text-blue-600 hover:underline font-medium"><?= htmlspecialchars($f['orig_name']) ?></a>
+                                                                    <span class="text-blue-600 hover:underline font-medium file-name-text"><?= htmlspecialchars($f['orig_name']) ?></span>
                                                                     <span class="text-gray-400 font-mono">(<?= lang('cust_file_link'); ?>)</span>
                                                                 <?php else: ?>
-                                                                    <span class="text-gray-700 font-medium"><?= htmlspecialchars($f['orig_name']) ?></span>
+                                                                    <span class="text-gray-700 font-medium file-name-text"><?= htmlspecialchars($f['orig_name']) ?></span>
                                                                     <span class="text-gray-400 font-mono">(<?= round($f['file_size']/1024, 1) ?> KB)</span>
-                                                                    <a href="<?= site_url('customers/download_file/'.$f['id']) ?>" class="text-blue-500 hover:text-blue-700" title="<?= htmlspecialchars(lang('cust_download_title'), ENT_QUOTES); ?>">📥</a>
+                                                                    <a href="<?= site_url('customers/download_file/'.$f['id']) ?>" class="text-blue-500 hover:text-blue-700 download-icon-btn" title="<?= htmlspecialchars(lang('cust_download_title'), ENT_QUOTES); ?>">📥</a>
                                                                 <?php endif; ?>
-                                                                <button onclick="deleteSpecFile(<?= $f['id'] ?>)" class="text-red-400 hover:text-red-600" title="<?= htmlspecialchars(lang('btn_delete'), ENT_QUOTES); ?>">✖</button>
+                                                                <button onclick="deleteSpecFile(<?= $f['id'] ?>)" class="text-red-400 hover:text-red-600 delete-file-btn" title="<?= htmlspecialchars(lang('btn_delete'), ENT_QUOTES); ?>">✖</button>
                                                             </div>
                                                         <?php endforeach; ?>
                                                     <?php endif; ?>
@@ -230,11 +234,15 @@
                                                          <?php else: ?>
                                                              <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
                                                                  <?php foreach ($ext_files as $ef): ?>
-                                                                     <div class="bg-white border border-gray-200 rounded-xl p-3 flex flex-col items-center text-center shadow-sm relative group hover:border-blue-400 transition-colors">
+                                                                     <div class="bg-white border border-gray-200 rounded-xl p-3 flex flex-col items-center text-center shadow-sm relative group hover:border-blue-400 transition-colors file-preview-trigger"
+                                                                          data-file-name="<?= htmlspecialchars($ef['name']) ?>"
+                                                                          data-url="<?= site_url('customers/download_external_file?spec_id=' . $spec['id'] . '&file=' . urlencode($ef['name'])) ?>"
+                                                                          data-spec-id="<?= $spec['id'] ?>"
+                                                                          data-is-external="1">
                                                                          <span class="text-3xl mb-1.5"><?= get_file_icon_emoji($ef['name'], 0) ?></span>
                                                                          <span class="text-xs font-semibold text-gray-700 line-clamp-2 w-full break-all mb-1" title="<?= htmlspecialchars($ef['name']) ?>"><?= htmlspecialchars($ef['name']) ?></span>
                                                                          <span class="text-[9px] font-mono text-gray-400"><?= round($ef['size']/1024, 1) ?> KB</span>
-                                                                         <a href="<?= site_url('customers/download_external_file?spec_id=' . $spec['id'] . '&file=' . urlencode($ef['name'])) ?>" class="absolute inset-0 rounded-xl cursor-pointer" title="Скачать файл"></a>
+                                                                         <a href="<?= site_url('customers/download_external_file?spec_id=' . $spec['id'] . '&file=' . urlencode($ef['name'])) ?>" class="absolute inset-0 rounded-xl cursor-pointer download-external-link" title="Скачать файл"></a>
                                                                      </div>
                                                                  <?php endforeach; ?>
                                                              </div>
@@ -588,6 +596,32 @@
                 </button>
             </div>
         <?php echo form_close(); ?>
+    </div>
+</div>
+
+<!-- Модальное окно просмотра документа (Шаг 4 заготовка) -->
+<div id="docViewerModal" onclick="closeDocViewerModal()" class="hidden fixed inset-0 z-[100000] bg-black bg-opacity-50 flex items-center justify-center p-4">
+    <div onclick="event.stopPropagation()" class="bg-white rounded-3xl shadow-2xl w-full max-w-7xl h-[90vh] flex flex-col overflow-hidden relative">
+        <!-- Шапка -->
+        <div class="p-6 border-b border-gray-100 flex justify-between items-center flex-shrink-0 bg-white">
+            <h4 class="text-xl font-black text-gray-800 flex items-center gap-2">
+                📄 Просмотр документа: <span id="docViewerTitle" class="text-gray-600 font-semibold truncate max-w-lg md:max-w-2xl font-sans"></span>
+            </h4>
+            <button type="button" onclick="closeDocViewerModal()" class="text-gray-400 hover:text-gray-600 transition-colors">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12"></path></svg>
+            </button>
+        </div>
+        
+        <!-- Тело -->
+        <div class="flex-grow p-6 overflow-y-auto bg-gray-50 flex items-center justify-center relative">
+            <div id="docViewerContent" class="w-full h-full flex items-center justify-center text-gray-500 text-lg font-semibold italic">
+                Просмотрщик документа готовится к запуску...
+            </div>
+            <!-- Спиннер загрузки -->
+            <div id="docViewerSpinner" class="hidden absolute inset-0 bg-white/80 backdrop-blur-sm flex items-center justify-center">
+                <svg class="w-10 h-10 text-blue-500 animate-spin" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path></svg>
+            </div>
+        </div>
     </div>
 </div>
 

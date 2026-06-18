@@ -14,6 +14,10 @@ class Profile extends MY_Controller {
     public function index() {
         $user_id = $this->session->userdata('user_id');
         $data['user'] = $this->User_model->get_user_by_id($user_id);
+        
+        $this->load->model('Settings_model');
+        $data['upload_dir'] = $this->Settings_model->get_setting('upload_dir', 'uploads/specs/');
+        
         $this->render_page('profile', $data);
     }
 
@@ -26,6 +30,7 @@ class Profile extends MY_Controller {
         $this->form_validation->set_rules('email', 'Email', 'required|trim|valid_email');
         $this->form_validation->set_rules('first_name', 'Имя', 'trim|max_length[50]');
         $this->form_validation->set_rules('last_name', 'Фамилия', 'trim|max_length[50]');
+        $this->form_validation->set_rules('upload_dir', 'Директория хранения файлов ТЗ', 'required|trim');
         
         // Пароль опционально
         if ($this->input->post('password')) {
@@ -52,14 +57,14 @@ class Profile extends MY_Controller {
                 return;
             }
 
-            if ($this->User_model->update_profile($user_id, $update_data)) {
-                $this->session->set_flashdata('success', 'Профиль успешно обновлен');
-                echo json_encode(['status' => 'success']);
-                return;
-            } else {
-                echo json_encode(['status' => 'success']); // Нет изменений
-                return;
-            }
+            // Сохраняем настройку директории ТЗ
+            $this->load->model('Settings_model');
+            $this->Settings_model->set_setting('upload_dir', trim($this->input->post('upload_dir')));
+
+            $this->User_model->update_profile($user_id, $update_data);
+            $this->session->set_flashdata('success', 'Профиль успешно обновлен');
+            echo json_encode(['status' => 'success']);
+            return;
         }
         
         echo json_encode(['status' => 'error', 'message' => validation_errors(' ', ' ')]);

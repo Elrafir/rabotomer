@@ -754,4 +754,73 @@ class Customers extends MY_Controller {
         }
         show_404();
     }
+
+    /**
+     * AJAX-метод получения текстового предпросмотра файлов
+     */
+    public function get_text_preview_ajax() {
+        if (ob_get_level() > 0) {
+            ob_clean();
+        }
+        header('Content-Type: application/json');
+
+        $file_id = $this->input->get('file_id');
+        $spec_id = $this->input->get('spec_id');
+        $filename = $this->input->get('file');
+
+        $filepath = '';
+        $display_name = '';
+
+        if (!empty($file_id)) {
+            $file = $this->Customer_model->get_spec_file((int)$file_id);
+            if ($file && $file['is_link'] == 0) {
+                // Получаем директорию загрузки из настроек
+                $this->load->model('Settings_model');
+                $upload_dir_setting = $this->Settings_model->get_setting('upload_dir', 'uploads/specs/');
+                if (substr($upload_dir_setting, 0, 1) === '/' || substr($upload_dir_setting, 1, 1) === ':') {
+                    $upload_dir = rtrim($upload_dir_setting, '/') . '/';
+                } else {
+                    $upload_dir = FCPATH . rtrim($upload_dir_setting, '/') . '/';
+                }
+                $filepath = $upload_dir . $file['filename'];
+                $display_name = $file['orig_name'];
+            }
+        } elseif (!empty($spec_id) && !empty($filename)) {
+            $filename = basename($filename); // Защита от Path Traversal
+            $spec = $this->Customer_model->get_spec((int)$spec_id);
+            if ($spec && !empty($spec['files_dir'])) {
+                $filepath = rtrim($spec['files_dir'], '/') . '/' . $filename;
+                $display_name = $filename;
+            }
+        }
+
+        if (empty($filepath) || !file_exists($filepath) || !is_file($filepath) || !is_readable($filepath)) {
+            echo json_encode(['status' => 'error', 'message' => 'Файл не найден или недоступен для чтения']);
+            exit;
+        }
+
+        // Проверяем, является ли файл текстовым
+        $ext = strtolower(pathinfo($filepath, PATHINFO_EXTENSION));
+        $allowed_exts = ['txt', 'log', 'sql', 'json', 'xml', 'csv', 'md', 'ini', 'cfg', 'yaml', 'yml', 'html', 'js', 'css'];
+        if (!in_array($ext, $allowed_exts)) {
+            echo json_encode(['status' => 'error', 'message' => 'Неподдерживаемый тип текстового файла']);
+            exit;
+        }
+
+        // Читаем первые 1000 символов
+        $content = file_get_contents($filepath, false, null, 0, 1000);
+        
+        // Убедимся, что кодировка корректная (преобразуем в UTF-8 если нужно)
+        if (!mb_check_encoding($content, 'UTF-8')) {
+            $content = mb_convert_encoding($content, 'UTF-8', 'CP1251, UTF-8');
+        }
+
+        echo json_encode([
+            'status' => 'success',
+            'filename' => $display_name,
+            'content' => $content,
+            'truncated' => (filesize($filepath) > 1000)
+        ]);
+        exit;
+    }
 }
