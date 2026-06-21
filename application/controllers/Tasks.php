@@ -208,22 +208,35 @@ class Tasks extends MY_Controller {
 
     /**
      * AJAX-обработчик для получения всех сессий конкретной задачи
+     * Использует хелпер session_formatting для очистки контроллера от логики преобразования.
+     *
+     * @return void Выводит JSON-ответ
      */
     public function get_sessions_ajax() {
+        // Получаем идентификатор текущего пользователя из сессии
         $user_id = $this->session->userdata('user_id');
+        
+        // Получаем ID задачи из POST-параметров запроса
         $task_id = $this->input->post('task_id');
 
+        // Проверяем, передан ли ID задачи
         if (!empty($task_id)) {
+            // Вызываем модель для получения списка сессий этой конкретной задачи
             $sessions = $this->Task_model->get_task_sessions($task_id, $user_id);
-            // Форматируем данные для красивого вывода
+            
+            // Подключаем хелпер форматирования сессий по правилам манифеста
+            $this->load->helper('session_formatting');
+            
+            // Загружаем формат вывода длительности из языкового файла
+            $duration_format = lang('time_format_hours_mins');
+            
+            // Проходим по каждой сессии и форматируем её через функцию хелпера
             foreach ($sessions as &$s) {
-                $s['start_formatted'] = date('d.m.Y H:i:s', strtotime($s['start_time']));
-                $s['end_formatted'] = date('d.m.Y H:i:s', strtotime($s['end_time']));
-                $diff = strtotime($s['end_time']) - strtotime($s['start_time']);
-                $s['duration'] = sprintf(lang('time_format_hours_mins'), floor($diff / 3600), floor(($diff % 3600) / 60));
-                // Защита от XSS для поля результата
-                $s['note_safe'] = !empty($s['note']) ? htmlspecialchars($s['note']) : '';
+                // Преобразуем данные в полный формат для ручного редактора одной задачи
+                $s = format_session_full($s, $duration_format);
             }
+            
+            // Выводим успешный ответ в JSON-формате
             echo json_encode(['status' => 'success', 'data' => $sessions]);
             return;
         }
@@ -231,32 +244,54 @@ class Tasks extends MY_Controller {
 
     /**
      * AJAX-обработчик получения каскадной истории (для задачи и всех её подзадач)
+     * С поддержкой постраничной загрузки (бесконечный скролл) и вынесением логики в хелпер.
+     *
+     * @return void Выводит JSON-ответ
      */
     public function get_cascading_history_ajax() {
+        // Получаем идентификатор текущего авторизованного пользователя
         $user_id = $this->session->userdata('user_id');
+        
+        // Получаем ID задачи из POST-параметров
         $task_id = $this->input->post('task_id');
+        
+        // Получаем параметры пагинации: лимит записей и смещение
+        $limit = $this->input->post('limit');
+        $offset = $this->input->post('offset');
+        
+        // Задаем лимит по умолчанию 40, если параметр не передан или пуст
+        $limit = !empty($limit) ? (int)$limit : 40;
+        
+        // Задаем смещение по умолчанию 0, если параметр отсутствует
+        $offset = !empty($offset) ? (int)$offset : 0;
 
+        // Проверяем наличие переданного идентификатора задачи
         if (!empty($task_id)) {
-            // Рекурсивно собираем все ID (этой задачи и всех её потомков)
+            // Рекурсивно собираем все ID (этой задачи и всех её подзадач любого уровня вложенности)
             $task_ids = $this->Task_model->get_task_and_children_ids($task_id);
             
-            // Получаем историю
-            $sessions = $this->Task_model->get_cascading_history($task_ids, $user_id);
+            // Получаем историю сессий из базы данных с учетом пагинации (лимит и оффсет)
+            $sessions = $this->Task_model->get_cascading_history($task_ids, $user_id, $limit, $offset);
             
-            // Форматируем для UI
+            // Загружаем хелпер форматирования сессий по правилам манифеста
+            $this->load->helper('session_formatting');
+            
+            // Получаем языковую строку формата вывода времени
+            $duration_format = lang('time_format_hours_mins');
+            
+            // Перебираем и форматируем каждую запись истории через функцию хелпера
             foreach ($sessions as &$s) {
-                $s['start_formatted'] = date('d.m.Y H:i', strtotime($s['start_time']));
-                $s['end_formatted'] = date('H:i', strtotime($s['end_time']));
-                $diff = $s['duration_seconds'];
-                $s['duration'] = sprintf(lang('time_format_hours_mins'), floor($diff / 3600), floor(($diff % 3600) / 60));
-                $s['note_safe'] = !empty($s['note']) ? htmlspecialchars($s['note']) : '';
+                // Применяем краткий формат вывода дат и времени для каскадной истории
+                $s = format_session_short($s, $duration_format);
             }
             
+            // Возвращаем результат в формате JSON
             echo json_encode(['status' => 'success', 'data' => $sessions]);
             return;
         }
         
-        echo json_encode(['status' => 'error']);
+        // Возвращаем ошибку в формате JSON, если ID задачи не передан
+        echo json_encode(['status' => 'error', 'message' => 'Не указан ID задачи']);
     }
 
     /**

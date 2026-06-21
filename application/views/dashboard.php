@@ -50,9 +50,8 @@ $this->load->view('templates/task_list_loop');
 
 
 
-<!-- Модальное окно для ручной корректировки времени -->
-<div id="editTimeModal" onclick="closeEditModal()" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4" style="z-index: 99999;">
-    <div id="editModalBody" onclick="event.stopPropagation()" class="bg-white rounded-3xl shadow-2xl w-full max-w-4xl p-6 md:p-8 transform transition-all max-h-[90vh] flex flex-col relative">
+<div id="editTimeModal" onclick="closeEditModal()" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4">
+    <div id="editModalBody" onclick="event.stopPropagation()" class="bg-white rounded-3xl shadow-2xl w-full max-w-4xl p-6 md:p-8 transform transition-all max-h-[90vh] flex flex-col relative overflow-hidden">
         <!-- Кнопка закрытия -->
         <button onclick="closeEditModal()" class="absolute top-6 right-6 text-gray-400 hover:text-gray-700 transition-colors bg-white/50 backdrop-blur-md rounded-full p-2 shadow-sm">
             <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
@@ -111,7 +110,7 @@ $this->load->view('templates/task_list_loop');
 </div>
 
 <!-- Панель выбора цвета (Color Picker) -->
-<div id="colorPickerPopover" class="hidden absolute bg-white rounded-lg shadow-xl border border-gray-200 p-1.5 grid grid-cols-5 gap-1.5 w-max" style="z-index: 99999; background-color: #ffffff !important;">
+<div id="colorPickerPopover" class="hidden absolute bg-white rounded-lg shadow-xl border border-gray-200 p-1.5 grid grid-cols-5 gap-1.5 w-max" style="background-color: #ffffff !important;">
     <button onclick="saveColor('#ef4444')" style="background-color: #ef4444;" class="w-5 h-5 rounded-full hover:scale-125 transition-transform shadow-sm"></button>
     <button onclick="saveColor('#f97316')" style="background-color: #f97316;" class="w-5 h-5 rounded-full hover:scale-125 transition-transform shadow-sm"></button>
     <button onclick="saveColor('#f59e0b')" style="background-color: #f59e0b;" class="w-5 h-5 rounded-full hover:scale-125 transition-transform shadow-sm"></button>
@@ -125,8 +124,8 @@ $this->load->view('templates/task_list_loop');
 </div>
 
 <!-- Модальное окно для Каскадной Истории -->
-<div id="cascadeHistoryModal" onclick="closeCascadeModal()" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4" style="z-index: 99999;">
-    <div id="cascadeModalBody" onclick="event.stopPropagation()" class="bg-white rounded-3xl shadow-2xl w-full max-w-4xl p-8 transform transition-all relative flex flex-col h-[85vh]">
+<div id="cascadeHistoryModal" onclick="closeCascadeModal()" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4">
+    <div id="cascadeModalBody" onclick="event.stopPropagation()" class="bg-white rounded-3xl shadow-2xl w-full max-w-4xl p-8 transform transition-all relative flex flex-col max-h-[90vh] md:max-h-[85vh] h-full overflow-hidden">
         <!-- Кнопка закрытия -->
         <button onclick="closeCascadeModal()" class="absolute top-6 right-6 text-gray-400 hover:text-gray-700 transition-colors bg-white/50 backdrop-blur-md rounded-full p-2 shadow-sm">
             <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
@@ -134,11 +133,11 @@ $this->load->view('templates/task_list_loop');
         <h3 class="text-xs uppercase tracking-wider font-bold mb-1 text-gray-500 flex-shrink-0"><?= lang('cascade_history_title'); ?></h3>
         <p class="text-gray-800 mb-4 text-xl flex-shrink-0 truncate w-full block overflow-hidden text-ellipsis whitespace-nowrap"><span id="cascadeModalTaskTitle" class="font-bold"></span></p>
         
-        <div class="mb-4">
+        <div class="mb-4 flex-shrink-0">
             <input type="text" id="cascadeSearchInput" placeholder="<?= lang('cascade_search_placeholder'); ?>" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:outline-none">
         </div>
         
-        <div class="overflow-y-auto flex-grow border border-gray-200 rounded-lg">
+        <div id="cascadeTableContainer" class="overflow-y-auto flex-grow border border-gray-200 rounded-lg">
             <table class="w-full text-left text-sm text-gray-600">
                 <thead class="bg-gray-100 text-gray-700 sticky top-0 z-10 shadow-sm">
                     <tr>

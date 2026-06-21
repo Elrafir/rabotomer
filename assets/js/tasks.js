@@ -392,36 +392,116 @@ if (window.loadedTasksModule) {
         });
     };
 
-    /**
-     * Открывает модальное окно каскадной (полной рекурсивной) истории проекта
-     */
-    window.openCascadeModal = function(taskId, title, hexColor = '#ffffff') {
-        $('#cascadeModalTaskTitle').text(title);
-        if (hexColor === '') hexColor = '#ffffff';
-        // Назначаем легкий оттенок проекта на задний фон модалки
-        $('#cascadeModalBody').css('background', 'linear-gradient(135deg, #ffffff 30%, ' + hexColor + '33 100%)');
-        $('#cascadeModalSessionsList').html('<tr><td colspan="4" class="px-4 py-8 text-center text-gray-400">Загрузка...</td></tr>');
-        $('#cascadeHistoryModal').removeClass('hidden');
+    // Переменные для каскадной истории (бесконечный скролл)
+    var cascadeCurrentTaskId = 0;
+    var cascadeLimit = 40;
+    var cascadeOffset = 0;
+    var cascadeHasMore = true;
+    var cascadeLoading = false;
 
-        $.post(window.api.get_cascading, { task_id: taskId }, function(response) {
-            var res = JSON.parse(response);
-            if (res.status === 'success') {
-                var html = '';
-                if (res.data.length === 0) {
-                    html = '<tr><td colspan="4" class="px-4 py-8 text-center text-gray-400 font-medium">Нет сессий активности.</td></tr>';
-                } else {
+    // Функция загрузки следующей пачки сессий каскадной истории
+    window.loadMoreCascadeSessions = function() {
+        if (cascadeLoading || !cascadeHasMore) return;
+        cascadeLoading = true;
+
+        // Показываем прелоадер (строку загрузки внизу таблицы)
+        var preloaderHtml = '<tr id="cascadePreloader"><td colspan="4" class="px-4 py-4 text-center text-purple-600 font-medium animate-pulse">Загрузка сессий...</td></tr>';
+        $('#cascadeModalSessionsList').append(preloaderHtml);
+
+        $.post(window.api.get_cascading, {
+            task_id: cascadeCurrentTaskId,
+            limit: cascadeLimit,
+            offset: cascadeOffset
+        }, function(response) {
+            try {
+                var res = JSON.parse(response);
+                $('#cascadePreloader').remove();
+
+                if (res.status === 'success') {
+                    if (res.data.length === 0) {
+                        cascadeHasMore = false;
+                        if (cascadeOffset === 0) {
+                            $('#cascadeModalSessionsList').html('<tr><td colspan="4" class="px-4 py-8 text-center text-gray-400 font-medium">Нет сессий активности.</td></tr>');
+                        }
+                        cascadeLoading = false;
+                        return;
+                    }
+
+                    var html = '';
+                    var searchValue = ($('#cascadeSearchInput').val() || '').toLowerCase().trim();
+
                     res.data.forEach(s => {
                         var colorStyle = s.color ? `background-color: ${s.color};` : 'background-color: #e5e7eb;';
+                        var rowText = `${s.start_formatted} ${s.end_formatted} ${s.task_title} ${s.duration} ${s.note_safe}`.toLowerCase();
+                        var isVisible = (searchValue === "" || rowText.indexOf(searchValue) > -1) ? '' : 'style="display: none;"';
+
                         html += `
-                        <tr class="hover:bg-gray-50 transition-colors">
+                        <tr class="hover:bg-gray-50 transition-colors" ${isVisible}>
                             <td class="px-4 py-2 border-b border-gray-100 whitespace-nowrap"><span class="font-medium text-gray-700">${s.start_formatted}</span> <span class="text-gray-400 text-xs">&rarr; ${s.end_formatted}</span></td>
                             <td class="px-4 py-2 border-b border-gray-100"><div class="flex items-center gap-2"><div class="w-3 h-3 rounded-full shadow-sm" style="${colorStyle}"></div><span class="font-bold text-gray-800 text-sm">${s.task_title}</span></div></td>
                             <td class="px-4 py-2 border-b border-gray-100 font-mono text-sm font-bold text-blue-600"><span class="bg-blue-50 px-2 py-0.5 rounded border border-blue-100">${s.duration}</span></td>
                             <td class="px-4 py-2 border-b border-gray-100 text-gray-600 text-sm italic bg-gray-50">${s.note_safe}</td>
                         </tr>`;
                     });
+
+                    $('#cascadeModalSessionsList').append(html);
+                    
+                    if (res.data.length < cascadeLimit) {
+                        cascadeHasMore = false;
+                    }
+                    
+                    cascadeOffset += res.data.length;
                 }
-                $('#cascadeModalSessionsList').html(html);
+            } catch(e) {
+                console.error(e);
+            }
+            cascadeLoading = false;
+        });
+    };
+
+    /**
+     * Открывает модальное окно каскадной (полной рекурсивной) истории проекта
+     * Сбрасывает параметры пагинации, очищает списки и биндит событие прокрутки к контейнеру таблицы.
+     *
+     * @param {number|string} taskId Идентификатор проекта
+     * @param {string} title Название проекта для заголовка
+     * @param {string} hexColor Цвет проекта для фонового градиента
+     */
+    window.openCascadeModal = function(taskId, title, hexColor = '#ffffff') {
+        // Устанавливаем заголовок задачи в модальном окне
+        $('#cascadeModalTaskTitle').text(title);
+        
+        // Если цвет пустой, используем белый
+        if (hexColor === '') hexColor = '#ffffff';
+
+        // Назначаем легкий оттенок проекта на задний фон модалки (прозрачность 20%)
+        $('#cascadeModalBody').css('background', 'linear-gradient(135deg, #ffffff 30%, ' + hexColor + '33 100%)');
+        
+        // Очищаем текущий список сессий
+        $('#cascadeModalSessionsList').html('');
+        
+        // Сбрасываем значение поля поиска
+        $('#cascadeSearchInput').val('');
+
+        // Сбрасываем параметры постраничной выборки для новой задачи
+        cascadeCurrentTaskId = taskId;
+        cascadeOffset = 0;
+        cascadeHasMore = true;
+        cascadeLoading = false;
+
+        // Показываем модальное окно
+        $('#cascadeHistoryModal').removeClass('hidden');
+
+        // Подгружаем первую порцию данных (первые 40 сессий)
+        window.loadMoreCascadeSessions();
+
+        // Снимаем старый обработчик скролла (если был) и вешаем новый для бесконечного скролла
+        $('#cascadeTableContainer').off('scroll').on('scroll', function() {
+            var container = $(this);
+            // Если пользователь прокрутил таблицу почти до самого конца (осталось менее 80px)
+            if (container.scrollTop() + container.innerHeight() >= container[0].scrollHeight - 80) {
+                // Инициируем подгрузку следующей пачки сессий
+                window.loadMoreCascadeSessions();
             }
         });
     };
@@ -526,24 +606,37 @@ if (window.loadedTasksModule) {
         }
     });
 
-    // Живой поиск по дереву задач на дашборде
+    // Живой поиск по дереву задач на дашборде (поиск по названию и детальному описанию)
     $(document).on('keyup', '#searchTaskInput', function() {
+        // Получаем введенное значение в нижнем регистре без лишних пробелов
         var value = $(this).val().toLowerCase().trim();
         
+        // Если поле поиска пустое
         if (value === "") {
-            // Если поиск пустой, возвращаем изначальное дерево
+            // Показываем все элементы списка в дереве задач
             $('.task-tree-root li').show();
+            // Инициализируем изначальное состояние веток дерева (сворачивание/разворачивание из localStorage)
             initExpandedTasksTree();
         } else {
-            // Показываем совпадения и их родителей, скрывая остальные
+            // Показываем совпадения по названию или описанию, а также их родительские элементы, остальные скрываем
             $('.task-tree-root li').each(function() {
+                // Извлекаем название задачи из первого дочернего элемента названия
                 var taskName = $(this).find('.task-title-text').first().text().toLowerCase();
+                // Извлекаем детальное описание задачи из дата-атрибута description
+                var taskDesc = $(this).find('.task-title-text').first().attr('data-description') || '';
+                // Приводим описание к нижнему регистру для нечувствительного к регистру сравнения
+                taskDesc = taskDesc.toLowerCase();
                 
-                if (taskName.indexOf(value) > -1) {
+                // Проверяем вхождение искомого слова в название ИЛИ в детальное описание задачи
+                if (taskName.indexOf(value) > -1 || taskDesc.indexOf(value) > -1) {
+                    // Показываем текущую задачу
                     $(this).show();
+                    // Показываем всех ее родителей выше по иерархии
                     $(this).parents('li').show();
+                    // Разворачиваем все списки дочерних элементов родительских задач
                     $(this).parents('ul.task-children').show();
                 } else {
+                    // Скрываем задачу, если нет совпадений
                     $(this).hide();
                 }
             });

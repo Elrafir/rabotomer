@@ -8,7 +8,7 @@
 <!-- Динамический вывод дополнительных JS файлов (если они переданы из контроллера) -->
 <?php if (isset($custom_js) && is_array($custom_js)): ?>
     <?php foreach ($custom_js as $js): ?>
-        <script src="<?php echo base_url($js); ?>"></script>
+        <script src="<?php echo base_url($js) . '?v=' . time(); ?>"></script>
     <?php endforeach; ?>
 <?php endif; ?>
 

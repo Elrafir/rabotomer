@@ -79,14 +79,13 @@ if ($current_theme === 'theme-custom') {
                         
                         <!-- User Dropdown Menu -->
                         <div class="relative profile-dropdown-wrapper">
-                            <button class="text-lg hover:bg-white/10 px-3 py-2 rounded-xl transition-colors flex items-center gap-2 cursor-pointer focus:outline-none">
-                                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path></svg>
-                                <?php echo htmlspecialchars($display_name); ?>
-                                <svg class="w-4 h-4 ml-1 opacity-70" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                            <!-- Кнопка аватара профиля (круглая, без вывода имени пользователя и стрелки) -->
+                            <button class="text-lg hover:bg-white/10 p-2 rounded-full transition-colors flex items-center justify-center cursor-pointer focus:outline-none" title="Профиль">
+                                <svg class="w-6 h-6 opacity-80 hover:opacity-100 transition-opacity" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path></svg>
                             </button>
                             
                             <!-- Dropdown Container -->
-                            <div class="absolute right-0 top-full pt-2 w-56 profile-dropdown-content" style="z-index: 99999;">
+                            <div class="absolute right-0 top-full pt-2 w-56 profile-dropdown-content">
                                 <div class="rounded-xl shadow-2xl border overflow-hidden text-white" style="background: linear-gradient(rgba(255, 255, 255, 0.15), rgba(255, 255, 255, 0.15)), var(--theme-color-main) !important; backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); border-color: rgba(255,255,255,0.15) !important;">
                                     <?php if ($ci->session->userdata('group_id') == 1 || $ci->session->userdata('username') === 'root'): ?>
                                         <a href="<?= site_url('admin/users'); ?>" class="px-4 py-3 hover:bg-black/10 border-b border-white/10 text-sm font-semibold flex items-center gap-2 transition-colors text-white opacity-90 hover:opacity-100">
@@ -105,6 +104,12 @@ if ($current_theme === 'theme-custom') {
                                 </div>
                             </div>
                         </div>
+                    <?php else: ?>
+                        <!-- Кнопка авторизации для неавторизованного посетителя -->
+                        <a href="<?= site_url('auth/login'); ?>" class="text-xl font-bold flex items-center transition-all px-4 py-2 opacity-70 hover:opacity-100 ajax-link" onclick="event.preventDefault(); loadAjaxPage(this.href);">
+                            <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path></svg>
+                            Войти
+                        </a>
                     <?php endif; ?>
                 </div>
             </div>
@@ -143,7 +148,8 @@ if ($current_theme === 'theme-custom') {
                 load_more_customers: '<?php echo site_url("customers/load_more_ajax"); ?>',
                 load_customer_tasks: '<?php echo site_url("customers/load_tasks_ajax"); ?>',
                 load_more_tasks: '<?php echo site_url("tasks/load_more_tasks_ajax"); ?>',
-                load_more_history: '<?php echo site_url("history/load_more_history_ajax"); ?>'
+                load_more_history: '<?php echo site_url("history/load_more_history_ajax"); ?>',
+                upload_editor_image: '<?php echo site_url("customers/upload_editor_image_ajax"); ?>'
             };
             window.globalLang = {
                 btn_pause: '<?= lang("btn_pause") ?>',

@@ -399,28 +399,55 @@ class Task_model extends CI_Model {
     }
 
     /**
-     * Получить каскадную историю для массива ID задач
+     * Получить каскадную историю (список сессий времени) для массива идентификаторов задач
+     * с поддержкой постраничной выборки (пагинации)
+     *
+     * @param array $task_ids_array Массив идентификаторов задач (включая подзадачи)
+     * @param int $user_id Идентификатор текущего пользователя
+     * @param int|null $limit Количество выбираемых записей (лимит)
+     * @param int $offset Смещение относительно начала списка (оффсет)
+     * @return array Массив сессий времени
      */
-    public function get_cascading_history($task_ids_array, $user_id) {
+    public function get_cascading_history($task_ids_array, $user_id, $limit = null, $offset = 0) {
+        // Проверяем, передан ли непустой массив идентификаторов задач
         if (empty($task_ids_array)) {
+            // Если массив пуст, сразу возвращаем пустой результат
             return [];
         }
 
+        // Выбираем все поля из таблицы time_sessions, а также название задачи, цвет и вычисляем разницу времени
         $this->db->select('
             time_sessions.*, 
             tasks.title as task_title, 
             tasks.color,
             TIMESTAMPDIFF(SECOND, time_sessions.start_time, time_sessions.end_time) as duration_seconds
         ');
+        
+        // Задаем базовую таблицу запроса - сессии времени
         $this->db->from('time_sessions');
+        
+        // Связываем сессии с таблицей задач по ID задачи
         $this->db->join('tasks', 'tasks.id = time_sessions.task_id');
         
+        // Устанавливаем фильтрацию по ID пользователя
         $this->db->where('time_sessions.user_id', $user_id);
+        
+        // Фильтруем сессии по списку переданных ID задач
         $this->db->where_in('time_sessions.task_id', $task_ids_array);
+        
+        // Выбираем только завершенные сессии (где время окончания не пустое)
         $this->db->where('time_sessions.end_time IS NOT NULL', null, false);
         
+        // Сортируем сессии в обратном хронологическом порядке (сначала новые)
         $this->db->order_by('time_sessions.end_time', 'DESC');
         
+        // Если передан лимит записей, применяем его к запросу Active Record вместе со смещением
+        if ($limit !== null) {
+            // Применяем LIMIT и OFFSET к SQL-запросу
+            $this->db->limit($limit, $offset);
+        }
+        
+        // Выполняем SQL-запрос и возвращаем результат в виде ассоциативного массива
         return $this->db->get()->result_array();
     }
 

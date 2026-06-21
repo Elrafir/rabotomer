@@ -143,7 +143,7 @@ if (!function_exists('render_task_tree')) {
                 echo '</button>';
 
                 // Кнопка РУЧНОЙ КОРРЕКТИРОВКИ
-                echo '<button onclick="openEditModal(' . $task['id'] . ', \'' . addslashes($modal_title) . '\', \'' . htmlspecialchars($task['hex_color'] ?? '#ffffff') . '\')" class="bg-gray-200 hover:bg-gray-300 text-gray-700 font-bold py-2 px-3 rounded-lg text-sm shadow-md transition-all active:scale-95 flex items-center gap-2 flex-shrink-0" title="' . htmlspecialchars(lang('dash_manual_adjust_title'), ENT_QUOTES) . '">';
+                echo '<button onclick="openEditModal(' . $task['id'] . ', \'' . addslashes($modal_title) . '\', \'' . htmlspecialchars($task['hex_color'] ?? '#ffffff') . '\')" class="hidden bg-gray-200 hover:bg-gray-300 text-gray-700 font-bold py-2 px-3 rounded-lg text-sm shadow-md transition-all active:scale-95 flex items-center gap-2 flex-shrink-0" title="' . htmlspecialchars(lang('dash_manual_adjust_title'), ENT_QUOTES) . '">';
                 echo '✍️';
                 echo '</button>';
 

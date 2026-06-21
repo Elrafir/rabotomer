@@ -18,7 +18,7 @@
     <!-- Динамический вывод дополнительных CSS файлов (если они переданы из контроллера) -->
     <?php if (isset($custom_css) && is_array($custom_css)): ?>
         <?php foreach ($custom_css as $css): ?>
-            <link href="<?php echo base_url($css); ?>" rel="stylesheet">
+            <link href="<?php echo base_url($css) . '?v=' . time(); ?>" rel="stylesheet">
         <?php endforeach; ?>
     <?php endif; ?>
 </head>

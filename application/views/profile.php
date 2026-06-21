@@ -26,16 +26,6 @@
             <div>
                 <label for="last_name" class="block text-gray-700 text-lg font-bold mb-2">Фамилия</label>
                 <input type="text" id="last_name" name="last_name" class="w-full bg-gray-50 border border-gray-300 rounded-xl px-5 py-4 text-xl focus:ring-2 focus:ring-blue-500 focus:outline-none" value="<?= html_escape($user['last_name']); ?>">
-        </div>
-
-        <div class="border-t pt-6 mt-8">
-            <h3 class="text-xl font-bold mb-4 text-gray-800">Настройки хранилища</h3>
-            <div>
-                <label for="upload_dir" class="block text-gray-700 text-lg font-bold mb-2">Директория хранения файлов ТЗ *</label>
-                <input type="text" id="upload_dir" name="upload_dir" class="w-full bg-gray-50 border border-gray-300 rounded-xl px-5 py-4 text-xl focus:ring-2 focus:ring-blue-500 focus:outline-none font-mono" value="<?= html_escape($upload_dir); ?>" required>
-                <p class="text-xs text-gray-500 mt-2 leading-relaxed">
-                    Укажите путь для загрузки файлов ТЗ. Можно использовать абсолютный путь (начинается с <code>/</code>, например <code>/mnt/share/time_uploads/</code>) для подключения сетевых дисков, или относительный путь от корня проекта (например, <code>uploads/specs/</code>).
-                </p>
             </div>
         </div>
 
