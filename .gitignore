@@ -13,3 +13,5 @@ application/config/database.php
 .DS_Store
 .vscode/
 .idea/
+reports_debug.txt
+

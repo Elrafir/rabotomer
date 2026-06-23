@@ -1,13 +1,17 @@
-<!-- Левая колонка (меню, виджеты) -->
-<?php if (!empty($left_sidebar_view)){ ?>
-    <aside class="w-full md:w-1/4 flex-shrink-0 sticky top-4">
-        <?php $this->load->view($left_sidebar_view, $data ?? []); ?>
-    </aside>
-<?php }?>
+<?php
+/**
+ * Шаблон-обёртка контента: 3 колонки (лево, центр, право).
+ * Левый aside сворачивается до иконок через CSS media query (< 1600px).
+ */
+?>
 
-<!-- Центральная колонка (основной контент) -->
-<div class="flex-grow w-full min-w-0">
-    <!-- Динамическая загрузка внутреннего представления с передачей всех данных -->
+<?php if (!empty($left_sidebar_view)): ?>
+<aside id="left-sidebar" class="left-sidebar flex-shrink-0">
+    <?php $this->load->view($left_sidebar_view, $data ?? []); ?>
+</aside>
+<?php endif; ?>
+
+<div class="flex-grow min-w-0">
     <?php if (isset($inner_view)): ?>
         <?php if(isset($active_session)) $data['active_session'] = $active_session; ?>
         <?php $this->load->view('templates/flash_messages'); ?>
@@ -17,9 +21,8 @@
     <?php endif; ?>
 </div>
 
-<!-- Правая колонка (баннеры, виджеты) -->
 <?php if (!empty($right_sidebar_view)): ?>
-    <aside class="w-full md:w-1/4 flex-shrink-0 sticky top-4">
-        <?php $this->load->view($right_sidebar_view, $data ?? []); ?>
-    </aside>
+<aside class="flex-shrink-0" style="width: 240px;">
+    <?php $this->load->view($right_sidebar_view, $data ?? []); ?>
+</aside>
 <?php endif; ?>

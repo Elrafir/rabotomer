@@ -1,7 +1,8 @@
 <!-- application/views/admin/users.php -->
+<!-- Страница управления пользователями и группами (только admin/root) -->
 <div class="max-w-6xl mx-auto min-h-[80vh] pb-32">
     
-    <!-- Заголовок страницы и кнопка добавления -->
+    <!-- Заголовок страницы и кнопка добавления пользователя -->
     <div class="flex justify-between items-center mb-10">
         <h1 class="text-4xl font-black text-gray-800"><?= lang('admin_title'); ?></h1>
         <button onclick="openAddUserModal()" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 px-8 rounded-xl text-xl shadow-lg transition-colors">
@@ -37,9 +38,7 @@
                                 <span class="bg-blue-100 text-blue-700 px-4 py-1 rounded-full font-bold text-sm uppercase tracking-wide"><?= $roleName ?></span>
                             <?php endif; ?>
                         </td>
-                        <td class="py-5 px-8 text-xl text-center font-bold text-gray-600">
-                            <?= (int)$u['total_tasks']; ?>
-                        </td>
+                        <td class="py-5 px-8 text-xl text-center font-bold text-gray-600"><?= (int)$u['total_tasks']; ?></td>
                         <td class="py-5 px-8 text-xl text-center font-bold text-blue-600">
                             <?php 
                                 $sec = (int)$u['total_time_seconds'];
@@ -52,9 +51,11 @@
                             <?= $u['last_activity'] ? date('d.m.Y H:i', strtotime($u['last_activity'])) : '—'; ?>
                         </td>
                         <td class="py-5 px-8 text-right space-x-2">
+                            <!-- Кнопка смены пароля -->
                             <button onclick="openChangePasswordModal(<?= $u['id']; ?>)" class="bg-blue-50 hover:bg-blue-100 text-blue-500 hover:text-blue-700 font-bold py-2 px-4 rounded-xl transition-colors" title="<?= lang('admin_btn_change_password'); ?>">
                                 🔑
                             </button>
+                            <!-- Кнопка редактирования -->
                             <button onclick="openEditUserModal(<?= htmlspecialchars(json_encode([
                                 'id' => $u['id'],
                                 'username' => $u['username'],
@@ -65,6 +66,7 @@
                             ])); ?>)" class="bg-gray-50 hover:bg-gray-100 text-gray-500 hover:text-gray-700 font-bold py-2 px-4 rounded-xl transition-colors" title="Редактировать">
                                 ✏️
                             </button>
+                            <!-- Кнопка удаления (нельзя удалить root) -->
                             <?php if ($u['username'] !== 'root'): ?>
                                 <button onclick="deleteUser(<?= $u['id']; ?>)" class="bg-red-50 hover:bg-red-100 text-red-500 hover:text-red-700 font-bold py-2 px-4 rounded-xl transition-colors" title="<?= lang('admin_btn_delete'); ?>">
                                     🗑️
@@ -77,10 +79,10 @@
         </table>
     </div>
 
-    <!-- Разделитель -->
+    <!-- Разделитель перед секцией групп -->
     <hr class="my-16 border-t-2 border-gray-100">
 
-    <!-- Секция Групп -->
+    <!-- Секция групп пользователей -->
     <div class="flex justify-between items-end mb-10 mt-16">
         <div>
             <h2 class="text-4xl font-black text-gray-800 mb-2">Группы пользователей</h2>
@@ -119,98 +121,9 @@
         </table>
     </div>
 
-    <!-- Разделитель -->
-    <hr class="my-16 border-t-2 border-gray-100">
-
-    <!-- Секция бэкапов -->
-    <div class="flex justify-between items-end mb-10">
-        <div>
-            <h2 class="text-4xl font-black text-gray-800 mb-2"><?= lang('admin_backup_title'); ?></h2>
-            <p class="text-lg text-gray-500 font-mono"><?= lang('admin_sys_info'); ?> <span class="font-bold text-purple-600"><?= $sys_space; ?></span></p>
-        </div>
-        <button onclick="createBackup()" id="btnCreateBackup" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 px-8 rounded-xl text-xl shadow-lg transition-colors flex items-center gap-2">
-            <?= lang('admin_btn_create_backup'); ?>
-        </button>
-    </div>
-
-    <div class="bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden mb-16">
-        <table class="w-full text-left border-collapse">
-            <thead>
-                <tr class="bg-gray-50 border-b border-gray-100 text-gray-500 text-lg">
-                    <th class="py-5 px-8 font-bold"><?= lang('admin_col_filename'); ?></th>
-                    <th class="py-5 px-8 font-bold"><?= lang('admin_col_size'); ?></th>
-                    <th class="py-5 px-8 font-bold"><?= lang('admin_col_date'); ?></th>
-                    <th class="py-5 px-8 font-bold text-right">Действия</th>
-                </tr>
-            </thead>
-            <tbody class="divide-y divide-gray-100">
-                <?php if (empty($backups)): ?>
-                    <tr>
-                        <td colspan="4" class="py-10 px-8 text-center text-xl text-gray-500">Нет сохраненных бэкапов.</td>
-                    </tr>
-                <?php else: ?>
-                    <?php foreach ($backups as $b): ?>
-                        <tr class="hover:bg-gray-50 transition-colors">
-                            <td class="py-5 px-8 text-xl font-mono text-gray-700"><?= htmlspecialchars($b['filename'] ?? ''); ?></td>
-                            <td class="py-5 px-8 text-xl text-gray-500 font-bold"><?= htmlspecialchars($b['size'] ?? ''); ?></td>
-                            <td class="py-5 px-8 text-xl text-gray-500"><?= htmlspecialchars($b['date'] ?? ''); ?></td>
-                            <td class="py-5 px-8 text-right">
-                                <button onclick="deleteBackup('<?= htmlspecialchars($b['filename'] ?? ''); ?>')" class="bg-red-50 hover:bg-red-100 text-red-500 hover:text-red-700 font-bold py-2 px-6 rounded-xl transition-colors" title="<?= lang('admin_btn_delete_file'); ?>">
-                                    <?= lang('admin_btn_delete_file'); ?>
-                                </button>
-                            </td>
-                        </tr>
-                    <?php endforeach; ?>
-                <?php endif; ?>
-            </tbody>
-        </table>
-    </div>
-
-    <!-- Разделитель -->
-    <hr class="my-16 border-t-2 border-gray-100">
-
-    <!-- Системные Настройки -->
-    <div class="mb-10">
-        <h2 class="text-4xl font-black text-gray-800 mb-2">Настройки Системы</h2>
-        <p class="text-lg text-gray-500 font-mono">Глобальные параметры работы трекера</p>
-    </div>
-
-    <div class="bg-white rounded-3xl shadow-sm border border-gray-100 p-10 mb-16">
-        <div class="max-w-xl space-y-10">
-            <div>
-                <label class="block text-gray-700 text-xl font-bold mb-4">Лимит времени на паузе (минуты)</label>
-                <p class="text-gray-500 mb-6">Если таймер находится на паузе дольше указанного времени, сессия будет автоматически остановлена (завершена). Укажите 0, чтобы отключить авто-стоп.</p>
-                <input type="number" id="settingPauseLimit" value="<?= htmlspecialchars($pause_limit_minutes ?? 10); ?>" class="w-32 bg-gray-50 border border-gray-300 rounded-xl px-5 py-4 text-2xl font-bold text-center focus:ring-2 focus:ring-blue-500 focus:outline-none" min="0">
-            </div>
-
-            <div>
-                <label class="block text-gray-700 text-xl font-bold mb-4">Количество строк на странице (пагинация)</label>
-                <p class="text-gray-500 mb-6">Количество записей, отображаемых по умолчанию на страницах журнала, списка задач и заказчиков.</p>
-                <select id="settingPerPage" class="w-48 bg-gray-50 border border-gray-300 rounded-xl px-5 py-4 text-xl font-bold focus:ring-2 focus:ring-blue-500 focus:outline-none">
-                    <option value="10" <?= (isset($per_page) && $per_page == 10) ? 'selected' : ''; ?>>10</option>
-                    <option value="25" <?= (!isset($per_page) || $per_page == 25) ? 'selected' : ''; ?>>25</option>
-                    <option value="50" <?= (isset($per_page) && $per_page == 50) ? 'selected' : ''; ?>>50</option>
-                    <option value="100" <?= (isset($per_page) && $per_page == 100) ? 'selected' : ''; ?>>100</option>
-                </select>
-            </div>
-
-            <div>
-                <label class="block text-gray-700 text-xl font-bold mb-4">Директория загрузки файлов ТЗ</label>
-                <p class="text-gray-500 mb-6">Абсолютный путь к папке на сервере, куда будут сохраняться загруженные файлы. По умолчанию: <code>uploads/specs/</code> (путь относительно корня сайта).</p>
-                <input type="text" id="settingUploadDir" value="<?= htmlspecialchars($upload_dir_setting ?? 'uploads/specs/'); ?>" class="w-full bg-gray-50 border border-gray-300 rounded-xl px-5 py-4 text-xl focus:ring-2 focus:ring-blue-500 focus:outline-none">
-            </div>
-
-            <div>
-                <button onclick="saveSettings()" class="bg-green-600 hover:bg-green-700 text-white font-bold py-4 px-8 rounded-xl text-xl shadow-md transition-colors">
-                    Сохранить настройки
-                </button>
-            </div>
-        </div>
-    </div>
-
 </div>
 
-<!-- Модальное окно пользователя (Добавление/Редактирование) с z-index фиксом и скроллом для вертикальных экранов -->
+<!-- Модальное окно пользователя (Добавление/Редактирование) -->
 <div id="userModal" class="hidden fixed inset-0 z-[99999] bg-black bg-opacity-50 flex items-center justify-center p-4">
     <div class="bg-white rounded-3xl shadow-2xl w-full max-w-2xl p-10 transform transition-all overflow-y-auto max-h-[90vh]">
         <h3 id="userModalTitle" class="text-3xl font-black mb-8 text-gray-800">Пользователь</h3>
@@ -263,7 +176,7 @@
     </div>
 </div>
 
-<!-- Модальное окно Группы с z-index фиксом и скроллом для вертикальных экранов -->
+<!-- Модальное окно группы -->
 <div id="groupModal" class="hidden fixed inset-0 z-[99999] bg-black bg-opacity-50 flex items-center justify-center p-4">
     <div class="bg-white rounded-3xl shadow-2xl w-full max-w-md p-10 transform transition-all max-h-[90vh] overflow-y-auto">
         <h3 id="groupModalTitle" class="text-3xl font-black mb-8 text-gray-800">Группа</h3>
@@ -291,7 +204,7 @@
     </div>
 </div>
 
-<!-- Модальное окно смены пароля с z-index фиксом и скроллом для вертикальных экранов -->
+<!-- Модальное окно смены пароля -->
 <div id="changePasswordModal" class="hidden fixed inset-0 z-[99999] bg-black bg-opacity-50 flex items-center justify-center p-4">
     <div class="bg-white rounded-3xl shadow-2xl w-full max-w-md p-10 transform transition-all max-h-[90vh] overflow-y-auto">
         <h3 class="text-3xl font-black mb-8 text-gray-800"><?= lang('admin_btn_change_password'); ?></h3>
@@ -319,19 +232,22 @@
     </div>
 </div>
 
+<!-- JavaScript: управление пользователями и группами -->
 <script>
+    // API-эндпоинты для AJAX-запросов
     const api = {
         add_user: '<?php echo site_url("admin/add_user_ajax"); ?>',
         edit_user: '<?php echo site_url("admin/edit_user_ajax"); ?>',
         delete_user: '<?php echo site_url("admin/delete_user_ajax"); ?>',
         change_password: '<?php echo site_url("admin/change_password_ajax"); ?>',
-        create_backup: '<?php echo site_url("admin/backup_db_ajax"); ?>',
-        delete_backup: '<?php echo site_url("admin/delete_backup_ajax"); ?>',
         add_group: '<?php echo site_url("admin/add_group_ajax"); ?>',
         edit_group: '<?php echo site_url("admin/edit_group_ajax"); ?>',
         delete_group: '<?php echo site_url("admin/delete_group_ajax"); ?>'
     };
 
+    // --- ПОЛЬЗОВАТЕЛИ ---
+
+    /** Открывает модалку добавления пользователя */
     function openAddUserModal() {
         $('#userModalTitle').text('Добавить пользователя');
         $('#editUserId').val('');
@@ -344,6 +260,7 @@
         $('#userModal').removeClass('hidden');
     }
 
+    /** Открывает модалку редактирования пользователя */
     function openEditUserModal(user) {
         $('#userModalTitle').text('Редактировать пользователя');
         $('#editUserId').val(user.id);
@@ -356,10 +273,9 @@
         $('#userModal').removeClass('hidden');
     }
 
-    function closeUserModal() {
-        $('#userModal').addClass('hidden');
-    }
+    function closeUserModal() { $('#userModal').addClass('hidden'); }
 
+    /** Сохраняет пользователя (создание или редактирование) */
     function saveUser() {
         const id = $('#editUserId').val();
         const data = {
@@ -371,39 +287,31 @@
             group_id: $('#editGroupId').val()
         };
 
+        // Для нового пользователя логин и пароль обязательны
         if (!id && (!data.username || !data.password)) {
             alert('Заполните логин и пароль!');
             return;
         }
-        
         if (id) data.user_id = id;
-        
-        const endpoint = id ? api.edit_user : api.add_user;
 
-        $.post(endpoint, data, function(response) {
+        $.post(id ? api.edit_user : api.add_user, data, function(response) {
             let res = JSON.parse(response);
-            if (res.status === 'success') {
-                window.location.reload();
-            } else {
-                alert(res.message);
-            }
+            res.status === 'success' ? window.location.reload() : alert(res.message);
         });
     }
 
+    /** Удаляет пользователя с подтверждением */
     function deleteUser(id) {
         if (confirm("Вы уверены, что хотите удалить этого пользователя? Все его задачи и время будут стерты навсегда!")) {
             $.post(api.delete_user, { user_id: id }, function(response) {
                 let res = JSON.parse(response);
-                if (res.status === 'success') {
-                    window.location.reload();
-                } else {
-                    alert(res.message);
-                }
+                res.status === 'success' ? window.location.reload() : alert(res.message);
             });
         }
     }
 
     // --- ГРУППЫ ---
+
     function openAddGroupModal() {
         $('#groupModalTitle').text('Добавить группу');
         $('#editGroupIdVal').val('');
@@ -420,9 +328,7 @@
         $('#groupModal').removeClass('hidden');
     }
 
-    function closeGroupModal() {
-        $('#groupModal').addClass('hidden');
-    }
+    function closeGroupModal() { $('#groupModal').addClass('hidden'); }
 
     function saveGroup() {
         const id = $('#editGroupIdVal').val();
@@ -430,23 +336,12 @@
             name: $('#editGroupName').val().trim(),
             description: $('#editGroupDesc').val().trim()
         };
-        
-        if (!data.name) {
-            alert('Заполните название!');
-            return;
-        }
-        
+        if (!data.name) { alert('Заполните название!'); return; }
         if (id) data.group_id = id;
-        
-        const endpoint = id ? api.edit_group : api.add_group;
 
-        $.post(endpoint, data, function(response) {
+        $.post(id ? api.edit_group : api.add_group, data, function(response) {
             let res = JSON.parse(response);
-            if (res.status === 'success') {
-                window.location.reload();
-            } else {
-                alert(res.message);
-            }
+            res.status === 'success' ? window.location.reload() : alert(res.message);
         });
     }
 
@@ -454,93 +349,37 @@
         if (confirm("Удалить группу? Это может повлиять на пользователей!")) {
             $.post(api.delete_group, { group_id: id }, function(response) {
                 let res = JSON.parse(response);
-                if (res.status === 'success') {
-                    window.location.reload();
-                } else {
-                    alert(res.message);
-                }
+                res.status === 'success' ? window.location.reload() : alert(res.message);
             });
         }
     }
 
-    // --- Смена пароля ---
+    // --- СМЕНА ПАРОЛЯ ---
+
     function openChangePasswordModal(userId) {
         $('#changePassUserId').val(userId);
-        $('#changePasswordVal').val('');
-        $('#changePasswordConf').val('');
+        $('#changePasswordVal, #changePasswordConf').val('');
         $('#changePasswordModal').removeClass('hidden');
     }
 
-    function closeChangePasswordModal() {
-        $('#changePasswordModal').addClass('hidden');
-    }
+    function closeChangePasswordModal() { $('#changePasswordModal').addClass('hidden'); }
 
     function saveNewPassword() {
-        const userId = $('#changePassUserId').val();
         const pass = $('#changePasswordVal').val().trim();
         const conf = $('#changePasswordConf').val().trim();
 
-        if (pass.length < 6) {
-            alert('<?= lang("admin_err_short_password"); ?>');
-            return;
-        }
-        if (pass !== conf) {
-            alert('<?= lang("admin_err_passwords_mismatch"); ?>');
-            return;
-        }
+        if (pass.length < 6) { alert('<?= lang("admin_err_short_password"); ?>'); return; }
+        if (pass !== conf) { alert('<?= lang("admin_err_passwords_mismatch"); ?>'); return; }
 
-        $.post(api.change_password, { user_id: userId, password: pass, passconf: conf }, function(response) {
+        $.post(api.change_password, {
+            user_id: $('#changePassUserId').val(),
+            password: pass,
+            passconf: conf
+        }, function(response) {
             let res = JSON.parse(response);
             if (res.status === 'success') {
                 alert(res.message);
                 closeChangePasswordModal();
-            } else {
-                alert(res.message);
-            }
-        });
-    }
-
-    // --- Бэкапы ---
-    function createBackup() {
-        const btn = $('#btnCreateBackup');
-        const originalText = btn.html();
-        btn.html('⏳ Создание...').prop('disabled', true).addClass('opacity-50');
-
-        $.post(api.create_backup, {}, function(response) {
-            let res = JSON.parse(response);
-            if (res.status === 'success') {
-                window.location.reload();
-            } else {
-                alert(res.message + (res.debug ? "\n\n" + res.debug : ""));
-                btn.html(originalText).prop('disabled', false).removeClass('opacity-50');
-            }
-        }).fail(function() {
-            alert('Произошла системная ошибка при вызове скрипта бэкапа.');
-            btn.html(originalText).prop('disabled', false).removeClass('opacity-50');
-        });
-    }
-
-    function deleteBackup(filename) {
-        if (!confirm('<?= lang("admin_js_confirm_delete_backup"); ?>')) return;
-
-        $.post('<?= base_url("admin/delete_backup_ajax"); ?>', { filename: filename }, function(response) {
-            let res = JSON.parse(response);
-            if (res.status === 'success') {
-                window.location.reload();
-            } else {
-                alert(res.message);
-            }
-        });
-    }
-
-    function saveSettings() {
-        const limit = $('#settingPauseLimit').val();
-        const perPage = $('#settingPerPage').val();
-        const uploadDir = $('#settingUploadDir').val();
-        $.post('<?= base_url("admin/save_settings_ajax"); ?>', { pause_limit_minutes: limit, per_page: perPage, upload_dir: uploadDir }, function(response) {
-            let res = JSON.parse(response);
-            if (res.status === 'success') {
-                alert(res.message);
             } else {
                 alert(res.message);
             }

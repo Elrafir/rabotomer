@@ -20,9 +20,9 @@ if ($current_theme === 'theme-custom') {
     $inline_styles .= " --theme-h: " . htmlspecialchars($current_hue) . ";";
 }
 ?>
-<body class="bg-gray-100 font-sans h-screen flex flex-col <?= htmlspecialchars($current_theme) ?>" style="<?= $inline_styles ?>">
+<body class="bg-gray-100 font-sans min-h-screen flex flex-col <?= htmlspecialchars($current_theme) ?>" style="<?= $inline_styles ?>">
     <!-- Верхняя навигационная панель -->
-    <nav class="bg-blue-600 text-white shadow-md relative z-50">
+    <nav id="main-nav" class="bg-blue-600 text-white shadow-md relative">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div class="flex justify-between h-16">
                 <a href="<?= site_url(); ?>" class="flex-shrink-0 flex items-center ajax-link hover:opacity-80 transition-opacity duration-300 py-1" onclick="event.preventDefault(); loadAjaxPage(this.href);">
@@ -32,14 +32,14 @@ if ($current_theme === 'theme-custom') {
                 <div class="flex items-center space-x-4">
                     <!-- Ссылки навигации, если пользователь авторизован -->
                     <?php if ($user_id): ?>
-                        <div class="mr-8 flex items-center h-full space-x-2">
+                        <div id="main-nav-links" class="mr-8 flex items-center h-full space-x-2 flex-shrink-0">
                             <!-- Кнопки добавления убрана в тело дашборда -->
                             <div class="mx-2 h-6 border-l border-blue-400"></div>
                             
                             <!-- Ссылки -->
-                            <a href="<?= site_url('tasks'); ?>" class="text-xl font-bold flex items-center transition-all px-4 py-2 <?= $is_dashboard ? 'opacity-100 nav-cloud-active' : 'opacity-70 hover:opacity-100' ?>">
-                                <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"></path></svg>
-                                <?= lang('nav_tasks'); ?>
+                            <a href="<?= site_url('tasks'); ?>" title="<?= lang('nav_tasks') ?>" class="text-xl font-bold flex items-center transition-all px-3 py-2 <?= $is_dashboard ? 'opacity-100 nav-cloud-active' : 'opacity-70 hover:opacity-100' ?>">
+                                <img src="<?= base_url('assets/img/icon_tasks.png') ?>" alt="Задачи" class="w-6 h-6 flex-shrink-0 object-contain" style="mix-blend-mode: multiply;">
+                                <span class="nav-label ml-2"><?= lang('nav_tasks'); ?></span>
                             </a>
                             <!--<div class="border-l border-white/30 transition-colors" style="height: 60%;"></div>
                             
@@ -49,9 +49,9 @@ if ($current_theme === 'theme-custom') {
                             </a>-->
                             <div class="border-l border-white/30 transition-colors" style="height: 60%;"></div>
                             
-                            <a href="<?= site_url('customers'); ?>" class="text-xl font-bold flex items-center transition-all px-4 py-2 <?= current_url() == site_url('customers') ? 'opacity-100 nav-cloud-active' : 'opacity-70 hover:opacity-100' ?>">
-                                <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"></path></svg>
-                                <?= lang('nav_customers'); ?>
+                            <a href="<?= site_url('customers'); ?>" title="<?= lang('nav_customers') ?>" class="text-xl font-bold flex items-center transition-all px-3 py-2 <?= current_url() == site_url('customers') ? 'opacity-100 nav-cloud-active' : 'opacity-70 hover:opacity-100' ?>">
+                                <span class="flex-shrink-0 text-lg">🤝</span>
+                                <span class="nav-label ml-2"><?= lang('nav_customers'); ?></span>
                             </a>
                             <div class="border-l border-white/30 transition-colors" style="height: 60%;"></div>
                             
@@ -60,28 +60,36 @@ if ($current_theme === 'theme-custom') {
                                 $is_stats_active = (strpos($curr_u, site_url('reports')) === 0 || strpos($curr_u, site_url('calculations')) === 0 || strpos($curr_u, site_url('history')) === 0);
                             ?>
                             <!-- Пункт меню "Калькуляция" удален из верхнего меню, так как он доступен через левую боковую панель -->
-                            <a href="<?= site_url('reports'); ?>" class="text-xl whitespace-nowrap font-bold flex items-center transition-all px-4 py-2 <?= $is_stats_active ? 'opacity-100 nav-cloud-active' : 'opacity-70 hover:opacity-100' ?>">
-                                <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path></svg>
-                                Статистика и расчёты
+                            <a href="<?= site_url('reports'); ?>" title="Статистика и расчёты" class="text-xl font-bold flex items-center transition-all px-3 py-2 <?= $is_stats_active ? 'opacity-100 nav-cloud-active' : 'opacity-70 hover:opacity-100' ?>">
+                                <span class="flex-shrink-0 text-lg">📊</span>
+                                <span class="nav-label ml-2">Статистика и расчёты</span>
                             </a>
                             <div class="border-l border-white/30 transition-colors" style="height: 60%;"></div>
-                            <a href="<?= site_url('tasks/trash'); ?>" class="text-xl font-bold flex items-center transition-all px-4 py-2 <?= current_url() == site_url('tasks/trash') ? 'opacity-100 nav-cloud-active' : 'opacity-70 hover:opacity-100' ?>">
-                                <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
-                                Корзина
+                            <a href="<?= site_url('tasks/trash'); ?>" title="Корзина" class="text-xl font-bold flex items-center transition-all px-3 py-2 <?= current_url() == site_url('tasks/trash') ? 'opacity-100 nav-cloud-active' : 'opacity-70 hover:opacity-100' ?>">
+                                <span class="flex-shrink-0 text-lg">🗑️</span>
+                                <span class="nav-label ml-2">Корзина</span>
                             </a>
                         </div>
                         <?php $display_name = !empty($current_user_data['first_name']) ? $current_user_data['first_name'] : $ci->session->userdata('username'); ?>
                         
-                        <!-- Theme Palette Button -->
+                        <!-- Кнопка настройки оформления -->
                         <button onclick="openThemeModal()" class="flex items-center p-2 hover:bg-white/20 rounded-full transition-colors group mr-2" title="Настроить оформление">
-                            <svg class="w-6 h-6 opacity-80 group-hover:opacity-100 transition-opacity" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h12a2 2 0 002-2v-4a2 2 0 00-2-2h-2.343M11 7.343l1.657-1.657a2 2 0 012.828 0l2.829 2.829a2 2 0 010 2.828l-8.486 8.485M7 17h.01"></path></svg>
+                            <span class="text-xl opacity-80 group-hover:opacity-100 transition-opacity">🎨</span>
                         </button>
                         
                         <!-- User Dropdown Menu -->
                         <div class="relative profile-dropdown-wrapper">
-                            <!-- Кнопка аватара профиля (круглая, без вывода имени пользователя и стрелки) -->
-                            <button class="text-lg hover:bg-white/10 p-2 rounded-full transition-colors flex items-center justify-center cursor-pointer focus:outline-none" title="Профиль">
-                                <svg class="w-6 h-6 opacity-80 hover:opacity-100 transition-opacity" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path></svg>
+                            <!-- Кнопка профиля с аватаркой по полу -->
+                            <?php
+                                $gender = $current_user_data['gender'] ?? 'not_specified';
+                                $avatar_src = ($gender === 'female')
+                                    ? base_url('assets/img/avatar_female.png')
+                                    : (($gender === 'male')
+                                        ? base_url('assets/img/avatar_male.png')
+                                        : base_url('assets/img/avatar_male.png')); // по умолч. мужской
+                            ?>
+                            <button class="hover:bg-white/10 p-1 rounded-full transition-colors flex items-center justify-center cursor-pointer focus:outline-none" title="Профиль">
+                                <img src="<?= $avatar_src ?>" alt="Профиль" class="w-8 h-8 rounded-full object-cover object-top opacity-90 hover:opacity-100 transition-opacity">
                             </button>
                             
                             <!-- Dropdown Container -->
@@ -93,9 +101,9 @@ if ($current_theme === 'theme-custom') {
                                             <?= lang('nav_admin'); ?>
                                         </a>
                                     <?php endif; ?>
-                                    <a href="<?= site_url('profile'); ?>" class="px-4 py-3 hover:bg-black/10 border-b border-white/10 text-sm font-semibold flex items-center gap-2 ajax-link transition-colors text-white opacity-90 hover:opacity-100" onclick="event.preventDefault(); loadAjaxPage(this.href);">
+                                    <a href="<?= site_url('admin/profile'); ?>" class="px-4 py-3 hover:bg-black/10 border-b border-white/10 text-sm font-semibold flex items-center gap-2 transition-colors text-white opacity-90 hover:opacity-100">
                                         <svg class="w-4 h-4 opacity-70" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path></svg>
-                                        Редактировать профиль
+                                        Личный кабинет
                                     </a>
                                     <a href="<?= site_url('auth/logout'); ?>" class="px-4 py-3 hover:bg-red-500/20 text-sm font-semibold flex items-center gap-2 transition-colors text-white opacity-90 hover:opacity-100">
                                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path></svg>
@@ -192,7 +200,7 @@ if ($current_theme === 'theme-custom') {
         </div>
         
         <!-- Плавающая панель активного таймера (спрятана по умолчанию) -->
-        <div id="activeTimerPanel" class="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-7xl bg-white border border-gray-200 rounded-t-2xl shadow-[0_-10px_40px_rgba(0,0,0,0.1)] transform transition-transform duration-300 z-50 translate-y-full">
+        <div id="activeTimerPanel" class="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-7xl bg-white border border-gray-200 rounded-t-2xl shadow-[0_-10px_40px_rgba(0,0,0,0.1)] transform transition-transform duration-300 z-[100] translate-y-full">
             <!-- Кнопка "Свернуть" -->
             <button id="btnCollapseTimerPanel" onclick="hideTimerPanel()" class="hidden absolute -top-10 right-4 bg-white px-4 py-1 rounded-t-lg shadow-sm border border-b-0 border-gray-200 text-gray-500 hover:text-gray-700 hover:bg-gray-50 text-sm font-bold flex items-center gap-1 transition-colors">
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
