@@ -43,6 +43,7 @@ CREATE TABLE IF NOT EXISTS `time_sessions` (
     `task_id` INT UNSIGNED NOT NULL COMMENT 'Привязка к задаче',
     `start_time` DATETIME NOT NULL COMMENT 'Время старта таймера',
     `end_time` DATETIME NULL DEFAULT NULL COMMENT 'Время остановки (NULL, если таймер сейчас активен)',
+    `last_heartbeat` DATETIME NULL DEFAULT NULL COMMENT 'Время последнего подтверждения активности (для автопаузы)',
     
     -- Внешние ключи
     CONSTRAINT `fk_time_sessions_user_id` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE,

@@ -157,7 +157,9 @@ if ($current_theme === 'theme-custom') {
                 load_customer_tasks: '<?php echo site_url("customers/load_tasks_ajax"); ?>',
                 load_more_tasks: '<?php echo site_url("tasks/load_more_tasks_ajax"); ?>',
                 load_more_history: '<?php echo site_url("history/load_more_history_ajax"); ?>',
-                upload_editor_image: '<?php echo site_url("customers/upload_editor_image_ajax"); ?>'
+                upload_editor_image: '<?php echo site_url("customers/upload_editor_image_ajax"); ?>',
+                heartbeat: '<?php echo site_url("tasks/heartbeat_ajax"); ?>',
+                resolve_gap: '<?php echo site_url("tasks/resolve_gap_ajax"); ?>'
             };
             window.globalLang = {
                 btn_pause: '<?= lang("btn_pause") ?>',
@@ -172,6 +174,7 @@ if ($current_theme === 'theme-custom') {
             window.globalActiveSession = <?= $active_session ? json_encode($active_session) : 'null' ?>;
             window.isDashboardPage = <?= $is_dashboard ? 'true' : 'false' ?>;
             window.globalPerPage = <?= $per_page_global ?>;
+            window.globalIsAdmin = <?= !empty($is_admin) ? 'true' : 'false' ?>;
         </script>
     <?php endif; ?>
 
@@ -350,6 +353,34 @@ if ($current_theme === 'theme-custom') {
                     <span id="hue_value"><?= html_escape($current_hue) ?>&deg;</span>
                 </div>
                 <input type="range" id="theme_hue" name="theme_hue" min="0" max="360" step="1" value="<?= html_escape($current_hue) ?>" class="w-full h-1.5 rounded-lg appearance-none cursor-pointer" style="background: linear-gradient(to right, #ff0000 0%, #ffff00 17%, #00ff00 33%, #00ffff 50%, #0000ff 67%, #ff00ff 83%, #ff0000 100%);">
+            </div>
+        </div>
+        </div>
+    </div>
+
+    <!-- Модальное окно при обрыве пульса (Gap Resolution) -->
+    <div id="gapModal" class="hidden fixed inset-0 z-[999999] bg-black bg-opacity-70 flex items-center justify-center p-4">
+        <div class="bg-white rounded-3xl shadow-2xl w-full max-w-lg p-8 transform transition-all relative">
+            <h3 class="text-2xl font-bold mb-4 text-red-600 flex items-center gap-2">
+                <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>
+                Обрыв связи
+            </h3>
+            
+            <p class="text-gray-700 mb-6 text-lg" id="gapModalText"></p>
+            
+            <div class="space-y-3">
+                <button onclick="resolveGap('keep')" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded-xl shadow-lg transition-colors flex justify-between items-center">
+                    <span>Оставить время</span>
+                    <span class="text-sm font-normal opacity-80">(Продолжить таймер)</span>
+                </button>
+                <button onclick="resolveGap('pause')" class="w-full bg-orange-500 hover:bg-orange-600 text-white font-bold py-3 px-4 rounded-xl shadow-lg transition-colors flex justify-between items-center">
+                    <span>Поставить на паузу</span>
+                    <span class="text-sm font-normal opacity-80">(С момента обрыва)</span>
+                </button>
+                <button onclick="resolveGap('stop')" class="w-full bg-red-600 hover:bg-red-700 text-white font-bold py-3 px-4 rounded-xl shadow-lg transition-colors flex justify-between items-center">
+                    <span>Остановить полностью</span>
+                    <span class="text-sm font-normal opacity-80">(С момента обрыва)</span>
+                </button>
             </div>
         </div>
     </div>

@@ -15,6 +15,11 @@ class Task_model extends CI_Model {
         if (!$this->db->field_exists('description', 'tasks')) {
             $this->db->query("ALTER TABLE tasks ADD COLUMN description TEXT NULL DEFAULT NULL AFTER spec_id");
         }
+
+        // Автоматическая миграция: поле для проверки отвала фронтенда (пульс)
+        if (!$this->db->field_exists('last_heartbeat', 'time_sessions')) {
+            $this->db->query("ALTER TABLE time_sessions ADD COLUMN last_heartbeat DATETIME NULL DEFAULT NULL AFTER end_time");
+        }
     }
 
     /**
@@ -102,6 +107,15 @@ class Task_model extends CI_Model {
                     // Лимит превышен! Автоматически останавливаем сессию
                     $this->stop_timer($user_id, 'Авто-стоп по лимиту паузы');
                     return null; // Сессия больше не активна
+                }
+            }
+
+            // Проверка на обрыв связи (отсутствие пульса более 3 минут)
+            if (!$skip_limit_check && !$session['is_paused'] && !empty($session['last_heartbeat'])) {
+                $heartbeat_age = time() - strtotime($session['last_heartbeat']);
+                if ($heartbeat_age > 180) {
+                    $session['gap_detected'] = true;
+                    $session['gap_seconds'] = $heartbeat_age;
                 }
             }
 
@@ -195,7 +209,8 @@ class Task_model extends CI_Model {
             'start_time' => date('Y-m-d H:i:s'),
             'end_time' => NULL,
             'is_paused' => 0,
-            'pause_duration' => 0
+            'pause_duration' => 0,
+            'last_heartbeat' => date('Y-m-d H:i:s')
         ];
         
         $this->db->insert('time_sessions', $data);
@@ -225,11 +240,21 @@ class Task_model extends CI_Model {
             $this->db->set('is_paused', 0);
             $this->db->set('last_paused_at', NULL);
             $this->db->set('pause_duration', 'pause_duration + ' . $pause_seconds, FALSE);
+            $this->db->set('last_heartbeat', date('Y-m-d H:i:s'));
             $this->db->where('id', $session_id);
             $this->db->update('time_sessions');
             return true;
         }
         return false;
+    }
+
+    /**
+     * Обновление времени последнего пульса (heartbeat)
+     */
+    public function update_heartbeat($session_id) {
+        $this->db->set('last_heartbeat', date('Y-m-d H:i:s'));
+        $this->db->where('id', $session_id);
+        $this->db->update('time_sessions');
     }
 
     /**

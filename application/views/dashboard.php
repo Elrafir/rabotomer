@@ -133,8 +133,14 @@ $this->load->view('templates/task_list_loop');
         <h3 class="text-xs uppercase tracking-wider font-bold mb-1 text-gray-500 flex-shrink-0"><?= lang('cascade_history_title'); ?></h3>
         <p class="text-gray-800 mb-4 text-xl flex-shrink-0 truncate w-full block overflow-hidden text-ellipsis whitespace-nowrap"><span id="cascadeModalTaskTitle" class="font-bold"></span></p>
         
-        <div class="mb-4 flex-shrink-0">
-            <input type="text" id="cascadeSearchInput" placeholder="<?= lang('cascade_search_placeholder'); ?>" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:outline-none">
+        <div class="mb-4 flex-shrink-0 flex gap-2">
+            <input type="text" id="cascadeSearchInput" placeholder="<?= lang('cascade_search_placeholder'); ?>" class="flex-grow px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:outline-none">
+            <?php if (!empty($is_admin)): ?>
+                <button onclick="openAddSessionModal(cascadeCurrentTaskId)" class="flex-shrink-0 bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg shadow-sm transition-colors flex items-center justify-center gap-1" title="<?= lang('lbl_session_add'); ?>">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
+                    <span class="hidden sm:inline">Добавить</span>
+                </button>
+            <?php endif; ?>
         </div>
         
         <div id="cascadeTableContainer" class="overflow-y-auto flex-grow border border-gray-200 rounded-lg">
@@ -145,6 +151,9 @@ $this->load->view('templates/task_list_loop');
                         <th class="px-4 py-2 border-b"><?= lang('cascade_col_task'); ?></th>
                         <th class="px-4 py-2 border-b"><?= lang('cascade_col_duration'); ?></th>
                         <th class="px-4 py-2 border-b"><?= lang('cascade_col_note'); ?></th>
+                        <?php if (!empty($is_admin)): ?>
+                            <th class="px-4 py-2 border-b text-right"><?= lang('lbl_actions'); ?></th>
+                        <?php endif; ?>
                     </tr>
                 </thead>
                 <tbody id="cascadeModalSessionsList" class="divide-y divide-gray-100 bg-white">
@@ -160,6 +169,89 @@ $this->load->view('templates/task_list_loop');
         </div>
     </div>
 </div>
+
+<?php if (!empty($is_admin)): ?>
+<!-- Модальное окно добавления сессии с z-index фиксом и скроллом для малых/вертикальных экранов -->
+<div id="addSessionModal" onclick="closeAddSessionModal()" class="hidden fixed inset-0 z-[99999] bg-black bg-opacity-50 flex items-center justify-center p-4">
+    <div onclick="event.stopPropagation()" class="bg-white rounded-3xl shadow-2xl w-full max-w-md p-8 transform transition-all relative max-h-[90vh] overflow-y-auto">
+        <button onclick="closeAddSessionModal()" class="absolute top-6 right-6 text-gray-400 hover:text-gray-600">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+        </button>
+        <h3 class="text-2xl font-bold mb-6 text-gray-800"><?= lang('lbl_session_add'); ?></h3>
+        
+        <div class="space-y-4">
+            <div>
+                <label class="block text-gray-700 text-sm font-bold mb-2"><?= lang('lbl_task'); ?></label>
+                <select id="add_task_id" class="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none">
+                    <option value=""><?= lang('lbl_select_task'); ?></option>
+                    <?php if (!empty($flat_tasks)): ?>
+                        <?php foreach ($flat_tasks as $t): ?>
+                            <option value="<?= $t['id'] ?>"><?= htmlspecialchars($t['title']) ?> <?= !empty($t['customer_name']) ? '['.htmlspecialchars($t['customer_name']).']' : '' ?></option>
+                        <?php endforeach; ?>
+                    <?php endif; ?>
+                </select>
+            </div>
+            <div>
+                <label class="block text-gray-700 text-sm font-bold mb-2"><?= lang('lbl_start_time'); ?></label>
+                <input type="datetime-local" id="add_start_time" class="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none">
+            </div>
+            <div>
+                <label class="block text-gray-700 text-sm font-bold mb-2"><?= lang('lbl_end_time'); ?></label>
+                <input type="datetime-local" id="add_end_time" class="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none">
+            </div>
+            <div>
+                <label class="block text-gray-700 text-sm font-bold mb-2"><?= lang('lbl_note_result'); ?></label>
+                <textarea id="add_note" rows="3" class="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none" placeholder="<?= htmlspecialchars(lang('lbl_what_was_done_placeholder'), ENT_QUOTES); ?>"></textarea>
+            </div>
+            
+            <button onclick="submitAddSession()" class="w-full mt-4 bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded-xl shadow-lg transition-colors">
+                <?= lang('btn_save'); ?>
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Модальное окно редактирования сессии (скопировано из Журнала активности) -->
+<div id="editSessionModal" onclick="closeEditSessionModal()" class="hidden fixed inset-0 z-[99999] bg-black bg-opacity-50 flex items-center justify-center p-4">
+    <div onclick="event.stopPropagation()" class="bg-white rounded-3xl shadow-2xl w-full max-w-md p-8 transform transition-all relative max-h-[90vh] overflow-y-auto">
+        <button onclick="closeEditSessionModal()" class="absolute top-6 right-6 text-gray-400 hover:text-gray-600">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+        </button>
+        <h3 class="text-2xl font-bold mb-6 text-gray-800"><?= lang('lbl_session_edit'); ?></h3>
+        
+        <input type="hidden" id="edit_session_id">
+        <div class="space-y-4">
+            <div>
+                <label class="block text-gray-700 text-sm font-bold mb-2"><?= lang('lbl_task'); ?></label>
+                <select id="edit_task_id" class="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none">
+                    <option value=""><?= lang('lbl_select_task'); ?></option>
+                    <?php if (!empty($flat_tasks)): ?>
+                        <?php foreach ($flat_tasks as $t): ?>
+                            <option value="<?= $t['id'] ?>"><?= htmlspecialchars($t['title']) ?> <?= !empty($t['customer_name']) ? '['.htmlspecialchars($t['customer_name']).']' : '' ?></option>
+                        <?php endforeach; ?>
+                    <?php endif; ?>
+                </select>
+            </div>
+            <div>
+                <label class="block text-gray-700 text-sm font-bold mb-2"><?= lang('lbl_start_time'); ?></label>
+                <input type="datetime-local" id="edit_start_time" class="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none">
+            </div>
+            <div>
+                <label class="block text-gray-700 text-sm font-bold mb-2"><?= lang('lbl_end_time'); ?></label>
+                <input type="datetime-local" id="edit_end_time" class="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none">
+            </div>
+            <div>
+                <label class="block text-gray-700 text-sm font-bold mb-2"><?= lang('lbl_note_result'); ?></label>
+                <textarea id="edit_note" rows="3" class="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none" placeholder="<?= htmlspecialchars(lang('lbl_what_was_done_placeholder'), ENT_QUOTES); ?>"></textarea>
+            </div>
+            
+            <button onclick="submitEditSession()" class="w-full mt-4 bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded-xl shadow-lg transition-colors">
+                <?= lang('btn_save'); ?> изменения
+            </button>
+        </div>
+    </div>
+</div>
+<?php endif; ?>
 
 <!-- Модальное окно для редактирования задачи (двухколоночный макет с липкими шапкой/подвалом и Quill-редактором) -->
 <div id="editTaskModal" onclick="closeEditTaskModal()" class="hidden fixed inset-0 z-[99999] bg-black bg-opacity-50 flex items-center justify-center p-4">

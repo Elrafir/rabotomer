@@ -687,4 +687,65 @@ class Tasks extends MY_Controller {
             'has_more' => $has_more
         ]);
     }
+
+    /**
+     * AJAX-обработчик пульса
+     */
+    public function heartbeat_ajax() {
+        $user_id = $this->session->userdata('user_id');
+        $active = $this->Task_model->get_active_session($user_id);
+        
+        if ($active && empty($active['is_paused'])) {
+            if (!empty($active['gap_detected'])) {
+                echo json_encode(['status' => 'gap_detected', 'last_heartbeat' => $active['last_heartbeat'], 'gap_seconds' => $active['gap_seconds']]);
+                return;
+            } else {
+                // Обновляем пульс
+                $this->Task_model->update_heartbeat($active['id']);
+                echo json_encode(['status' => 'success']);
+                return;
+            }
+        }
+        echo json_encode(['status' => 'error', 'message' => 'Нет активной сессии или она на паузе']);
+    }
+
+    /**
+     * AJAX-обработчик решения пользователя по обрыву связи
+     */
+    public function resolve_gap_ajax() {
+        $user_id = $this->session->userdata('user_id');
+        $action = $this->input->post('action'); // 'keep', 'pause', 'stop'
+        
+        $active = $this->Task_model->get_active_session($user_id, true);
+        
+        if ($active && empty($active['is_paused'])) {
+            $last_heartbeat = !empty($active['last_heartbeat']) ? $active['last_heartbeat'] : $active['start_time'];
+            
+            if ($action === 'keep') {
+                $this->Task_model->update_heartbeat($active['id']);
+                echo json_encode(['status' => 'success']);
+            } elseif ($action === 'pause') {
+                $this->db->set('is_paused', 1);
+                $this->db->set('last_paused_at', $last_heartbeat);
+                $this->db->where('id', $active['id']);
+                $this->db->update('time_sessions');
+                echo json_encode(['status' => 'success']);
+            } elseif ($action === 'stop') {
+                $duration = strtotime($last_heartbeat) - strtotime($active['start_time']) - $active['pause_duration'];
+                if ($duration < 60) {
+                    $this->db->where('id', $active['id']);
+                    $this->db->delete('time_sessions');
+                } else {
+                    $this->db->set('end_time', $last_heartbeat);
+                    $this->db->where('id', $active['id']);
+                    $this->db->update('time_sessions');
+                }
+                echo json_encode(['status' => 'success']);
+            } else {
+                echo json_encode(['status' => 'error', 'message' => 'Неизвестное действие']);
+            }
+            return;
+        }
+        echo json_encode(['status' => 'error', 'message' => 'Нет активной сессии']);
+    }
 }

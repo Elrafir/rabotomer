@@ -254,18 +254,26 @@ if (window.loadedTasksModule) {
                     return;
                 }
                 
-                var html = '<table class="w-full text-left border-collapse text-xs md:text-sm text-gray-600"><thead class="bg-gray-100 text-gray-500 border-b border-gray-200 font-semibold tracking-wide"><tr><th class="px-3 py-1">Начало - Окончание</th><th class="px-3 py-1">Задача</th><th class="px-3 py-1">Длительность</th><th class="px-3 py-1 w-1/3">Заметка</th></tr></thead><tbody class="divide-y divide-gray-100">';
+                var html = '<table class="w-full text-left border-collapse text-xs md:text-sm text-gray-600"><thead class="bg-gray-100 text-gray-500 border-b border-gray-200 font-semibold tracking-wide"><tr><th class="px-3 py-1">Начало - Окончание</th><th class="px-3 py-1">Задача</th><th class="px-3 py-1">Длительность</th><th class="px-3 py-1 w-1/3">Заметка</th>' + (window.globalIsAdmin ? '<th class="px-3 py-1 text-right">Действия</th>' : '') + '</tr></thead><tbody class="divide-y divide-gray-100">';
                 var showLimit = 10;
                 var displayData = res.data.slice(0, showLimit);
                 
                 displayData.forEach(s => {
                     var colorStyle = s.color ? `background-color: ${s.color};` : 'background-color: #e5e7eb;';
+                    var actionHtml = '';
+                    if (window.globalIsAdmin) {
+                        actionHtml = `<td class="px-3 py-1.5 whitespace-nowrap text-right">
+                            <button onclick="openEditSessionModal(${s.id}, ${s.task_id}, '${s.start_time.replace(' ', 'T').substring(0,16)}', '${(s.end_time ? s.end_time.replace(' ', 'T').substring(0,16) : '')}', '${s.note_safe ? s.note_safe.replace(/'/g, "\\'") : ''}')" class="bg-gray-100 hover:bg-gray-200 text-gray-600 p-1.5 rounded transition-colors mr-1" title="Редактировать">✏️</button>
+                            <button onclick="deleteSession(${s.id})" class="bg-gray-100 hover:bg-red-100 text-gray-600 hover:text-red-600 p-1.5 rounded transition-colors" title="Удалить">🗑️</button>
+                        </td>`;
+                    }
                     html += `
                         <tr class="hover:bg-gray-100 transition-colors">
                             <td class="px-3 py-1.5 whitespace-nowrap"><span class="font-medium text-gray-700">${s.start_formatted}</span> <span class="text-gray-400">&rarr; ${s.end_formatted}</span></td>
                             <td class="px-3 py-1.5"><div class="flex items-center gap-2"><div class="w-2 h-2 rounded-full shadow-sm" style="${colorStyle}"></div><span class="font-semibold text-gray-800">${s.task_title}</span></div></td>
                             <td class="px-3 py-1.5 font-mono font-bold text-blue-600 bg-blue-50/50 rounded inline-block px-2">${s.duration}</td>
                             <td class="px-3 py-1.5 italic text-gray-500 bg-gray-50/50 rounded">${s.note_safe}</td>
+                            ${actionHtml}
                         </tr>
                     `;
                 });
@@ -435,12 +443,21 @@ if (window.loadedTasksModule) {
                         var rowText = `${s.start_formatted} ${s.end_formatted} ${s.task_title} ${s.duration} ${s.note_safe}`.toLowerCase();
                         var isVisible = (searchValue === "" || rowText.indexOf(searchValue) > -1) ? '' : 'style="display: none;"';
 
+                        var actionHtml = '';
+                        if (window.globalIsAdmin) {
+                            actionHtml = `<td class="px-4 py-2 border-b border-gray-100 whitespace-nowrap text-right">
+                                <button onclick="openEditSessionModal(${s.id}, ${s.task_id}, '${s.start_time.replace(' ', 'T').substring(0,16)}', '${(s.end_time ? s.end_time.replace(' ', 'T').substring(0,16) : '')}', '${s.note_safe ? s.note_safe.replace(/'/g, "\\'") : ''}')" class="bg-gray-100 hover:bg-gray-200 text-gray-600 p-1.5 rounded transition-colors mr-1" title="Редактировать">✏️</button>
+                                <button onclick="deleteSession(${s.id})" class="bg-gray-100 hover:bg-red-100 text-gray-600 hover:text-red-600 p-1.5 rounded transition-colors" title="Удалить">🗑️</button>
+                            </td>`;
+                        }
+
                         html += `
                         <tr class="hover:bg-gray-50 transition-colors" ${isVisible}>
                             <td class="px-4 py-2 border-b border-gray-100 whitespace-nowrap"><span class="font-medium text-gray-700">${s.start_formatted}</span> <span class="text-gray-400 text-xs">&rarr; ${s.end_formatted}</span></td>
                             <td class="px-4 py-2 border-b border-gray-100"><div class="flex items-center gap-2"><div class="w-3 h-3 rounded-full shadow-sm" style="${colorStyle}"></div><span class="font-bold text-gray-800 text-sm">${s.task_title}</span></div></td>
                             <td class="px-4 py-2 border-b border-gray-100 font-mono text-sm font-bold text-blue-600"><span class="bg-blue-50 px-2 py-0.5 rounded border border-blue-100">${s.duration}</span></td>
                             <td class="px-4 py-2 border-b border-gray-100 text-gray-600 text-sm italic bg-gray-50">${s.note_safe}</td>
+                            ${actionHtml}
                         </tr>`;
                     });
 
@@ -851,10 +868,185 @@ if (window.loadedTasksModule) {
         }
     });
 
+    // Модалка добавления сессии вручную
+    window.openAddSessionModal = function(defaultTaskId = '') {
+        $('#add_task_id').val(defaultTaskId);
+        $('#add_start_time').val('');
+        $('#add_end_time').val('');
+        $('#add_note').val('');
+        $('#addSessionModal').removeClass('hidden');
+    };
+
+    window.closeAddSessionModal = function() {
+        $('#addSessionModal').addClass('hidden');
+    };
+
+    window.submitAddSession = function() {
+        var taskId = $('#add_task_id').val();
+        var startTime = $('#add_start_time').val();
+        var endTime = $('#add_end_time').val();
+        var note = $('#add_note').val();
+
+        if (!taskId || !startTime || !endTime) {
+            alert('Пожалуйста, заполните все обязательные поля.');
+            return;
+        }
+
+        $.post(window.globalApi.add_manual, {
+            task_id: taskId,
+            start_time: startTime,
+            end_time: endTime,
+            note: note
+        }, function(response) {
+            try {
+                var res = JSON.parse(response);
+                if (res.status === 'success') {
+                    window.closeAddSessionModal();
+                    window.location.reload(); // Перезагружаем для обновления списка
+                } else {
+                    alert(res.message);
+                }
+            } catch(e) {
+                console.error(e);
+                alert('Произошла системная ошибка при сохранении сессии.');
+            }
+        });
+    };
+
+    // Модалка редактирования сессии (как в истории)
+    window.openEditSessionModal = function(sessionId, taskId, startTime, endTime, note) {
+        $('#edit_session_id').val(sessionId);
+        $('#edit_task_id').val(taskId);
+        $('#edit_start_time').val(startTime);
+        $('#edit_end_time').val(endTime);
+        $('#edit_note').val(note);
+        $('#editSessionModal').removeClass('hidden');
+    };
+
+    window.closeEditSessionModal = function() {
+        $('#editSessionModal').addClass('hidden');
+    };
+
+    window.submitEditSession = function() {
+        var sessionId = $('#edit_session_id').val();
+        var taskId = $('#edit_task_id').val();
+        var startTime = $('#edit_start_time').val();
+        var endTime = $('#edit_end_time').val();
+        var note = $('#edit_note').val();
+
+        if (!sessionId || !taskId || !startTime || !endTime) {
+            alert('Пожалуйста, заполните все обязательные поля.');
+            return;
+        }
+
+        $.post(window.globalApi.edit_session, {
+            session_id: sessionId,
+            task_id: taskId,
+            start_time: startTime,
+            end_time: endTime,
+            note: note
+        }, function(response) {
+            try {
+                var res = JSON.parse(response);
+                if (res.status === 'success') {
+                    window.closeEditSessionModal();
+                    window.location.reload();
+                } else {
+                    alert(res.message);
+                }
+            } catch(e) {
+                console.error(e);
+                alert('Произошла системная ошибка при изменении сессии.');
+            }
+        });
+    };
+
+    window.deleteSession = function(sessionId) {
+        if (!confirm('Вы уверены, что хотите удалить эту сессию активности?')) {
+            return;
+        }
+
+        $.post(window.globalApi.delete_session, {
+            session_id: sessionId
+        }, function(response) {
+            try {
+                var res = JSON.parse(response);
+                if (res.status === 'success') {
+                    window.location.reload();
+                } else {
+                    alert(res.message);
+                }
+            } catch(e) {
+                console.error(e);
+                alert('Не удалось удалить сессию.');
+            }
+        });
+    };
+
     // Инициализация бесконечного скролла задач на дашборде
     initInfiniteScrollTasks();
     initExpandedTasksTree();
     initTaskQuillEditor();
+
+    // Heartbeat: Пульс для проверки обрывов соединения
+    let heartbeatInterval = null;
+    if (typeof window.api !== 'undefined' && window.api.heartbeat) {
+        heartbeatInterval = setInterval(function() {
+            if (window.globalActiveSession && !window.globalActiveSession.is_paused) {
+                $.post(window.api.heartbeat, {}, function(response) {
+                    try {
+                        var res = JSON.parse(response);
+                        if (res.status === 'gap_detected') {
+                            showGapModal(res.last_heartbeat, res.gap_seconds);
+                            clearInterval(heartbeatInterval);
+                        }
+                    } catch (e) {}
+                });
+            }
+        }, 60000); // Раз в минуту
+    }
+
+    // Проверка обрыва связи при загрузке страницы
+    if (window.globalActiveSession && window.globalActiveSession.gap_detected) {
+        if (heartbeatInterval) clearInterval(heartbeatInterval);
+        showGapModal(window.globalActiveSession.last_heartbeat, window.globalActiveSession.gap_seconds);
+    }
+
+    window.showGapModal = function(lastHeartbeat, gapSeconds) {
+        var minutes = Math.floor(gapSeconds / 60);
+        var timeStr = '';
+        
+        // Форматируем дату пульса красиво
+        if (lastHeartbeat) {
+            var parts = lastHeartbeat.split(' ');
+            var timeOnly = parts[1] ? parts[1].substring(0, 5) : lastHeartbeat;
+            timeStr = 'с ' + timeOnly;
+        } else {
+            timeStr = '(время неизвестно)';
+        }
+
+        var text = 'Связь была потеряна ' + timeStr + '. Пока вас не было, натикало <b>' + minutes + ' мин.</b> Что делать с этим временем?';
+        $('#gapModalText').html(text);
+        $('#gapModal').removeClass('hidden');
+    };
+
+    window.resolveGap = function(action) {
+        if (typeof window.api === 'undefined' || !window.api.resolve_gap) return;
+        
+        $.post(window.api.resolve_gap, { action: action }, function(response) {
+            try {
+                var res = JSON.parse(response);
+                if (res.status === 'success') {
+                    window.location.reload();
+                } else {
+                    alert(res.message);
+                }
+            } catch(e) {
+                console.error(e);
+                alert('Произошла ошибка при обработке запроса.');
+            }
+        });
+    };
 }
 
 /**
