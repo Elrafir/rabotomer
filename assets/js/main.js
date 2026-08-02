@@ -459,3 +459,16 @@ document.addEventListener('DOMContentLoaded', function() {
         modal.classList.remove('dragging-theme-modal');
     }
 });
+
+// Регистрация Service Worker для PWA (Офлайн-режим)
+if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+        // Определяем путь к sw.js (в корне сайта)
+        const swPath = window.location.pathname.startsWith('/time/') ? '/time/sw.js' : '/sw.js';
+        navigator.serviceWorker.register(swPath).then((registration) => {
+            console.log('ServiceWorker registration successful with scope: ', registration.scope);
+        }).catch((err) => {
+            console.log('ServiceWorker registration failed: ', err);
+        });
+    });
+}

@@ -188,4 +188,36 @@ class Auth extends MY_Controller {
         // Перенаправляем посетителя на страницу входа
         redirect('auth/login');
     }
+
+    /**
+     * AJAX-авторизация (для браузерного расширения)
+     */
+    public function login_ajax() {
+        $username = $this->input->post('username');
+        $password = $this->input->post('password');
+
+        $user = $this->User_model->get_user_by_username($username);
+
+        if ($user && password_verify($password, $user['password'])) {
+            $session_data = [
+                'user_id' => $user['id'],
+                'username' => $user['username'],
+                'group_id' => $user['group_id'],
+                'user_theme' => isset($user['user_theme']) ? $user['user_theme'] : 'theme-default',
+                'user_theme_opacity' => isset($user['user_theme_opacity']) ? $user['user_theme_opacity'] : '1.00',
+                'user_custom_hue' => isset($user['user_custom_hue']) ? $user['user_custom_hue'] : '221'
+            ];
+            $this->session->set_userdata($session_data);
+
+            // Устанавливаем токен для запоминания сессии
+            $this->load->helper('cookie');
+            $token = bin2hex(random_bytes(32));
+            $this->User_model->set_remember_token($user['id'], $token);
+            set_cookie('remember_token', $token, 30 * 24 * 60 * 60);
+
+            echo json_encode(['status' => 'success']);
+        } else {
+            echo json_encode(['status' => 'error', 'message' => 'Неверный логин или пароль']);
+        }
+    }
 }

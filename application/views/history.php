@@ -12,15 +12,20 @@
             <img src="<?= base_url('assets/img/history_logo.png') ?>" alt="History Logo" class="w-16 h-16 object-cover rounded-2xl shadow-sm">
             <h2 class="text-3xl font-black text-gray-800"><?= lang('history_title'); ?></h2>
         </div>
-        
-        <!-- Кнопка создания новой сессии вручную. Видна только администраторам. -->
-        <?php if (!empty($is_admin)): ?>
-            <button onclick="openAddSessionModal()" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-xl shadow-lg transition-colors flex items-center gap-2">
-                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
-                <?= lang('lbl_session_add'); ?>
-            </button>
-        <?php endif; ?>
+        <!-- Кнопки управления -->
+        <div class="flex items-center gap-4">
+            <!-- Кнопка создания новой сессии вручную. Видна только администраторам. -->
+            <?php if (!empty($is_admin)): ?>
+                <button onclick="openAddSessionModal()" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-xl shadow-lg transition-colors flex items-center gap-2 text-sm">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
+                    <?= lang('lbl_session_add'); ?>
+                </button>
+            <?php endif; ?>
+        </div>
     </div>
+
+    <!-- Таймлайн дня для выбранной даты -->
+    <div id="history-timeline" class="mb-6"></div>
 
     <?php if (empty($sessions)): ?>
         <div class="bg-white p-12 rounded-3xl border border-gray-100 text-center shadow-sm">
@@ -184,3 +189,15 @@
 
 <?php endif; ?>
 <script src="<?= base_url('assets/js/history.js?v=' . time()) ?>"></script>
+<script src="<?= base_url('assets/js/timeline.js?v=' . time()) ?>"></script>
+<script>
+    // Инициализируем Таймлайн только после загрузки всех скриптов
+    setTimeout(() => {
+        if (typeof DailyTimeline !== 'undefined') {
+            window.historyTimeline = new DailyTimeline('history-timeline', {
+                title: 'Таймлайн активности',
+                date: document.getElementById('historyDateFilter') ? document.getElementById('historyDateFilter').value : new Date().toISOString().split('T')[0]
+            });
+        }
+    }, 300);
+</script>

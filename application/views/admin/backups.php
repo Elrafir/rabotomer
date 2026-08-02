@@ -69,6 +69,12 @@
                                         class="px-3 py-2 rounded-lg text-sm font-semibold text-amber-600 hover:bg-amber-50 transition-colors" title="Восстановить БД из бэкапа">
                                         ♻️
                                     </button>
+                                <?php else: ?>
+                                    <!-- Скачать установщик (только для полных бэкапов) -->
+                                    <a href="<?= site_url('admin/download_installer') ?>"
+                                        class="px-3 py-2 rounded-lg text-sm font-semibold text-purple-600 hover:bg-purple-50 transition-colors" title="Скачать файл установщика (installer.php)">
+                                        🧰
+                                    </a>
                                 <?php endif; ?>
                                 <!-- Удалить -->
                                 <button onclick="deleteBackup('<?= htmlspecialchars($backup['filename']) ?>')"

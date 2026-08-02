@@ -57,10 +57,15 @@ class History extends MY_Controller {
             'sessions' => $sessions,
             // Подключаем левую панель со статистикой и ссылками
             'left_sidebar_view' => 'sidebars/statistics',
+            // Активная вкладка левой панели
+            'active_sub_page' => 'history',
             // Передаем флаг администратора для проверки прав в представлении
             'is_admin' => $is_admin,
             // Передаем размер страницы по умолчанию для JS скрипта
-            'per_page' => $per_page
+            'per_page' => $per_page,
+            'custom_js' => [
+                'assets/js/timeline.js'
+            ]
         ];
 
         // Если администратор, подгружаем его задачи для выбора в формах CRUD

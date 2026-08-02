@@ -55,6 +55,13 @@ class MY_Controller extends CI_Controller {
             // Если после попытки автологина сессия все еще не создана, и текущий запрос идет не к контроллеру 'auth'
             if (!$this->session->userdata('user_id') && $current_controller !== 'auth') {
                 
+                // Специальная обработка для API расширения (чтобы не отдавать HTML страницы логина)
+                if ($this->router->fetch_method() === 'extension_data_ajax') {
+                    header('Content-Type: application/json');
+                    echo json_encode(['status' => 'unauthorized']);
+                    exit;
+                }
+                
                 // Проверяем, является ли запрос AJAX-запросом (актуально для SPA переходов)
                 if ($this->input->is_ajax_request()) {
                     // При AJAX-запросе возвращаем скрипт перенаправления на страницу входа

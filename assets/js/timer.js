@@ -148,6 +148,39 @@ function initGlobalTimer() {
         document.title = 'Тайм-трекер';
         setFavicon(faviconDefault);
     }
+    
+    // Оповещаем браузерное расширение (через Content Script) об изменении состояния
+    window.dispatchEvent(new CustomEvent('rabotomerTimerChanged'));
+    
+    // Интеграция с Android Capacitor Plugin
+    if (window.Capacitor && window.Capacitor.Plugins.TimeTracker) {
+        if (window.globalActiveSession) {
+            window.Capacitor.Plugins.TimeTracker.updateState({
+                state: isPaused ? 'paused' : 'running',
+                taskName: currentTaskTitle,
+                timeSeconds: initialSessionSeconds
+            });
+        } else {
+            window.Capacitor.Plugins.TimeTracker.updateState({
+                state: 'stopped'
+            });
+        }
+    }
+    
+    // Интеграция с Windows Electron App
+    if (window.electronAPI && window.electronAPI.updateTimerState) {
+        if (window.globalActiveSession) {
+            window.electronAPI.updateTimerState({
+                state: isPaused ? 'paused' : 'running',
+                taskName: currentTaskTitle,
+                timeSeconds: initialSessionSeconds
+            });
+        } else {
+            window.electronAPI.updateTimerState({
+                state: 'stopped'
+            });
+        }
+    }
 }
 
 /**
@@ -308,26 +341,55 @@ function actionTogglePause() {
     
     if (isPaused) {
         // Продолжить таймер
-        $.post(window.globalApi.start, { task_id: currentTaskId }, function(response) {
-            let res = JSON.parse(response);
-            if (res.status === 'success') {
-                window.globalActiveSession = res.data;
-                initGlobalTimer();
-                loadAjaxPage(window.location.href, false); // Перезагружаем SPA страницу
-            } else {
-                alert(res.message);
+        $.ajax({
+            url: window.globalApi.start,
+            type: 'POST',
+            data: { task_id: currentTaskId },
+            success: function(response) {
+                let res = JSON.parse(response);
+                if (res.status === 'success') {
+                    window.globalActiveSession = res.data;
+                    initGlobalTimer();
+                    loadAjaxPage(window.location.href, false);
+                } else {
+                    alert(res.message);
+                }
+            },
+            error: function(xhr) {
+                if (!navigator.onLine || xhr.status === 0) {
+                    OfflineSync.addAction({ type: 'RESUME', task_id: currentTaskId, timestamp: OfflineSync.getFormattedDate() });
+                    window.globalActiveSession.is_paused = 0;
+                    initGlobalTimer();
+                } else {
+                    alert("Ошибка сети");
+                }
             }
         });
     } else {
         // Поставить на паузу
-        $.post(window.globalApi.pause, {}, function(response) {
-            let res = JSON.parse(response);
-            if (res.status === 'success') {
-                window.globalActiveSession = res.data;
-                initGlobalTimer();
-                loadAjaxPage(window.location.href, false); // Перезагружаем SPA страницу
-            } else {
-                alert(res.message);
+        $.ajax({
+            url: window.globalApi.pause,
+            type: 'POST',
+            success: function(response) {
+                let res = JSON.parse(response);
+                if (res.status === 'success') {
+                    window.globalActiveSession = res.data;
+                    initGlobalTimer();
+                    loadAjaxPage(window.location.href, false);
+                } else {
+                    alert(res.message);
+                }
+            },
+            error: function(xhr) {
+                if (!navigator.onLine || xhr.status === 0) {
+                    const elapsed = initialSessionSeconds + Math.floor((Date.now() - localStartTime) / 1000);
+                    OfflineSync.addAction({ type: 'PAUSE', task_id: currentTaskId, timestamp: OfflineSync.getFormattedDate() });
+                    window.globalActiveSession.is_paused = 1;
+                    window.globalActiveSession.current_elapsed = elapsed;
+                    initGlobalTimer();
+                } else {
+                    alert("Ошибка сети");
+                }
             }
         });
     }
@@ -336,25 +398,82 @@ function actionTogglePause() {
 /**
  * Завершает сессию таймера с возможностью сохранения комментария (Note)
  */
-function actionStopTimer() {
+async function actionStopTimer() {
     const elapsedSinceLoad = Math.floor((Date.now() - localStartTime) / 1000);
     const currentSessionSeconds = isPaused ? initialSessionSeconds : initialSessionSeconds + elapsedSinceLoad;
 
     let note = "";
     // Запрашиваем комментарий, только если сессия длилась более 1 минуты
     if (currentSessionSeconds >= 60) {
-        note = prompt(window.globalLang.js_prompt_stop_timer, "");
+        if (!window.customPrompt) {
+            window.customPrompt = function(message, defaultValue = "") {
+                return new Promise((resolve) => {
+                    const modalHtml = `
+                    <div id="customPromptModal" class="fixed inset-0 flex items-center justify-center p-4" style="z-index: 999999; background-color: rgba(0,0,0,0.5);">
+                        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md p-6 transform transition-all" style="position: relative; z-index: 1000000;">
+                            <h3 class="text-lg font-bold mb-4 text-gray-800">${message}</h3>
+                            <input type="text" id="customPromptInput" class="w-full border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-blue-500 focus:outline-none mb-6" value="${defaultValue}">
+                            <div class="flex justify-end gap-3">
+                                <button id="customPromptCancel" class="px-4 py-2 text-gray-600 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors">Отмена</button>
+                                <button id="customPromptOk" class="px-4 py-2 text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors">ОК</button>
+                            </div>
+                        </div>
+                    </div>
+                    `;
+                    document.body.insertAdjacentHTML('beforeend', modalHtml);
+                    
+                    const modal = document.getElementById('customPromptModal');
+                    const input = document.getElementById('customPromptInput');
+                    const btnCancel = document.getElementById('customPromptCancel');
+                    const btnOk = document.getElementById('customPromptOk');
+
+                    input.focus();
+
+                    const closeAndResolve = (val) => {
+                        modal.remove();
+                        resolve(val);
+                    };
+
+                    btnCancel.addEventListener('click', () => closeAndResolve(null));
+                    btnOk.addEventListener('click', () => closeAndResolve(input.value));
+                    input.addEventListener('keydown', (e) => {
+                        if (e.key === 'Enter') closeAndResolve(input.value);
+                        if (e.key === 'Escape') closeAndResolve(null);
+                    });
+                });
+            };
+        }
+        note = await window.customPrompt(window.globalLang.js_prompt_stop_timer, "");
         if (note === null) return; // Отмена остановки
     }
 
-    $.post(window.globalApi.stop, { note: note }, function(response) {
-        let res = JSON.parse(response);
-        if (res.status === 'success' || res.status === 'spam') {
-            window.globalActiveSession = null;
-            initGlobalTimer();
-            loadAjaxPage(window.location.href, false); // Перезагружаем SPA страницу
-        } else {
-            alert(res.message);
+    $.ajax({
+        url: window.globalApi.stop,
+        type: 'POST',
+        data: { note: note },
+        success: function(response) {
+            let res = JSON.parse(response);
+            if (res.status === 'success' || res.status === 'spam') {
+                window.globalActiveSession = null;
+                initGlobalTimer();
+                loadAjaxPage(window.location.href, false);
+            } else {
+                alert(res.message);
+            }
+        },
+        error: function(xhr) {
+            if (!navigator.onLine || xhr.status === 0) {
+                OfflineSync.addAction({ type: 'STOP', note: note, task_id: currentTaskId, timestamp: OfflineSync.getFormattedDate() });
+                window.globalActiveSession = null;
+                initGlobalTimer();
+                if ($('.nav-cloud-active').attr('href') && $('.nav-cloud-active').attr('href').indexOf('/tasks') !== -1) {
+                    // Если мы на дашборде, попытаемся визуально остановить, но лучше просто уведомить
+                    alert("Нет сети. Остановка сохранена локально и будет отправлена при появлении интернета.");
+                    // Просто перерисуем интерфейс таймера без перезагрузки страницы
+                }
+            } else {
+                alert("Ошибка соединения");
+            }
         }
     });
 }
@@ -389,15 +508,39 @@ window.stopTimer = function() {
  * @param {number|string} taskId - Идентификатор запускаемой задачи
  */
 window.startTimer = function(taskId) {
-    $.post(window.globalApi.start, { task_id: taskId }, function(response) {
-        let res = JSON.parse(response);
-        if (res.status === 'success') {
-            localStorage.removeItem('pausedTimerInfo');
-            window.globalActiveSession = res.data;
-            initGlobalTimer();
-            loadAjaxPage(window.location.href, false); // Обновляем страницу через SPA
-        } else {
-            alert(res.message);
+    let taskTitle = $('#task-title-' + taskId).length ? $('#task-title-' + taskId).text().trim() : "Задача " + taskId;
+    
+    $.ajax({
+        url: window.globalApi.start,
+        type: 'POST',
+        data: { task_id: taskId },
+        success: function(response) {
+            let res = JSON.parse(response);
+            if (res.status === 'success') {
+                localStorage.removeItem('pausedTimerInfo');
+                window.globalActiveSession = res.data;
+                initGlobalTimer();
+                loadAjaxPage(window.location.href, false);
+            } else {
+                alert(res.message);
+            }
+        },
+        error: function(xhr) {
+            if (!navigator.onLine || xhr.status === 0) {
+                OfflineSync.addAction({ type: 'START', task_id: taskId, timestamp: OfflineSync.getFormattedDate() });
+                localStorage.removeItem('pausedTimerInfo');
+                window.globalActiveSession = {
+                    task_id: taskId,
+                    task_title: taskTitle,
+                    is_paused: 0,
+                    current_elapsed: 0,
+                    total_accumulated: 0
+                };
+                initGlobalTimer();
+                alert("Нет сети. Таймер запущен в оффлайн-режиме.");
+            } else {
+                alert("Ошибка сети");
+            }
         }
     });
 };
@@ -603,4 +746,87 @@ $(document).ready(function() {
         
         dragElement = null;
     });
+
+    // Запускаем фоновую синхронизацию состояния с сервером
+    startTimerStateSync();
+    
+    // Подписываемся на события от Android плагина Capacitor
+    if (window.Capacitor && window.Capacitor.Plugins.TimeTracker) {
+        window.Capacitor.Plugins.TimeTracker.addListener('onTimerAction', (info) => {
+            if (info.action === 'toggle' || info.action === 'start' || info.action === 'pause') {
+                globalTogglePause();
+            } else if (info.action === 'stop') {
+                stopTimer();
+            }
+        });
+        
+        // Запрашиваем права на плавающий пузырек, чтобы он мог работать
+        window.Capacitor.Plugins.TimeTracker.requestOverlayPermission();
+    }
+    
+    // Подписываемся на события от Windows Electron App
+    if (window.electronAPI && window.electronAPI.onTimerAction) {
+        window.electronAPI.onTimerAction((action) => {
+            if (action === 'toggle' || action === 'start' || action === 'pause') {
+                globalTogglePause();
+            } else if (action === 'stop') {
+                stopTimer();
+            }
+        });
+    }
 });
+
+// --- СИНХРОНИЗАЦИЯ СОСТОЯНИЯ СЕРВЕРА (ОТ РАСШИРЕНИЯ / ДРУГИХ ВКЛАДОК) ---
+let timerSyncInterval = null;
+
+function startTimerStateSync() {
+    if (timerSyncInterval) clearInterval(timerSyncInterval);
+    
+    timerSyncInterval = setInterval(() => {
+        // Не поллим, если нет сети
+        if (!navigator.onLine) return;
+        
+        // Используем глобальный объект API из body.php
+        const apiUrl = window.globalApi && window.globalApi.sync_session ? window.globalApi.sync_session : '/tasks/sync_active_session_ajax';
+        
+        $.ajax({
+            url: apiUrl,
+            type: 'GET',
+            dataType: 'json',
+            success: function(res) {
+                if (res.status === 'success') {
+                    checkAndApplyTimerChanges(res.active_session);
+                }
+            }
+        });
+    }, 5000); // Проверка каждые 5 секунд
+}
+
+function checkAndApplyTimerChanges(serverSession) {
+    let changed = false;
+    
+    if (!window.globalActiveSession && serverSession) {
+        // Таймер был запущен извне
+        changed = true;
+    } else if (window.globalActiveSession && !serverSession) {
+        // Таймер был остановлен извне
+        changed = true;
+    } else if (window.globalActiveSession && serverSession) {
+        // Сравниваем важные поля
+        if (window.globalActiveSession.task_id != serverSession.task_id ||
+            window.globalActiveSession.is_paused != serverSession.is_paused) {
+            changed = true;
+        }
+    }
+    
+    if (changed) {
+        console.log("Состояние таймера изменилось извне, обновляем UI...");
+        window.globalActiveSession = serverSession;
+        initGlobalTimer();
+        
+        // Обновляем таймлайн, если он инициализирован и мы на дашборде
+        if (window.dashboardTimeline && window.dashboardTimeline.loadData) {
+            window.dashboardTimeline.loadData();
+        }
+    }
+}

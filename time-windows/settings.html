@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Настройки Работомера</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; background-color: #f3f4f6; }
+        .drag-region { -webkit-app-region: drag; }
+        .no-drag { -webkit-app-region: no-drag; }
+    </style>
+</head>
+<body class="h-screen flex flex-col overflow-hidden">
+    <!-- Кастомный заголовок окна -->
+    <div class="drag-region bg-white border-b border-gray-200 h-10 flex items-center justify-between px-4 select-none shrink-0">
+        <div class="text-sm font-semibold text-gray-700 flex items-center gap-2">
+            <span>⏱️</span> Работомер
+        </div>
+        <div class="no-drag">
+            <button id="btnClose" class="text-gray-500 hover:text-red-500 transition-colors w-6 h-6 flex items-center justify-center rounded">&times;</button>
+        </div>
+    </div>
+
+    <!-- Основной контент -->
+    <div class="flex-grow flex items-center justify-center p-6 overflow-y-auto">
+        <div class="bg-white p-8 rounded-2xl shadow-xl w-full max-w-md">
+            <div class="text-center mb-6">
+                <div class="text-5xl mb-4">🌍</div>
+                <h2 class="text-2xl font-bold text-gray-800">Подключение к серверу</h2>
+                <p class="text-gray-500 mt-2 text-sm">Введите URL-адрес сервера вашего тайм-трекера, чтобы приложение могло к нему подключиться.</p>
+            </div>
+
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-sm font-bold text-gray-700 mb-1">URL адрес сервера</label>
+                    <input type="url" id="serverUrl" placeholder="http://192.168.100.2:7880" class="w-full px-4 py-3 bg-gray-50 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:outline-none transition-shadow">
+                    <p class="text-xs text-gray-400 mt-1">Обязательно с http:// или https://</p>
+                </div>
+
+                <!-- Блок статуса проверки -->
+                <div id="statusBox" class="hidden p-3 rounded-lg text-sm font-medium text-center"></div>
+
+                <div class="flex gap-3 mt-6">
+                    <button id="btnTest" class="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold py-3 px-4 rounded-xl transition-colors">
+                        Проверить
+                    </button>
+                    <button id="btnSave" disabled class="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded-xl shadow-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
+                        Сохранить и войти
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const btnTest = document.getElementById('btnTest');
+        const btnSave = document.getElementById('btnSave');
+        const serverUrl = document.getElementById('serverUrl');
+        const statusBox = document.getElementById('statusBox');
+        const btnClose = document.getElementById('btnClose');
+
+        // Загрузка сохраненного URL (если есть)
+        window.electronAPI.getServerUrl().then(url => {
+            if (url) {
+                serverUrl.value = url;
+            }
+        });
+
+        // Закрытие окна
+        btnClose.addEventListener('click', () => {
+            window.close();
+        });
+
+        // Сброс кнопки Сохранить при изменении текста
+        serverUrl.addEventListener('input', () => {
+            btnSave.disabled = true;
+            statusBox.classList.add('hidden');
+        });
+
+        // Логика проверки
+        btnTest.addEventListener('click', async () => {
+            const url = serverUrl.value.trim();
+            if (!url) return;
+
+            btnTest.textContent = 'Проверка...';
+            btnTest.disabled = true;
+            statusBox.classList.add('hidden');
+
+            try {
+                // Пытаемся сделать запрос на сервер (например, к корню, чтобы проверить доступность)
+                // Используем fetch. Для избежания CORS в Electron можно настроить webSecurity: false,
+                // Но лучше просто перехватить ошибку.
+                const response = await fetch(url + '/index.php/auth/login_ajax', { method: 'GET', mode: 'no-cors' });
+                
+                // Если мы дошли сюда, значит сервер хоть как-то ответил
+                statusBox.textContent = '✅ Сервер доступен!';
+                statusBox.className = 'p-3 rounded-lg text-sm font-medium text-center bg-green-100 text-green-800 mt-4';
+                btnSave.disabled = false;
+            } catch (err) {
+                statusBox.textContent = '❌ Не удалось подключиться к серверу';
+                statusBox.className = 'p-3 rounded-lg text-sm font-medium text-center bg-red-100 text-red-800 mt-4';
+                btnSave.disabled = true;
+            } finally {
+                btnTest.textContent = 'Проверить';
+                btnTest.disabled = false;
+            }
+        });
+
+        // Логика сохранения
+        btnSave.addEventListener('click', () => {
+            const url = serverUrl.value.trim();
+            if (!url) return;
+            
+            // Отправляем команду в главный процесс на сохранение и переход
+            window.electronAPI.saveServerUrl(url);
+        });
+    </script>
+</body>
+</html>

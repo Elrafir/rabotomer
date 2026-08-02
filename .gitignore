@@ -15,3 +15,7 @@ application/config/database.php
 .idea/
 reports_debug.txt
 
+# Скомпилированные сборки приложений
+assets/downloads/*.zip
+assets/downloads/*.apk
+

@@ -6,6 +6,10 @@
     <title><?php echo isset($title) ? $title : 'Тайм-трекер'; ?></title>
     <link rel="icon" type="image/svg+xml" href="<?php echo base_url('assets/img/clock-icon.svg'); ?>">
     
+    <!-- PWA Settings -->
+    <link rel="manifest" href="<?php echo base_url('manifest.json'); ?>">
+    <meta name="theme-color" content="#2563eb">
+    <link rel="apple-touch-icon" href="<?php echo base_url('assets/img/clock-icon.svg'); ?>">
 
     <!-- Локальное подключение Tailwind CSS -->
     <link href="<?php echo base_url('assets/css/tailwind.min.css'); ?>" rel="stylesheet">
@@ -14,6 +18,7 @@
     <script src="<?php echo base_url('assets/js/jquery.min.js'); ?>"></script>
     <script src="<?php echo base_url('assets/js/main.js?v='.time()); ?>"></script>
     <script src="<?php echo base_url('assets/js/timer.js?v='.time()); ?>"></script>
+    <script src="<?php echo base_url('assets/js/offline-sync.js?v='.time()); ?>"></script>
     
     <!-- Динамический вывод дополнительных CSS файлов (если они переданы из контроллера) -->
     <?php if (isset($custom_css) && is_array($custom_css)): ?>

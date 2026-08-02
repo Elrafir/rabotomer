@@ -41,13 +41,13 @@ if ($current_theme === 'theme-custom') {
                                 <img src="<?= base_url('assets/img/icon_tasks.png') ?>" alt="Задачи" class="w-6 h-6 flex-shrink-0 object-contain" style="mix-blend-mode: multiply;">
                                 <span class="nav-label ml-2"><?= lang('nav_tasks'); ?></span>
                             </a>
-                            <!--<div class="border-l border-white/30 transition-colors" style="height: 60%;"></div>
+                            <div class="border-l border-white/30 transition-colors" style="height: 60%;"></div>
                             
-                            <a href="<?= site_url('history'); ?>" class="text-xl font-bold flex items-center transition-all px-4 py-2 <?= current_url() == site_url('history') ? 'opacity-100 nav-cloud-active' : 'opacity-70 hover:opacity-100' ?>">
+                            <!--<a href="<?= site_url('history'); ?>" class="text-xl font-bold flex items-center transition-all px-4 py-2 <?= current_url() == site_url('history') ? 'opacity-100 nav-cloud-active' : 'opacity-70 hover:opacity-100' ?>">
                                 <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
                                 <?= lang('nav_history'); ?>
-                            </a>-->
-                            <div class="border-l border-white/30 transition-colors" style="height: 60%;"></div>
+                            </a>
+                            <div class="border-l border-white/30 transition-colors" style="height: 60%;"></div>-->
                             
                             <a href="<?= site_url('customers'); ?>" title="<?= lang('nav_customers') ?>" class="text-xl font-bold flex items-center transition-all px-3 py-2 <?= current_url() == site_url('customers') ? 'opacity-100 nav-cloud-active' : 'opacity-70 hover:opacity-100' ?>">
                                 <span class="flex-shrink-0 text-lg">🤝</span>
@@ -148,6 +148,11 @@ if ($current_theme === 'theme-custom') {
                 hard_delete: '<?php echo site_url("tasks/hard_delete_ajax"); ?>',
                 search_tasks: '<?php echo site_url("calculations/search_tasks_ajax"); ?>',
                 add_calculation_task: '<?php echo site_url("calculations/add_task_ajax"); ?>',
+                update_calculation_task: '<?php echo site_url("calculations/update_task_ajax"); ?>',
+                delete_calculation_task: '<?php echo site_url("calculations/delete_task_ajax"); ?>',
+                analytics_data: '<?php echo site_url("analytics/get_data_ajax"); ?>',
+                sync_session: '<?php echo site_url("tasks/sync_active_session_ajax"); ?>',
+                get_timeline: '<?php echo site_url("tasks/get_timeline_ajax"); ?>',
                 remove_calculation_task: '<?php echo site_url("calculations/remove_task_ajax"); ?>',
                 delete_spec_file: '<?php echo site_url("customers/delete_file/"); ?>',
                 upload_file: '<?php echo site_url("customers/upload_file"); ?>',
@@ -159,7 +164,8 @@ if ($current_theme === 'theme-custom') {
                 load_more_history: '<?php echo site_url("history/load_more_history_ajax"); ?>',
                 upload_editor_image: '<?php echo site_url("customers/upload_editor_image_ajax"); ?>',
                 heartbeat: '<?php echo site_url("tasks/heartbeat_ajax"); ?>',
-                resolve_gap: '<?php echo site_url("tasks/resolve_gap_ajax"); ?>'
+                resolve_gap: '<?php echo site_url("tasks/resolve_gap_ajax"); ?>',
+                sync_offline: '<?php echo site_url("tasks/sync_offline_actions_ajax"); ?>'
             };
             window.globalLang = {
                 btn_pause: '<?= lang("btn_pause") ?>',

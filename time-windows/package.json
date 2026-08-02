@@ -1,0 +1,27 @@
+{
+  "name": "rabotomer",
+  "version": "1.0.4",
+  "description": "Работомер - Тайм-трекер",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "build": "electron-builder --win"
+  },
+  "build": {
+    "appId": "com.alexey.rabotomer",
+    "productName": "Работомер",
+    "directories": {
+      "output": "dist"
+    },
+    "win": {
+      "target": "zip"
+    }
+  },
+  "dependencies": {
+    "electron-store": "^11.0.2"
+  },
+  "devDependencies": {
+    "electron": "^43.2.0",
+    "electron-builder": "^24.13.3"
+  }
+}

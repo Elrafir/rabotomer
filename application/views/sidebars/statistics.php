@@ -58,6 +58,16 @@
             <span class="flex-shrink-0 text-lg">📓</span>
             <span class="sidebar-label"><?= lang('nav_history'); ?></span>
         </a>
+
+        <?php
+        $is_analytics_active = (isset($active_sub_page) && $active_sub_page === 'analytics');
+        $analytics_classes = $is_analytics_active ? 'bg-blue-50 text-blue-600 font-bold' : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900';
+        ?>
+        <!-- Ссылка на подраздел "Аналитика" -->
+        <a href="<?= site_url('analytics') ?>" title="Аналитика" class="flex items-center gap-3 px-4 py-3 rounded-2xl transition-colors <?= $analytics_classes; ?>">
+            <span class="flex-shrink-0 text-lg">📈</span>
+            <span class="sidebar-label">Аналитика</span>
+        </a>
     </nav>
 </div>
 

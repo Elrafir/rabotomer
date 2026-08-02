@@ -659,6 +659,22 @@ class Admin extends MY_Controller {
     }
 
     /**
+     * Скачивание файла установщика (installer.php).
+     * URL: admin/download_installer
+     */
+    public function download_installer() {
+        $this->_require_admin();
+        $filepath = FCPATH . 'installer.php';
+        
+        if (!file_exists($filepath) || !is_file($filepath)) {
+            show_404();
+        }
+        
+        $this->load->helper('download');
+        force_download('installer.php', file_get_contents($filepath));
+    }
+
+    /**
      * AJAX: Восстановление базы данных из файла бэкапа.
      * ОПАСНАЯ ОПЕРАЦИЯ — полностью заменяет текущую БД данными из бэкапа.
      * Перед восстановлением автоматически создаётся «страховочный» бэкап.

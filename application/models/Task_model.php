@@ -249,6 +249,99 @@ class Task_model extends CI_Model {
     }
 
     /**
+     * Пакетная синхронизация офлайн-действий пользователя из IndexedDB
+     */
+    public function sync_offline_actions($user_id, $actions) {
+        // Сортируем действия по времени на всякий случай
+        usort($actions, function($a, $b) {
+            return strtotime($a['timestamp']) - strtotime($b['timestamp']);
+        });
+
+        foreach ($actions as $action) {
+            $type = $action['type'];
+            $timestamp = $action['timestamp'];
+
+            if ($type === 'START') {
+                $task_id = $action['task_id'];
+                
+                // Закрываем активную сессию, если она есть
+                $this->db->where('user_id', $user_id);
+                $this->db->where('end_time IS NULL');
+                $this->db->set('end_time', $timestamp);
+                $this->db->update('time_sessions');
+                
+                // Создаем новую
+                $data = [
+                    'user_id' => $user_id,
+                    'task_id' => $task_id,
+                    'start_time' => $timestamp,
+                    'end_time' => NULL,
+                    'is_paused' => 0,
+                    'pause_duration' => 0,
+                    'last_heartbeat' => $timestamp
+                ];
+                $this->db->insert('time_sessions', $data);
+
+            } elseif ($type === 'STOP') {
+                $this->db->where('user_id', $user_id);
+                $this->db->where('end_time IS NULL');
+                $open_session = $this->db->get('time_sessions')->row_array();
+                
+                if ($open_session) {
+                    $pause_dur = isset($open_session['pause_duration']) ? $open_session['pause_duration'] : 0;
+                    if ($open_session['is_paused'] && !empty($open_session['last_paused_at'])) {
+                        $timestamp = $open_session['last_paused_at'];
+                    }
+                    $duration = strtotime($timestamp) - strtotime($open_session['start_time']) - $pause_dur;
+                    
+                    if ($duration < 60) {
+                        $this->db->where('id', $open_session['id']);
+                        $this->db->delete('time_sessions');
+                    } else {
+                        $this->db->where('id', $open_session['id']);
+                        $this->db->set('end_time', $timestamp);
+                        $this->db->set('is_paused', 0);
+                        $this->db->set('last_paused_at', NULL);
+                        if (!empty($action['note'])) {
+                            $this->db->set('note', $action['note']);
+                        }
+                        $this->db->update('time_sessions');
+                    }
+                }
+            } elseif ($type === 'PAUSE') {
+                $this->db->where('user_id', $user_id);
+                $this->db->where('end_time IS NULL');
+                $this->db->where('is_paused', 0);
+                $open_session = $this->db->get('time_sessions')->row_array();
+                
+                if ($open_session) {
+                    $this->db->where('id', $open_session['id']);
+                    $this->db->set('is_paused', 1);
+                    $this->db->set('last_paused_at', $timestamp);
+                    $this->db->update('time_sessions');
+                }
+            } elseif ($type === 'RESUME') {
+                $this->db->where('user_id', $user_id);
+                $this->db->where('end_time IS NULL');
+                $this->db->where('is_paused', 1);
+                $open_session = $this->db->get('time_sessions')->row_array();
+                
+                if ($open_session) {
+                    $pause_seconds = strtotime($timestamp) - strtotime($open_session['last_paused_at']);
+                    if ($pause_seconds < 0) $pause_seconds = 0;
+                    
+                    $this->db->where('id', $open_session['id']);
+                    $this->db->set('is_paused', 0);
+                    $this->db->set('last_paused_at', NULL);
+                    $this->db->set('pause_duration', 'pause_duration + ' . (int)$pause_seconds, FALSE);
+                    $this->db->set('last_heartbeat', $timestamp);
+                    $this->db->update('time_sessions');
+                }
+            }
+        }
+    }
+
+    /**
      * Обновление времени последнего пульса (heartbeat)
      */
     public function update_heartbeat($session_id) {
@@ -379,6 +472,34 @@ class Task_model extends CI_Model {
         $this->db->order_by('time_sessions.end_time', 'DESC');
         
         return $this->db->get()->result_array();
+    }
+
+    /**
+     * Получить цвет задачи (если у самой нет, ищет у родителей вверх по дереву)
+     */
+    public function get_task_color_recursive($task_id, $user_id) {
+        $current_id = $task_id;
+        while ($current_id) {
+            $this->db->select('parent_id, color');
+            $this->db->where('id', $current_id);
+            $this->db->where('user_id', $user_id);
+            $task = $this->db->get('tasks')->row_array();
+            
+            if (empty($task)) {
+                return null;
+            }
+            
+            if (!empty($task['color'])) {
+                return $task['color'];
+            }
+            
+            if (!empty($task['parent_id'])) {
+                $current_id = $task['parent_id'];
+            } else {
+                break;
+            }
+        }
+        return null;
     }
 
     /**

@@ -1,7 +1,8 @@
 <footer>
     <!-- Подвальные ссылки или копирайты -->
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 text-center text-gray-500">
-        &copy; <?php echo date('Y'); ?> Тайм-трекер. Все права защищены.
+        <p class="text-gray-500 mb-0">&copy; 2026 Тайм-трекер. Все права защищены.</p>
+        <a href="<?= site_url('MobileApp') ?>" class="inline-block mt-2 text-blue-600 hover:text-blue-800 hover:underline transition-colors font-medium">Установить приложения</a>
     </div>
 </footer>
 

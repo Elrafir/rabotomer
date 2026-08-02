@@ -12,10 +12,11 @@ window.initQuillEditor = function() {
     // Проверяем, доступна ли библиотека Quill
     if (typeof Quill !== 'undefined') {
 
-        // Регистрируем плагин ресайза картинок (если подключён)
+        // Регистрируем плагин ресайза картинок (если подключён и ещё не зарегистрирован)
         // Даёт ручки для перетягивания размера + панель выравнивания (лево/центр/право)
-        if (typeof ImageResize !== 'undefined') {
+        if (typeof ImageResize !== 'undefined' && !window.quillImageResizeRegistered) {
             Quill.register('modules/imageResize', ImageResize.default || ImageResize);
+            window.quillImageResizeRegistered = true;
         }
 
         // Конфигурация тулбара Quill: полный «статейный» набор для описания ТЗ

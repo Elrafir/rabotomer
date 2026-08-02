@@ -48,6 +48,10 @@ class Tasks extends MY_Controller {
 
         // Подготавливаем данные для передачи во view
         $data = [
+            'title' => 'Работомер - Дашборд',
+            'custom_js' => [
+                'assets/js/timeline.js'
+            ],
             'tasks_tree' => $tasks_tree,
             'active_session' => $active_session,
             'customers' => $this->Customer_model->get_all($user_id),
@@ -747,5 +751,110 @@ class Tasks extends MY_Controller {
             return;
         }
         echo json_encode(['status' => 'error', 'message' => 'Нет активной сессии']);
+    }
+
+    /**
+     * AJAX-обработчик синхронизации оффлайн-действий из PWA (IndexedDB)
+     */
+    public function sync_offline_actions_ajax() {
+        $user_id = $this->session->userdata('user_id');
+        $actions_json = $this->input->post('actions');
+        $actions = json_decode($actions_json, true);
+        
+        if (is_array($actions) && count($actions) > 0) {
+            $this->Task_model->sync_offline_actions($user_id, $actions);
+            echo json_encode(['status' => 'success']);
+        } else {
+            echo json_encode(['status' => 'error', 'message' => 'Нет данных или неверный формат']);
+        }
+    }
+
+    /**
+     * Возвращает только активную сессию для синхронизации состояния между вкладками и расширением
+     */
+    public function sync_active_session_ajax() {
+        $user_id = $this->session->userdata('user_id');
+        if (!$user_id) {
+            echo json_encode(['status' => 'unauthorized']);
+            return;
+        }
+        
+        $active_session = $this->Task_model->get_active_session($user_id);
+        
+        if ($active_session) {
+            $active_session['total_accumulated'] = $this->Task_model->get_task_time_recursive($active_session['task_id'], $user_id);
+            $active_session['current_elapsed'] = time() - strtotime($active_session['start_time']);
+        }
+        
+        echo json_encode([
+            'status' => 'success',
+            'active_session' => $active_session
+        ]);
+    }
+
+    /**
+     * Возвращает данные для браузерного расширения
+     */
+    public function extension_data_ajax() {
+        $user_id = $this->session->userdata('user_id');
+        if (!$user_id) {
+            echo json_encode(['status' => 'unauthorized']);
+            return;
+        }
+
+        // Получаем плоский список задач
+        $all_tasks = $this->Task_model->get_user_tasks($user_id);
+        
+        // Получаем активную сессию
+        $active_session = $this->Task_model->get_active_session($user_id);
+
+        echo json_encode([
+            'status' => 'success',
+            'tasks' => $all_tasks,
+            'active_session' => $active_session
+        ]);
+    }
+
+    /**
+     * Возвращает данные для Таймлайна дня
+     */
+    public function get_timeline_ajax() {
+        $user_id = $this->session->userdata('user_id');
+        $date = $this->input->get('date') ?: date('Y-m-d');
+        
+        $this->db->select('time_sessions.*, tasks.title as task_title, time_sessions.task_id');
+        $this->db->from('time_sessions');
+        $this->db->join('tasks', 'tasks.id = time_sessions.task_id', 'left');
+        $this->db->where('time_sessions.user_id', $user_id);
+        $this->db->where('DATE(time_sessions.start_time)', $date);
+        $this->db->order_by('time_sessions.start_time', 'ASC');
+        $query = $this->db->get();
+        $sessions_raw = $query->result_array();
+        
+        $sessions = [];
+        foreach ($sessions_raw as $s) {
+            $is_active = is_null($s['end_time']);
+            
+            // Записываем саму сессию
+            $sessions[] = [
+                'id' => $s['id'],
+                'title' => $s['task_title'],
+                'color' => $this->Task_model->get_task_color_recursive($s['task_id'], $user_id),
+                'start_time_only' => date('H:i:s', strtotime($s['start_time'])),
+                'end_time_only' => $is_active ? null : date('H:i:s', strtotime($s['end_time'])),
+                'is_active' => $is_active
+            ];
+            
+            // Записываем паузы как "пустые" блоки (опционально, если нужно будет)
+            // Но мы можем и не делать это, т.к. паузы просто будут отображаться как серые дыры, 
+            // если мы скорректируем конец предыдущего блока на время паузы.
+            // Для таймлайна с часами и минутами лучше оставить блок целиком, а внутри можно сделать штриховку.
+        }
+        
+        echo json_encode([
+            'status' => 'success',
+            'date' => $date,
+            'sessions' => $sessions
+        ]);
     }
 }

@@ -533,10 +533,48 @@ if (window.loadedTasksModule) {
     /**
      * Переименовывает задачу через быструю форму prompt
      */
-    window.editTaskTitle = function(taskId, currentTitle) {
-        var newTitle = prompt("Редактировать:", currentTitle);
+    window.editTaskTitle = async function(taskId, currentTitle) {
+        if (!window.customPrompt) {
+            window.customPrompt = function(message, defaultValue = "") {
+                return new Promise((resolve) => {
+                    const modalHtml = `
+                    <div id="customPromptModal" class="fixed inset-0 flex items-center justify-center p-4" style="z-index: 999999; background-color: rgba(0,0,0,0.5);">
+                        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md p-6 transform transition-all" style="position: relative; z-index: 1000000;">
+                            <h3 class="text-lg font-bold mb-4 text-gray-800">${message}</h3>
+                            <input type="text" id="customPromptInput" class="w-full border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-blue-500 focus:outline-none mb-6" value="${defaultValue}">
+                            <div class="flex justify-end gap-3">
+                                <button id="customPromptCancel" class="px-4 py-2 text-gray-600 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors">Отмена</button>
+                                <button id="customPromptOk" class="px-4 py-2 text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors">ОК</button>
+                            </div>
+                        </div>
+                    </div>
+                    `;
+                    document.body.insertAdjacentHTML('beforeend', modalHtml);
+                    
+                    const modal = document.getElementById('customPromptModal');
+                    const input = document.getElementById('customPromptInput');
+                    const btnCancel = document.getElementById('customPromptCancel');
+                    const btnOk = document.getElementById('customPromptOk');
+
+                    input.focus();
+
+                    const closeAndResolve = (val) => {
+                        modal.remove();
+                        resolve(val);
+                    };
+
+                    btnCancel.addEventListener('click', () => closeAndResolve(null));
+                    btnOk.addEventListener('click', () => closeAndResolve(input.value));
+                    input.addEventListener('keydown', (e) => {
+                        if (e.key === 'Enter') closeAndResolve(input.value);
+                        if (e.key === 'Escape') closeAndResolve(null);
+                    });
+                });
+            };
+        }
         
-        if (newTitle !== null && newTitle.trim() !== "" && newTitle.trim() !== currentTitle) {
+        var newTitle = await window.customPrompt("Редактировать:", currentTitle);
+        if (newTitle !== null && newTitle.trim() !== "" && newTitle !== currentTitle) {
             $.post(window.api.edit_title, { task_id: taskId, title: newTitle.trim() }, function(response) {
                 var res = JSON.parse(response);
                 if (res.status === 'success') {
@@ -1102,4 +1140,55 @@ function initInfiniteScrollTasks() {
             });
         }
     });
+}
+
+/**
+ * Проверка автообновлений (для Android/Capacitor)
+ */
+(function checkAppUpdates() {
+    if (window.Capacitor && window.Capacitor.Plugins.App) {
+        // Мы в Android-приложении!
+        window.Capacitor.Plugins.App.getInfo().then(info => {
+            const currentVersion = info.version; // e.g. "1.0.0"
+            const currentVersionCode = parseInt(info.build || '1');
+
+            // Запрашиваем с нашего сервера актуальную версию
+            const serverUrl = window.location.origin + '/MobileApp/version';
+            fetch(serverUrl)
+                .then(res => res.json())
+                .then(data => {
+                    const serverVersionCode = parseInt(data.versionCode);
+                    if (serverVersionCode > currentVersionCode) {
+                        // Показываем уведомление об обновлении
+                        showUpdateNotification(data.version, data.downloadUrls.android, data.releaseNotes);
+                    }
+                })
+                .catch(err => console.error("Update check failed:", err));
+        }).catch(err => console.log("Capacitor App Info not available", err));
+    }
+})();
+
+function showUpdateNotification(version, downloadUrl, notes) {
+    // Простейшая проверка, чтобы не показывать диалог каждую секунду (SPA навигация)
+    if (sessionStorage.getItem('update_notified_' + version)) return;
+    sessionStorage.setItem('update_notified_' + version, '1');
+
+    const modalHtml = `
+    <div id="updateModal" class="fixed inset-0 bg-gray-900 bg-opacity-75 flex items-center justify-center z-[9999] p-4">
+        <div class="bg-white rounded-2xl shadow-2xl p-6 w-full max-w-sm transform transition-all">
+            <div class="flex items-center justify-center w-12 h-12 mx-auto bg-blue-100 rounded-full mb-4">
+                <svg class="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path>
+                </svg>
+            </div>
+            <h3 class="text-xl font-bold text-center text-gray-900 mb-2">Доступно обновление!</h3>
+            <p class="text-gray-600 text-center mb-4">Вышла новая версия приложения: <strong>${version}</strong></p>
+            ${notes ? `<div class="bg-gray-50 text-sm text-gray-700 p-3 rounded-lg mb-6 max-h-32 overflow-y-auto">${notes}</div>` : ''}
+            <div class="flex space-x-3">
+                <button onclick="document.getElementById('updateModal').remove()" class="flex-1 py-3 bg-gray-100 text-gray-700 rounded-xl font-medium hover:bg-gray-200 transition-colors">Позже</button>
+                <a href="${downloadUrl}" onclick="document.getElementById('updateModal').remove()" download target="_blank" class="flex-1 py-3 bg-blue-600 text-white rounded-xl font-medium text-center hover:bg-blue-700 transition-colors shadow-md hover:shadow-lg">Обновить</a>
+            </div>
+        </div>
+    </div>`;
+    $('body').append(modalHtml);
 }

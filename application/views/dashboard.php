@@ -4,8 +4,6 @@ $this->load->view('templates/task_list_loop');
 ?>
 
 <div class="relative min-h-[80vh] pb-32">
-    <!-- Блок добавления корневого проекта удален и перенесен в глобальное модальное окно (body.php) -->
-
     <!-- Список задач -->
     <div class="flex justify-between items-end mb-4">
         <div class="flex items-center gap-6 w-1/3">
@@ -27,6 +25,9 @@ $this->load->view('templates/task_list_loop');
         </div>
     </div>
     
+    <!-- Таймлайн дня -->
+    <div id="dashboard-timeline" class="mb-6"></div>
+
     <?php if (empty($tasks_tree)): ?>
         <div class="bg-white p-12 rounded-2xl border border-gray-200 text-center shadow-sm">
             <span class="text-6xl mb-4 block">📋</span>
@@ -363,3 +364,14 @@ $this->load->view('templates/task_list_loop');
 <script src="https://cdn.quilljs.com/1.3.6/quill.js"></script>
 
 <script src="<?= base_url('assets/js/tasks.js?v=' . time()) ?>"></script>
+<script src="<?= base_url('assets/js/timeline.js?v=' . time()) ?>"></script>
+<script>
+    // Инициализируем Таймлайн только после загрузки всех скриптов
+    setTimeout(() => {
+        if (typeof DailyTimeline !== 'undefined') {
+            window.dashboardTimeline = new DailyTimeline('dashboard-timeline', {
+                title: 'Таймлайн (сегодня)'
+            });
+        }
+    }, 300);
+</script>
