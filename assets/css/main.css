@@ -210,8 +210,9 @@ body {
 
 @media (max-width: 1149px) {
 
-    /* Скрываем текстовые подписи ссылок навбара */
-    #main-nav-links .nav-label {
+    /* Скрываем текстовые подписи ссылок навбара и кнопки обновления */
+    #main-nav-links .nav-label,
+    #appUpdateHeaderContainer .nav-label {
         display: none;
     }
 

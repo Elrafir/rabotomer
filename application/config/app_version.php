@@ -11,9 +11,9 @@ defined('BASEPATH') OR exit('No direct script access allowed');
 |
 */
 
-$config['app_version'] = '1.0.9';
-$config['app_version_code'] = 10; // Внутренний номер сборки (полезно для Android)
-$config['app_release_notes'] = 'Динамическое WebRTC авто-сканирование подсети 1..254, работа Хотспота при мобильном интернете и динамический alias .1 на S20+.';
+$config['app_version'] = '1.1.0';
+$config['app_version_code'] = 11; // Внутренний номер сборки (полезно для Android)
+$config['app_release_notes'] = 'Адаптивное скрытие подписи кнопки обновления в узком навбаре шапки и увеличенная иконка.';
 
 // Если в будущем вы будете хранить файлы на Git-сервере (например, GitHub Releases, GitLab),
 // укажите здесь базовый URL (например, 'https://github.com/user/repo/releases/latest/download/').

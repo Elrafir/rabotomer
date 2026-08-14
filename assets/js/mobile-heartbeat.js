@@ -339,15 +339,15 @@
         if (serverData && serverCode > installed.code) {
             container.innerHTML = `
                 <button onclick="window.showAppUpdateModal()" class="text-xs bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-3 py-1.5 rounded-xl shadow-lg flex items-center gap-1.5 transition-all animate-pulse" title="Доступна новая версия v${serverData.version} (у вас v${installed.name})">
-                    <span>🚀</span>
-                    <span>Скачать v${serverData.version}</span>
+                    <span class="text-base leading-none">🚀</span>
+                    <span class="nav-label">Скачать v${serverData.version}</span>
                 </button>
             `;
         } else {
             container.innerHTML = `
                 <button onclick="window.checkAppUpdateManual()" class="text-xs bg-white/10 hover:bg-white/20 text-white font-medium px-3 py-1.5 rounded-xl transition-colors flex items-center gap-1.5 opacity-80 hover:opacity-100" title="Проверить обновления">
-                    <span>🔄</span>
-                    <span class="hidden sm:inline">Проверить обновления</span>
+                    <span class="text-base leading-none">🔄</span>
+                    <span class="nav-label">Проверить обновления</span>
                 </button>
             `;
         }
