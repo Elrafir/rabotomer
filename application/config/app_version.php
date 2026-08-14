@@ -11,9 +11,9 @@ defined('BASEPATH') OR exit('No direct script access allowed');
 |
 */
 
-$config['app_version'] = '1.0.5';
-$config['app_version_code'] = 6; // Внутренний номер сборки (полезно для Android)
-$config['app_release_notes'] = 'Добавлена предварительная проверка доступности серверов, список сохраненных адресов и защита от оффлайн-блокировки WebView.';
+$config['app_version'] = '1.0.6';
+$config['app_version_code'] = 7; // Внутренний номер сборки (полезно для Android)
+$config['app_release_notes'] = 'Добавлен порт по умолчанию 7880, авто-подстановка 192.168.100.2:7880 и детализированная диагностика ошибок сети.';
 
 // Если в будущем вы будете хранить файлы на Git-сервере (например, GitHub Releases, GitLab),
 // укажите здесь базовый URL (например, 'https://github.com/user/repo/releases/latest/download/').
