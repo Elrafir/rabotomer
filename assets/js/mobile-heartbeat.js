@@ -395,18 +395,18 @@
                 </div>
 
                 <div style="display:flex; flex-direction:column; gap:10px;">
-                    <a id="btnDownloadUpdateApk" href="#" download target="_blank" style="
-                        display: block;
-                        text-align: center;
+                    <button id="btnDownloadUpdateApk" onclick="window.triggerApkDownload(event)" style="
+                        width: 100%;
                         background: linear-gradient(135deg, #10b981, #059669);
                         color: white;
-                        text-decoration: none;
+                        border: none;
                         padding: 13px;
                         border-radius: 12px;
                         font-size: 15px;
                         font-weight: 700;
+                        cursor: pointer;
                         box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
-                    ">⬇️ Скачать и обновить APK</a>
+                    ">⬇️ Скачать и обновить APK</button>
 
                     <button onclick="window.hideAppUpdateModal()" style="
                         width: 100%;
@@ -426,6 +426,22 @@
         document.body.appendChild(updateModalElement);
     }
 
+    window.triggerApkDownload = function(e) {
+        if (e && e.preventDefault) e.preventDefault();
+        const apkUrl = (latestServerVersionData && latestServerVersionData.downloadUrls && latestServerVersionData.downloadUrls.android) 
+            ? latestServerVersionData.downloadUrls.android 
+            : window.location.origin + '/index.php/MobileApp/download/android';
+
+        try {
+            const win = window.open(apkUrl, '_system');
+            if (!win || win.closed || typeof win.closed === 'undefined') {
+                window.location.href = apkUrl;
+            }
+        } catch(err) {
+            window.location.href = apkUrl;
+        }
+    };
+
     window.showAppUpdateModal = function() {
         if (!latestServerVersionData) return;
         createUpdateModal();
@@ -433,11 +449,6 @@
         document.getElementById('updateVersionTitle').innerText = `Работомер v${latestServerVersionData.version}`;
         document.getElementById('updateReleaseNotes').innerText = latestServerVersionData.releaseNotes || 'Улучшения производительности и исправления ошибок.';
         
-        const apkUrl = (latestServerVersionData.downloadUrls && latestServerVersionData.downloadUrls.android) 
-            ? latestServerVersionData.downloadUrls.android 
-            : window.location.origin + '/index.php/MobileApp/download/android';
-
-        document.getElementById('btnDownloadUpdateApk').href = apkUrl;
         updateModalElement.style.display = 'flex';
     };
 
