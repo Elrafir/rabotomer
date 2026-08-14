@@ -1,7 +1,7 @@
 /**
  * Mobile Heartbeat, Connectivity & Auto-Update Manager
- * Отслеживает доступность сервера, показывает 30-сек плашку подключения
- * и проверяет/предлагает обновления приложения.
+ * Отслеживает доступность сервера, показывает 30-сек плашку подключения,
+ * автоматически обнаруживает альтернативный адрес (Хотспот) и предлагает переход.
  */
 (function() {
     let firstFailureTime = null;
@@ -12,6 +12,27 @@
     let updateModalElement = null;
     let reconnectBannerElement = null;
     let latestServerVersionData = null;
+    let detectedAlternativeUrl = null;
+
+    // Функция мгновенного возврата на локальный лаунчер без сетевых запросов
+    function goToSetupScreen() {
+        try { localStorage.removeItem('timeTrackerServerUrl'); } catch(e) {}
+        
+        let localLauncher = null;
+        try { localLauncher = localStorage.getItem('timeTrackerLocalLauncher'); } catch(e) {}
+
+        if (localLauncher) {
+            window.location.href = localLauncher.split('?')[0] + '?reset=1';
+            return;
+        }
+
+        // Запасные варианты для WebView / Capacitor / Cordova
+        if (window.location.protocol === 'file:') {
+            window.location.href = 'file:///android_asset/public/index.html?reset=1';
+        } else {
+            window.location.href = window.location.origin + '/MobileApp/reset_setup';
+        }
+    }
 
     // --- 1. ПЛАШКА "ПОПЫТКА ПОДКЛЮЧЕНИЯ" (До 30 секунд) ---
     function getReconnectBanner() {
@@ -65,7 +86,60 @@
         if (reconnectBannerElement) reconnectBannerElement.style.display = 'none';
     }
 
-    // --- 2. МОДАЛЬНОЕ ОКНО "ПОТЕРЯ СВЯЗИ (> 30 СЕКУНД)" ---
+    // --- 2. ПРОВЕРКА АЛЬТЕРНАТИВНОГО СЕРВЕРА (например, Hotspot 10.129.176.1) ---
+    async function checkAlternativeServers() {
+        const currentOrigin = window.location.origin;
+        const candidates = ['http://10.129.176.1:7880', 'http://192.168.100.2:7880'].filter(u => !currentOrigin.includes(u.replace('http://', '')));
+
+        for (const targetUrl of candidates) {
+            try {
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => controller.abort(), 2000);
+                const res = await fetch(targetUrl + '/index.php/MobileApp/version?t=' + Date.now(), {
+                    method: 'GET',
+                    signal: controller.signal,
+                    cache: 'no-store'
+                });
+                clearTimeout(timeoutId);
+                if (res.ok || res.status < 400) {
+                    detectedAlternativeUrl = targetUrl;
+                    updateOfflineModalWithAlternative(targetUrl);
+                    return targetUrl;
+                }
+            } catch(e) {}
+        }
+        return null;
+    }
+
+    function updateOfflineModalWithAlternative(targetUrl) {
+        const altContainer = document.getElementById('altServerContainer');
+        if (!altContainer) return;
+        
+        const label = targetUrl.includes('10.129.176.1') ? 'Хотспот (10.129.176.1:7880)' : 'Локальную сеть (192.168.100.2:7880)';
+        altContainer.innerHTML = `
+            <button id="btnSwitchAltServer" style="
+                width: 100%;
+                background: linear-gradient(135deg, #10b981, #059669);
+                color: white;
+                border: none;
+                padding: 13px;
+                border-radius: 12px;
+                font-size: 15px;
+                font-weight: 700;
+                cursor: pointer;
+                box-shadow: 0 4px 12px rgba(16, 185, 129, 0.4);
+                margin-bottom: 4px;
+            ">⚡ Переключиться на ${label}</button>
+        `;
+        altContainer.style.display = 'block';
+
+        document.getElementById('btnSwitchAltServer').addEventListener('click', function() {
+            try { localStorage.setItem('timeTrackerServerUrl', targetUrl); } catch(e) {}
+            window.location.href = targetUrl;
+        });
+    }
+
+    // --- 3. МОДАЛЬНОЕ ОКНО "ПОТЕРЯ СВЯЗИ (> 30 СЕКУНД)" ---
     function createOfflineModal() {
         if (offlineModalElement) return;
 
@@ -74,8 +148,8 @@
         offlineModalElement.style.cssText = `
             position: fixed;
             top: 0; left: 0; right: 0; bottom: 0;
-            background-color: rgba(15, 23, 42, 0.94);
-            backdrop-filter: blur(10px);
+            background-color: rgba(15, 23, 42, 0.95);
+            backdrop-filter: blur(12px);
             z-index: 999999;
             display: none;
             align-items: center;
@@ -98,12 +172,14 @@
             ">
                 <div style="font-size: 44px; margin-bottom: 12px;">⚠️</div>
                 <h3 style="margin: 0 0 8px 0; font-size: 20px; font-weight: 700; color: #f8fafc;">Связь с сервером не установлена</h3>
-                <p style="margin: 0 0 20px 0; font-size: 14px; color: #94a3b8; line-height: 1.5;">
+                <p style="margin: 0 0 18px 0; font-size: 14px; color: #94a3b8; line-height: 1.5;">
                     Не удалось подключиться к серверу в течение 30 секунд.<br>
                     <small style="font-size: 12px; color: #64748b;" id="offlineServerOrigin"></small>
                 </p>
                 
-                <div style="display: flex; flex-direction: column; gap: 12px;">
+                <div id="altServerContainer" style="display:none; margin-bottom: 10px;"></div>
+
+                <div style="display: flex; flex-direction: column; gap: 10px;">
                     <button id="btnRetryHeartbeat" style="
                         width: 100%;
                         background: linear-gradient(135deg, #2563eb, #1d4ed8);
@@ -145,8 +221,7 @@
         });
 
         document.getElementById('btnResetServerUrl').addEventListener('click', function() {
-            try { localStorage.removeItem('timeTrackerServerUrl'); } catch(e) {}
-            window.location.href = window.location.origin + '/MobileApp/reset_setup';
+            goToSetupScreen();
         });
     }
 
@@ -156,6 +231,7 @@
         const originEl = document.getElementById('offlineServerOrigin');
         if (originEl) originEl.innerText = window.location.origin;
         if (offlineModalElement) offlineModalElement.style.display = 'flex';
+        checkAlternativeServers();
     }
 
     function hideOfflineModal() {
@@ -164,7 +240,7 @@
         firstFailureTime = null;
     }
 
-    // --- 3. ОБНОВЛЕНИЕ ПРИЛОЖЕНИЯ ---
+    // --- 4. ОБНОВЛЕНИЕ ПРИЛОЖЕНИЯ ---
     function renderHeaderUpdateControls(serverData) {
         const container = document.getElementById('appUpdateHeaderContainer');
         if (!container) return;
@@ -173,7 +249,6 @@
         const serverCode = serverData ? (serverData.versionCode || 0) : 0;
 
         if (serverData && serverCode > currentCode) {
-            // Доступно обновление!
             container.innerHTML = `
                 <button onclick="window.showAppUpdateModal()" class="text-xs bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-3 py-1.5 rounded-xl shadow-lg flex items-center gap-1.5 transition-all animate-pulse" title="Доступна новая версия v${serverData.version}">
                     <span>🚀</span>
@@ -181,7 +256,6 @@
                 </button>
             `;
         } else {
-            // Приложение в актуальном состоянии
             container.innerHTML = `
                 <button onclick="window.checkAppUpdateManual()" class="text-xs bg-white/10 hover:bg-white/20 text-white font-medium px-3 py-1.5 rounded-xl transition-colors flex items-center gap-1.5 opacity-80 hover:opacity-100" title="Проверить обновления">
                     <span>🔄</span>
@@ -224,7 +298,7 @@
                     <div style="font-size: 32px;">🚀</div>
                     <div>
                         <h3 style="margin:0; font-size:18px; font-weight:700; color:#f8fafc;">Доступно обновление!</h3>
-                        <div style="font-size:13px; color:#10b981; font-weight:600;" id="updateVersionTitle">Работомер v1.0.8</div>
+                        <div style="font-size:13px; color:#10b981; font-weight:600;" id="updateVersionTitle">Работомер</div>
                     </div>
                 </div>
 
@@ -299,7 +373,7 @@
         }
     };
 
-    // --- 4. ОСНОВНОЙ ЦИКЛ ПРОВЕРКИ (HEARTBEAT) ---
+    // --- 5. ОСНОВНОЙ ЦИКЛ ПРОВЕРКИ (HEARTBEAT) ---
     async function checkServerHealth(force = false) {
         if (isChecking && !force) return true;
         isChecking = true;
@@ -321,7 +395,6 @@
                 const data = await response.json();
                 latestServerVersionData = data;
                 
-                // Успешная связь!
                 hideOfflineModal();
                 renderHeaderUpdateControls(data);
                 return true;
