@@ -19,6 +19,16 @@
     <script src="<?php echo base_url('assets/js/main.js?v='.time()); ?>"></script>
     <script src="<?php echo base_url('assets/js/timer.js?v='.time()); ?>"></script>
     <script src="<?php echo base_url('assets/js/offline-sync.js?v='.time()); ?>"></script>
+    <?php 
+        $ci =& get_instance();
+        $ci->load->config('app_version', TRUE, TRUE);
+        $v_code = (int)($ci->config->item('app_version_code', 'app_version') ?? 8);
+        $v_name = $ci->config->item('app_version', 'app_version') ?? '1.0.7';
+    ?>
+    <script>
+        window.CURRENT_APP_VERSION_CODE = <?= $v_code ?>;
+        window.CURRENT_APP_VERSION = "<?= htmlspecialchars($v_name) ?>";
+    </script>
     <script src="<?php echo base_url('assets/js/mobile-heartbeat.js?v='.time()); ?>"></script>
     
     <!-- Динамический вывод дополнительных CSS файлов (если они переданы из контроллера) -->
