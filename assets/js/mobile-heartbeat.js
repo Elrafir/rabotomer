@@ -86,19 +86,50 @@
         if (reconnectBannerElement) reconnectBannerElement.style.display = 'none';
     }
 
-    // --- 2. ПРОВЕРКА АЛЬТЕРНАТИВНОГО СЕРВЕРА (например, Hotspot 10.177.61.62 или 10.129.176.1) ---
+    // --- 2. ПРОВЕРКА АЛЬТЕРНАТИВНОГО СЕРВЕРА И АВТО-СКАНИРОВАНИЕ SUBNET ---
+    async function scanSubnetForServer(subnetPrefix) {
+        const promises = [];
+        let foundUrl = null;
+
+        for (let i = 1; i <= 254; i++) {
+            const targetUrl = `http://${subnetPrefix}${i}:7880`;
+            if (window.location.origin.includes(targetUrl.replace('http://', ''))) continue;
+
+            promises.push((async () => {
+                try {
+                    const controller = new AbortController();
+                    const timeoutId = setTimeout(() => controller.abort(), 800);
+                    const res = await fetch(targetUrl + '/index.php/MobileApp/version?t=' + Date.now(), {
+                        method: 'GET',
+                        signal: controller.signal,
+                        cache: 'no-store'
+                    });
+                    clearTimeout(timeoutId);
+                    if (res.ok || res.status < 400) {
+                        foundUrl = targetUrl;
+                    }
+                } catch(e) {}
+            })());
+        }
+
+        await Promise.all(promises);
+        return foundUrl;
+    }
+
     async function checkAlternativeServers() {
         const currentOrigin = window.location.origin;
         const candidates = [
+            'http://10.177.61.1:7880',
             'http://10.177.61.62:7880',
             'http://10.129.176.1:7880',
             'http://192.168.100.2:7880'
         ].filter(u => !currentOrigin.includes(u.replace('http://', '')));
 
+        // 1. Быстрый пинг предустановленных серверов
         for (const targetUrl of candidates) {
             try {
                 const controller = new AbortController();
-                const timeoutId = setTimeout(() => controller.abort(), 2000);
+                const timeoutId = setTimeout(() => controller.abort(), 1200);
                 const res = await fetch(targetUrl + '/index.php/MobileApp/version?t=' + Date.now(), {
                     method: 'GET',
                     signal: controller.signal,
@@ -112,6 +143,40 @@
                 }
             } catch(e) {}
         }
+
+        // 2. Динамический WebRTC авто-сканер подсети
+        let localIp = null;
+        try {
+            localIp = await new Promise((resolve) => {
+                const pc = new RTCPeerConnection({ iceServers: [] });
+                pc.createDataChannel('');
+                pc.createOffer().then(offer => pc.setLocalDescription(offer)).catch(() => resolve(null));
+                pc.onicecandidate = (ice) => {
+                    if (!ice || !ice.candidate || !ice.candidate.candidate) return;
+                    const match = ice.candidate.candidate.match(/(?:[0-9]{1,3}\.){3}[0-9]{1,3}/);
+                    if (match) {
+                        const ip = match[0];
+                        if (ip !== '127.0.0.1' && !ip.startsWith('169.254')) {
+                            pc.close();
+                            resolve(ip);
+                        }
+                    }
+                };
+                setTimeout(() => resolve(null), 800);
+            });
+        } catch(e) {}
+
+        if (localIp) {
+            const parts = localIp.split('.');
+            const prefix = `${parts[0]}.${parts[1]}.${parts[2]}.`;
+            const scannedUrl = await scanSubnetForServer(prefix);
+            if (scannedUrl) {
+                detectedAlternativeUrl = scannedUrl;
+                updateOfflineModalWithAlternative(scannedUrl);
+                return scannedUrl;
+            }
+        }
+
         return null;
     }
 
@@ -119,10 +184,11 @@
         const altContainer = document.getElementById('altServerContainer');
         if (!altContainer) return;
         
-        let label = 'Альтернативный сервер';
-        if (targetUrl.includes('10.177.61.62')) label = 'Хотспот (10.177.61.62 - с моб. инетом)';
-        else if (targetUrl.includes('10.129.176.1')) label = 'Хотспот Алиас (10.129.176.1 - без моб. инета)';
-        else if (targetUrl.includes('192.168.100.2')) label = 'Локальную сеть (192.168.100.2)';
+        let label = 'Найденный сервер';
+        if (targetUrl.includes('10.177.61.62') || targetUrl.includes('10.177.61.1')) label = `Хотспот (${targetUrl.replace('http://', '')})`;
+        else if (targetUrl.includes('10.129.176.1')) label = 'Хотспот Алиас (10.129.176.1)';
+        else if (targetUrl.includes('192.168.100.2')) label = 'Локальная сеть (192.168.100.2)';
+        else label = targetUrl.replace('http://', '');
 
         altContainer.innerHTML = `
             <button id="btnSwitchAltServer" style="
