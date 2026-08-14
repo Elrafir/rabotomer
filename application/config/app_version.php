@@ -11,9 +11,9 @@ defined('BASEPATH') OR exit('No direct script access allowed');
 |
 */
 
-$config['app_version'] = '1.0.4';
-$config['app_version_code'] = 5; // Внутренний номер сборки (полезно для Android)
-$config['app_release_notes'] = 'Добавлена возможность обновления страницы в Windows приложении (F5, Ctrl+R, пункт в трее).';
+$config['app_version'] = '1.0.5';
+$config['app_version_code'] = 6; // Внутренний номер сборки (полезно для Android)
+$config['app_release_notes'] = 'Добавлена предварительная проверка доступности серверов, список сохраненных адресов и защита от оффлайн-блокировки WebView.';
 
 // Если в будущем вы будете хранить файлы на Git-сервере (например, GitHub Releases, GitLab),
 // укажите здесь базовый URL (например, 'https://github.com/user/repo/releases/latest/download/').

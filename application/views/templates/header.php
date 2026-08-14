@@ -19,6 +19,7 @@
     <script src="<?php echo base_url('assets/js/main.js?v='.time()); ?>"></script>
     <script src="<?php echo base_url('assets/js/timer.js?v='.time()); ?>"></script>
     <script src="<?php echo base_url('assets/js/offline-sync.js?v='.time()); ?>"></script>
+    <script src="<?php echo base_url('assets/js/mobile-heartbeat.js?v='.time()); ?>"></script>
     
     <!-- Динамический вывод дополнительных CSS файлов (если они переданы из контроллера) -->
     <?php if (isset($custom_css) && is_array($custom_css)): ?>

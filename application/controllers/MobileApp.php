@@ -31,17 +31,34 @@ class MobileApp extends CI_Controller {
      */
     public function download($platform = 'android') {
         $this->load->helper('download');
+        $this->load->config('app_version', TRUE, TRUE);
+        $version = $this->config->item('app_version', 'app_version') ?? '1.0.5';
         
         if ($platform === 'windows') {
-            $filePath = FCPATH . 'assets/downloads/Работомер_Windows.zip';
-            $fileName = 'Работомер_Windows.zip';
+            $candidates = [
+                FCPATH . "assets/downloads/Работомер_v{$version}_Windows.zip",
+                FCPATH . "assets/downloads/Работомер_Windows.zip"
+            ];
+            $defaultName = "Работомер_v{$version}_Windows.zip";
         } else {
-            $filePath = FCPATH . 'assets/downloads/Работомер.apk';
-            $fileName = 'Работомер.apk';
+            $candidates = [
+                FCPATH . "assets/downloads/Работомер_v{$version}.apk",
+                FCPATH . "assets/downloads/Работомер.apk"
+            ];
+            $defaultName = "Работомер_v{$version}.apk";
         }
 
-        if (file_exists($filePath)) {
-            force_download($fileName, file_get_contents($filePath));
+        $filePath = null;
+        foreach ($candidates as $cand) {
+            if (file_exists($cand)) {
+                $filePath = $cand;
+                $defaultName = basename($cand);
+                break;
+            }
+        }
+
+        if ($filePath && file_exists($filePath)) {
+            force_download($defaultName, file_get_contents($filePath));
         } else {
             show_404();
         }
@@ -84,5 +101,21 @@ class MobileApp extends CI_Controller {
         header('Content-Type: application/json');
         header('Access-Control-Allow-Origin: *');
         echo json_encode($data);
+    }
+
+    /**
+     * Сброс адреса сервера для мобильного приложения
+     */
+    public function reset_setup() {
+        echo '<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Resetting...</title></head><body>';
+        echo '<script>';
+        echo 'try { localStorage.removeItem("timeTrackerServerUrl"); } catch(e){}';
+        echo 'if (window.location.protocol === "file:") {';
+        echo '   window.location.href = "index.html?reset=1";';
+        echo '} else {';
+        echo '   window.location.href = "/?reset=1";';
+        echo '}';
+        echo '</script>';
+        echo '</body></html>';
     }
 }
