@@ -86,10 +86,14 @@
         if (reconnectBannerElement) reconnectBannerElement.style.display = 'none';
     }
 
-    // --- 2. ПРОВЕРКА АЛЬТЕРНАТИВНОГО СЕРВЕРА (например, Hotspot 10.129.176.1) ---
+    // --- 2. ПРОВЕРКА АЛЬТЕРНАТИВНОГО СЕРВЕРА (например, Hotspot 10.177.61.62 или 10.129.176.1) ---
     async function checkAlternativeServers() {
         const currentOrigin = window.location.origin;
-        const candidates = ['http://10.129.176.1:7880', 'http://192.168.100.2:7880'].filter(u => !currentOrigin.includes(u.replace('http://', '')));
+        const candidates = [
+            'http://10.177.61.62:7880',
+            'http://10.129.176.1:7880',
+            'http://192.168.100.2:7880'
+        ].filter(u => !currentOrigin.includes(u.replace('http://', '')));
 
         for (const targetUrl of candidates) {
             try {
@@ -115,7 +119,11 @@
         const altContainer = document.getElementById('altServerContainer');
         if (!altContainer) return;
         
-        const label = targetUrl.includes('10.129.176.1') ? 'Хотспот (10.129.176.1:7880)' : 'Локальную сеть (192.168.100.2:7880)';
+        let label = 'Альтернативный сервер';
+        if (targetUrl.includes('10.177.61.62')) label = 'Хотспот (10.177.61.62 - с моб. инетом)';
+        else if (targetUrl.includes('10.129.176.1')) label = 'Хотспот Алиас (10.129.176.1 - без моб. инета)';
+        else if (targetUrl.includes('192.168.100.2')) label = 'Локальную сеть (192.168.100.2)';
+
         altContainer.innerHTML = `
             <button id="btnSwitchAltServer" style="
                 width: 100%;
@@ -241,16 +249,30 @@
     }
 
     // --- 4. ОБНОВЛЕНИЕ ПРИЛОЖЕНИЯ ---
+    function getInstalledAppVersion() {
+        let code = 0;
+        let name = '';
+        try {
+            code = parseInt(localStorage.getItem('installedApkVersionCode')) || 0;
+            name = localStorage.getItem('installedApkVersionName') || '';
+        } catch(e) {}
+
+        if (!code) code = window.CURRENT_APP_VERSION_CODE || 9;
+        if (!name) name = window.CURRENT_APP_VERSION || '1.0.8';
+
+        return { code, name };
+    }
+
     function renderHeaderUpdateControls(serverData) {
         const container = document.getElementById('appUpdateHeaderContainer');
         if (!container) return;
 
-        const currentCode = window.CURRENT_APP_VERSION_CODE || 8;
+        const installed = getInstalledAppVersion();
         const serverCode = serverData ? (serverData.versionCode || 0) : 0;
 
-        if (serverData && serverCode > currentCode) {
+        if (serverData && serverCode > installed.code) {
             container.innerHTML = `
-                <button onclick="window.showAppUpdateModal()" class="text-xs bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-3 py-1.5 rounded-xl shadow-lg flex items-center gap-1.5 transition-all animate-pulse" title="Доступна новая версия v${serverData.version}">
+                <button onclick="window.showAppUpdateModal()" class="text-xs bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-3 py-1.5 rounded-xl shadow-lg flex items-center gap-1.5 transition-all animate-pulse" title="Доступна новая версия v${serverData.version} (у вас v${installed.name})">
                     <span>🚀</span>
                     <span>Скачать v${serverData.version}</span>
                 </button>
@@ -363,12 +385,11 @@
         }
         const isOk = await checkServerHealth(true);
         if (isOk) {
-            const currentCode = window.CURRENT_APP_VERSION_CODE || 8;
-            const currentVersion = window.CURRENT_APP_VERSION || '1.0.7';
-            if (latestServerVersionData && latestServerVersionData.versionCode > currentCode) {
+            const installed = getInstalledAppVersion();
+            if (latestServerVersionData && latestServerVersionData.versionCode > installed.code) {
                 window.showAppUpdateModal();
             } else {
-                alert(`✅ У вас установлена актуальная версия приложения: Работомер v${currentVersion}`);
+                alert(`✅ У вас установлена актуальная версия приложения: Работомер v${installed.name}`);
             }
         }
     };
