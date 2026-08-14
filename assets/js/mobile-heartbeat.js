@@ -432,13 +432,24 @@
             ? latestServerVersionData.downloadUrls.android 
             : window.location.origin + '/index.php/MobileApp/download/android';
 
-        try {
-            const win = window.open(apkUrl, '_system');
-            if (!win || win.closed || typeof win.closed === 'undefined') {
+        if (typeof showToast === 'function') {
+            showToast('📥 Открытие скачивания APK...', 'info');
+        }
+
+        // 1. В Capacitor Android открываем через системный интент браузера/загрузчика
+        if (window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.App && typeof window.Capacitor.Plugins.App.openUrl === 'function') {
+            window.Capacitor.Plugins.App.openUrl({ url: apkUrl }).catch(function(err) {
+                console.warn('Capacitor openUrl fallback:', err);
                 window.location.href = apkUrl;
-            }
-        } catch(err) {
+            });
+            return;
+        }
+
+        // 2. Обычный переход для браузера / WebView с DownloadListener
+        try {
             window.location.href = apkUrl;
+        } catch(err) {
+            window.open(apkUrl, '_system');
         }
     };
 
