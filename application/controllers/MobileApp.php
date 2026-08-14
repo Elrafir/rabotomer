@@ -32,7 +32,7 @@ class MobileApp extends CI_Controller {
     public function download($platform = 'android') {
         $this->load->helper('download');
         $this->load->config('app_version', TRUE, TRUE);
-        $version = $this->config->item('app_version', 'app_version') ?? '1.0.6';
+        $version = $this->config->item('app_version', 'app_version') ?? '1.0.7';
         
         if ($platform === 'windows') {
             $candidates = [
