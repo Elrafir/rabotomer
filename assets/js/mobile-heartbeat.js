@@ -91,11 +91,9 @@
         });
 
         document.getElementById('btnResetServerUrl').addEventListener('click', function() {
-            // Очищаем сохраненный URL в localStorage если возможно
             try {
                 localStorage.removeItem('timeTrackerServerUrl');
             } catch(e) {}
-            // Перенаправляем на локальный стартовый экран Capacitor / Cordova или сброс
             window.location.href = window.location.origin + '/MobileApp/reset_setup';
         });
     }
@@ -129,7 +127,7 @@
             clearTimeout(timeoutId);
             isChecking = false;
 
-            if (response.ok || response.status === 200) {
+            if (response.ok || response.status < 400) {
                 consecutiveFailures = 0;
                 hideModal();
                 return true;
@@ -149,14 +147,11 @@
         return true;
     }
 
-    // Запускаем фоновый таймер
     window.addEventListener('DOMContentLoaded', () => {
-        // Первую проверку делаем через 5 секунд
         setTimeout(checkServerHealth, 5000);
         setInterval(checkServerHealth, CHECK_INTERVAL);
     });
 
-    // Реакция на онлайн/оффлайн события браузера
     window.addEventListener('offline', () => {
         consecutiveFailures = MAX_FAILURES;
         showModal();

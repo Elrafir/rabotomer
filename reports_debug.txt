@@ -344,3 +344,5 @@
 2026-07-21 07:20:42 | time_slice | GET: {"show_archived":"all","start":"2026-07-20","end":"2026-07-20","range":"yesterday","sort_by":"activity","sort_dir":"desc"} | customer_filters: [] | sort_by: activity | sort_dir: desc
 2026-07-21 07:20:43 | time_slice | GET: {"show_archived":"all","start":"2026-07-20","end":"2026-07-21","range":"week","sort_by":"activity","sort_dir":"desc"} | customer_filters: [] | sort_by: activity | sort_dir: desc
 2026-07-21 07:20:44 | project_slice | GET: [] | customer_filters: [] | sort_by: activity | sort_dir: desc
+2026-08-02 23:47:29 | time_slice | GET: [] | customer_filters: [] | sort_by: activity | sort_dir: desc
+2026-08-10 21:02:43 | time_slice | GET: [] | customer_filters: [] | sort_by: activity | sort_dir: desc
