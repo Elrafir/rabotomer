@@ -75,6 +75,16 @@ if ($current_theme === 'theme-custom') {
                         <!-- Контейнер проверки/скачивания обновлений приложения -->
                         <div id="appUpdateHeaderContainer" class="flex items-center mr-2"></div>
 
+                        <!-- Кнопка обновления страницы (F5) -->
+                        <button onclick="window.location.reload()" class="flex items-center p-2 hover:bg-white/20 rounded-full transition-colors group mr-1" title="Обновить страницу (F5)">
+                            <span class="text-xl opacity-80 group-hover:opacity-100 transition-opacity">🔄</span>
+                        </button>
+
+                        <!-- Кнопка возврата на стартовую страницу (выбор сервера) -->
+                        <button onclick="if(window.goToSetupScreen){window.goToSetupScreen();}else{window.location.href='<?= site_url('MobileApp/reset_setup'); ?>';}" class="flex items-center p-2 hover:bg-white/20 rounded-full transition-colors group mr-2" title="Стартовая страница (Выбор сервера)">
+                            <span class="text-xl opacity-80 group-hover:opacity-100 transition-opacity">🌐</span>
+                        </button>
+
                         <!-- Кнопка настройки оформления -->
                         <button onclick="openThemeModal()" class="flex items-center p-2 hover:bg-white/20 rounded-full transition-colors group mr-2" title="Настроить оформление">
                             <span class="text-xl opacity-80 group-hover:opacity-100 transition-opacity">🎨</span>
@@ -108,6 +118,10 @@ if ($current_theme === 'theme-custom') {
                                         <svg class="w-4 h-4 opacity-70" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path></svg>
                                         Личный кабинет
                                     </a>
+                                    <button onclick="if(window.goToSetupScreen){window.goToSetupScreen();}else{window.location.href='<?= site_url('MobileApp/reset_setup'); ?>';}" class="w-full text-left px-4 py-3 hover:bg-black/10 border-b border-white/10 text-sm font-semibold flex items-center gap-2 transition-colors text-white opacity-90 hover:opacity-100">
+                                        <svg class="w-4 h-4 opacity-70" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 12h14M12 5l7 7-7 7"></path></svg>
+                                        Выбор сервера
+                                    </button>
                                     <a href="<?= site_url('auth/logout'); ?>" class="px-4 py-3 hover:bg-red-500/20 text-sm font-semibold flex items-center gap-2 transition-colors text-white opacity-90 hover:opacity-100">
                                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path></svg>
                                         Выйти

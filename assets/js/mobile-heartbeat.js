@@ -33,6 +33,7 @@
             window.location.href = window.location.origin + '/MobileApp/reset_setup';
         }
     }
+    window.goToSetupScreen = goToSetupScreen;
 
     // --- 1. ПЛАШКА "ПОПЫТКА ПОДКЛЮЧЕНИЯ" (До 30 секунд) ---
     function getReconnectBanner() {
