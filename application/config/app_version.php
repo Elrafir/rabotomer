@@ -11,9 +11,9 @@ defined('BASEPATH') OR exit('No direct script access allowed');
 |
 */
 
-$config['app_version'] = '1.0.7';
-$config['app_version_code'] = 8; // Внутренний номер сборки (полезно для Android)
-$config['app_release_notes'] = 'Добавлен адрес Хотспота 10.129.176.1:7880 в сохраненные серверы и оптимизирована работа в автономном режиме.';
+$config['app_version'] = '1.0.8';
+$config['app_version_code'] = 9; // Внутренний номер сборки (полезно для Android)
+$config['app_release_notes'] = 'Автономный переход на страницу выбора сервера без ошибок сети, авто-обнаружение активного Хотспота 10.129.176.1 и подписи адресов.';
 
 // Если в будущем вы будете хранить файлы на Git-сервере (например, GitHub Releases, GitLab),
 // укажите здесь базовый URL (например, 'https://github.com/user/repo/releases/latest/download/').
