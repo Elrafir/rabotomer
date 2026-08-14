@@ -75,16 +75,6 @@ if ($current_theme === 'theme-custom') {
                         <!-- Контейнер проверки/скачивания обновлений приложения -->
                         <div id="appUpdateHeaderContainer" class="flex items-center mr-2"></div>
 
-                        <!-- Кнопка обновления страницы (F5) -->
-                        <button onclick="window.location.reload()" class="flex items-center p-2 hover:bg-white/20 rounded-full transition-colors group mr-1" title="Обновить страницу (F5)">
-                            <span class="text-xl opacity-80 group-hover:opacity-100 transition-opacity">🔄</span>
-                        </button>
-
-                        <!-- Кнопка возврата на стартовую страницу (выбор сервера) -->
-                        <button onclick="if(window.goToSetupScreen){window.goToSetupScreen();}else{window.location.href='<?= site_url('MobileApp/reset_setup'); ?>';}" class="flex items-center p-2 hover:bg-white/20 rounded-full transition-colors group mr-2" title="Стартовая страница (Выбор сервера)">
-                            <span class="text-xl opacity-80 group-hover:opacity-100 transition-opacity">🌐</span>
-                        </button>
-
                         <!-- Кнопка настройки оформления -->
                         <button onclick="openThemeModal()" class="flex items-center p-2 hover:bg-white/20 rounded-full transition-colors group mr-2" title="Настроить оформление">
                             <span class="text-xl opacity-80 group-hover:opacity-100 transition-opacity">🎨</span>
