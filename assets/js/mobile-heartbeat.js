@@ -332,27 +332,7 @@
 
     function renderHeaderUpdateControls(serverData) {
         const container = document.getElementById('appUpdateHeaderContainer');
-        if (!container) return;
-
-        const installed = getInstalledAppVersion();
-        const serverCode = serverData ? (serverData.versionCode || 0) : 0;
-
-        if (serverData && serverCode > installed.code) {
-            container.innerHTML = `
-                <button onclick="window.showAppUpdateModal()" class="text-xs bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-3 py-1.5 rounded-xl shadow-lg flex items-center gap-1.5 transition-all animate-pulse" title="Доступна новая версия v${serverData.version} (у вас v${installed.name})">
-                    <span class="text-base leading-none">🚀</span>
-                    <span class="nav-label">Скачать v${serverData.version}</span>
-                </button>
-            `;
-        } else {
-            container.innerHTML = `
-                <button onclick="window.checkAppUpdateManual()" class="text-xs bg-white/10 hover:bg-white/20 text-white font-medium px-3 py-1.5 rounded-xl transition-colors flex items-center gap-1.5 opacity-80 hover:opacity-100" title="Проверить обновления">
-                    <span class="text-base leading-none">🔄</span>
-                    <span class="nav-label">Проверить обновления</span>
-                </button>
-            `;
-        }
-    }
+        if (!container) return; // Do not render on desktop web browsers
 
     function createUpdateModal() {
         if (updateModalElement) return;

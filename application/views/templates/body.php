@@ -72,8 +72,6 @@ if ($current_theme === 'theme-custom') {
                         </div>
                         <?php $display_name = !empty($current_user_data['first_name']) ? $current_user_data['first_name'] : $ci->session->userdata('username'); ?>
                         
-                        <!-- Контейнер проверки/скачивания обновлений приложения -->
-                        <div id="appUpdateHeaderContainer" class="flex items-center mr-2"></div>
 
                         <!-- Кнопка настройки оформления -->
                         <button onclick="openThemeModal()" class="flex items-center p-2 hover:bg-white/20 rounded-full transition-colors group mr-2" title="Настроить оформление">
