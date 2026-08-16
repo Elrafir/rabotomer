@@ -29,21 +29,25 @@ class MobileApp extends CI_Controller {
     /**
      * Скачивание файла приложения
      */
-    public function download($platform = 'android') {
+    public function download($platform = 'android', $ver = null) {
         $this->load->helper('download');
         $this->load->config('app_version', TRUE, TRUE);
-        $version = $this->config->item('app_version', 'app_version') ?? '1.0.8';
+        $version = $ver ? preg_replace('/[^0-9\.]/', '', $ver) : ($this->config->item('app_version', 'app_version') ?? '2.2.1');
         
         if ($platform === 'windows') {
             $candidates = [
                 FCPATH . "assets/downloads/Работомер_v{$version}_Windows.zip",
-                FCPATH . "assets/downloads/Работомер_Windows.zip"
+                FCPATH . "assets/downloads/Работомер_Windows.zip",
+                FCPATH . "assets/downloads/old/Работомер_v{$version}_Windows.zip",
+                FCPATH . "assets/downloads/old/Работомер_Windows.zip"
             ];
             $defaultName = "Работомер_v{$version}_Windows.zip";
         } else {
             $candidates = [
                 FCPATH . "assets/downloads/Работомер_v{$version}.apk",
-                FCPATH . "assets/downloads/Работомер.apk"
+                FCPATH . "assets/downloads/Работомер.apk",
+                FCPATH . "assets/downloads/old/Работомер_v{$version}.apk",
+                FCPATH . "assets/downloads/old/Работомер.apk"
             ];
             $defaultName = "Работомер_v{$version}.apk";
         }
@@ -68,21 +72,19 @@ class MobileApp extends CI_Controller {
      * API для проверки актуальной версии
      */
     public function version() {
-        $this->load->config('app_version', TRUE, TRUE); // Загружаем конфиг, если его нет - игнорируем ошибку
+        $this->load->config('app_version', TRUE, TRUE);
         
-        $version = $this->config->item('app_version', 'app_version') ?? '1.0.1';
-        $versionCode = $this->config->item('app_version_code', 'app_version') ?? 2;
-        $notes = $this->config->item('app_release_notes', 'app_version') ?? '';
+        $version = $this->config->item('app_version', 'app_version') ?? '2.2.1';
+        $versionCode = (int)($this->config->item('app_build', 'app_version') ?? $this->config->item('app_version_code', 'app_version') ?? 23);
+        $notes = $this->config->item('app_notes', 'app_version') ?? $this->config->item('app_release_notes', 'app_version') ?? '';
         $baseUrl = $this->config->item('app_download_base_url', 'app_version');
 
         // Формируем URL для скачивания
         if (!empty($baseUrl)) {
-            // Если задан внешний Git-сервер (убеждаемся, что есть слэш на конце)
             $baseUrl = rtrim($baseUrl, '/') . '/';
             $androidUrl = $baseUrl . 'Работомер.apk';
             $windowsUrl = $baseUrl . 'Работомер_Windows.zip';
         } else {
-            // Если не задан, используем текущий локальный сервер
             $androidUrl = site_url('MobileApp/download/android');
             $windowsUrl = site_url('MobileApp/download/windows');
         }
@@ -90,17 +92,28 @@ class MobileApp extends CI_Controller {
         $data = [
             'version' => $version,
             'versionCode' => $versionCode,
+            'version_code' => $versionCode,
+            'build' => $versionCode,
+            'notes' => $notes,
             'releaseNotes' => $notes,
             'downloadUrls' => [
                 'android' => $androidUrl,
                 'windows' => $windowsUrl
-            ]
+            ],
+            'download_url' => $androidUrl
         ];
 
         // Отдаем JSON, разрешаем CORS
-        header('Content-Type: application/json');
+        header('Content-Type: application/json; charset=utf-8');
         header('Access-Control-Allow-Origin: *');
-        echo json_encode($data);
+        echo json_encode($data, JSON_UNESCAPED_UNICODE);
+    }
+
+    /**
+     * Алиас для проверки версии
+     */
+    public function check_version() {
+        $this->version();
     }
 
     /**

@@ -1,5 +1,5 @@
 /**
- * Rabotomer v2.2.1 - Offline Daily Timeline Component
+ * Rabotomer v2.2.2 - Offline Daily Timeline Component
  * Renders 24-hour visual progress bar with sessions directly from IndexedDB
  * Includes breakdown statistics for PC (mains power) vs Tablet (battery/offline)
  */
