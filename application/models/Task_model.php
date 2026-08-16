@@ -20,6 +20,11 @@ class Task_model extends CI_Model {
         if (!$this->db->field_exists('last_heartbeat', 'time_sessions')) {
             $this->db->query("ALTER TABLE time_sessions ADD COLUMN last_heartbeat DATETIME NULL DEFAULT NULL AFTER end_time");
         }
+
+        // Автоматическая миграция: устройство запуска (desktop/tablet/mobile/windows)
+        if (!$this->db->field_exists('device_type', 'time_sessions')) {
+            $this->db->query("ALTER TABLE time_sessions ADD COLUMN device_type VARCHAR(32) NOT NULL DEFAULT 'desktop' AFTER pause_duration");
+        }
     }
 
     /**

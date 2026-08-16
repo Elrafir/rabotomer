@@ -842,6 +842,7 @@ class Tasks extends MY_Controller {
                 'color' => $this->Task_model->get_task_color_recursive($s['task_id'], $user_id),
                 'start_time_only' => date('H:i:s', strtotime($s['start_time'])),
                 'end_time_only' => $is_active ? null : date('H:i:s', strtotime($s['end_time'])),
+                'device_type' => !empty($s['device_type']) ? $s['device_type'] : 'desktop',
                 'is_active' => $is_active
             ];
             

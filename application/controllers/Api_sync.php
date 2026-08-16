@@ -109,7 +109,7 @@ class Api_sync extends CI_Controller {
             ->get()->result_array();
 
         // 4. Time Sessions
-        $sessions = $this->db->select('id, uuid, user_uuid, task_uuid, start_time, end_time, note, is_paused, pause_duration, last_paused_at, last_heartbeat, updated_at, deleted_at')
+        $sessions = $this->db->select('id, uuid, user_uuid, task_uuid, start_time, end_time, note, is_paused, pause_duration, last_paused_at, last_heartbeat, device_type, updated_at, deleted_at')
             ->from('time_sessions')
             ->get()->result_array();
 
@@ -170,7 +170,7 @@ class Api_sync extends CI_Controller {
         $tasks = $this->db->get()->result_array();
 
         // Time Sessions
-        $this->db->select('id, uuid, user_uuid, task_uuid, start_time, end_time, note, is_paused, pause_duration, last_paused_at, last_heartbeat, updated_at, deleted_at')
+        $this->db->select('id, uuid, user_uuid, task_uuid, start_time, end_time, note, is_paused, pause_duration, last_paused_at, last_heartbeat, device_type, updated_at, deleted_at')
             ->from('time_sessions');
         if ($since_dt) {
             $this->db->where("updated_at >= '$since_dt' OR deleted_at >= '$since_dt'");
@@ -342,6 +342,7 @@ class Api_sync extends CI_Controller {
                     'last_paused_at' => $this->_to_datetime($s['last_paused_at'] ?? null),
                     'pause_duration' => (int)($s['pause_duration'] ?? 0),
                     'last_heartbeat' => $this->_to_datetime($s['last_heartbeat'] ?? null),
+                    'device_type' => !empty($s['device_type']) ? $s['device_type'] : 'tablet',
                     'updated_at' => $this->_to_datetime($s['updated_at'] ?? null) ?: date('Y-m-d H:i:s'),
                     'deleted_at' => $this->_to_datetime($s['deleted_at'] ?? null)
                 ];
