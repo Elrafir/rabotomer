@@ -11,9 +11,9 @@ defined('BASEPATH') OR exit('No direct script access allowed');
 |
 */
 
-$config['app_version'] = '1.1.1';
-$config['app_version_code'] = 12; // Внутренний номер сборки (полезно для Android)
-$config['app_release_notes'] = 'Добавлены кнопки "Обновить страницу" (F5) и "Выбор сервера" (Стартовая страница) в шапке приложения.';
+$config['app_version'] = '1.1.2';
+$config['app_version_code'] = 13; // Внутренний номер сборки (полезно для Android)
+$config['app_release_notes'] = 'Фундаментальная автономная архитектура (Offline-First): полная работа без сети и интернета с локальной БД, 2-сторонняя синхронизация с сервером на порту 7880, защита таймера от выгрузки Android, адаптивный интерфейс (планшет 3 колонки / смартфон вкладки) и переключение профилей.';
 
 // Если в будущем вы будете хранить файлы на Git-сервере (например, GitHub Releases, GitLab),
 // укажите здесь базовый URL (например, 'https://github.com/user/repo/releases/latest/download/').
