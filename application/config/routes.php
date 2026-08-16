@@ -53,3 +53,10 @@ $route['default_controller'] = 'tasks';
 $route['reports'] = 'reports/index';
 $route['404_override'] = '';
 $route['translate_uri_dashes'] = FALSE;
+
+// Offline-First Sync API Routes
+$route['api/sync/status'] = 'api_sync/status';
+$route['api/sync/bootstrap'] = 'api_sync/bootstrap';
+$route['api/sync/pull'] = 'api_sync/pull';
+$route['api/sync/push'] = 'api_sync/push';
+
